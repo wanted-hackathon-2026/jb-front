@@ -6,7 +6,7 @@
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-shell flex-col justify-center gap-2 px-6">
+  <main class="flex flex-1 flex-col justify-center gap-2 px-6">
     <h1 class="text-lg font-bold text-slate-900">jb-front</h1>
     <p class="text-sm leading-relaxed text-slate-600">
       Vue 3 · Vite · TypeScript · Pinia · Vue Router · Tailwind CSS 설정 완료.<br />
