@@ -54,6 +54,10 @@ export interface Listing {
   areaPyeong: number
   floor: number
   address: string
+  /** 경도(lng) */
+  x: number
+  /** 위도(lat) */
+  y: number
   /** 매칭 점수 1~100. 거점 미설정 상태에서는 null */
   score: number | null
   commutes: CommuteInfo[]
@@ -66,6 +70,10 @@ export interface PlaceSuggestion {
   id: string
   name: string
   address: string
+  /** 경도(lng) */
+  x: number
+  /** 위도(lat) */
+  y: number
   /** 역이면 노선 목록 */
   lines?: string[]
 }

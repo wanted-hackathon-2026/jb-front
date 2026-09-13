@@ -21,9 +21,8 @@ export const useAnchorsStore = defineStore('anchors', () => {
       id: localId('anchor'),
       name: place.name,
       address: place.address,
-      // 지도 SDK 연동 전까지는 좌표를 쓰지 않는다.
-      x: 0,
-      y: 0,
+      x: place.x,
+      y: place.y,
     })
   }
 

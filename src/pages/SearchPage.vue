@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChip from '@/components/ui/AppChip.vue'
-import { searchPlaces } from '@/mocks/places'
+import { searchPlaces } from '@/api/places'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import type { PlaceSuggestion } from '@/types/domain'
 

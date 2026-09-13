@@ -5,6 +5,16 @@
  * 점선 원은 kakao.maps.Circle 로 대응된다.
  */
 defineProps<{ showRadius?: boolean }>()
+const emit = defineEmits<{ pick: [{ x: number; y: number }] }>()
+
+/** 키 없이도 핀 흐름을 확인할 수 있게, 클릭 위치를 서울 근방 좌표로 흉내낸다. */
+function onClick(e: MouseEvent) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  emit('pick', {
+    x: 127.0 + ((e.clientX - r.left) / r.width - 0.5) * 0.08,
+    y: 37.52 - ((e.clientY - r.top) / r.height - 0.5) * 0.06,
+  })
+}
 
 const clusters = [
   { n: 12, top: '12%', left: '62%' },
@@ -16,7 +26,7 @@ const clusters = [
 </script>
 
 <template>
-  <div class="absolute inset-0 bg-[#eef1ea]">
+  <div class="absolute inset-0 bg-[#eef1ea]" @click="onClick">
     <!-- 지도 질감 대신 옅은 격자. 실제 타일이 아님을 숨기지 않는다. -->
     <div
       class="absolute inset-0 opacity-60"

@@ -25,6 +25,9 @@ function build(i: number): Listing {
     areaPyeong: 6 + (i % 4),
     floor: 1 + (i % 5),
     address: `서울 강남구 ${ADDRESSES[i % ADDRESSES.length]}`,
+    // 강남 일대에 흩어놓는다. 실제 좌표가 아니라 지도 렌더 확인용이다.
+    x: 127.02 + ((i % 7) - 3) * 0.012,
+    y: 37.5 + ((i % 5) - 2) * 0.009,
     score,
     commutes: [
       { anchorId: 'a1', minutes: 20 + (i % 5) * 4, transfers: i % 3, walkMinutes: 5 + (i % 4) * 2 },

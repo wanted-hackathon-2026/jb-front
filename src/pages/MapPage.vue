@@ -7,12 +7,17 @@ import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import FilterPanel from '@/features/listings/FilterPanel.vue'
 import ListingCard from '@/features/listings/ListingCard.vue'
 import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
+import MapView from '@/features/map/MapView.vue'
+import { hasKakaoKey } from '@/lib/kakao'
+import { useFiltersStore } from '@/stores/filters'
+import { coordToAddress } from '@/api/places'
 import { getNearbyListings, getScoredListings } from '@/mocks/listings'
-import { useAnchorsStore } from '@/stores/anchors'
+import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import type { Listing } from '@/types/domain'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
+const filters = useFiltersStore()
 
 const tab = ref<'listings' | 'filters'>('listings')
 const sheet = ref<'peek' | 'full'>('peek')
@@ -35,11 +40,41 @@ onMounted(load)
 watch(() => anchors.anchors.length, load)
 
 const total = computed(() => listings.value.length)
+
+/** 지도에서 찍은 지점 — 주소를 확인한 뒤 거점으로 등록할지 고른다. */
+const picked = ref<{ x: number; y: number; address: string } | null>(null)
+const picking = ref(false)
+
+async function onPick(coord: { x: number; y: number }) {
+  picking.value = true
+  picked.value = { ...coord, address: '' }
+  const address = await coordToAddress(coord.x, coord.y)
+  // 주소를 기다리는 동안 다른 지점을 찍었으면 늦게 온 응답은 버린다.
+  if (picked.value?.x === coord.x && picked.value?.y === coord.y) {
+    picked.value = { ...coord, address }
+  }
+  picking.value = false
+}
+
+function addPickedAnchor() {
+  if (!picked.value) return
+  const { x, y, address } = picked.value
+  anchors.add({ id: `pin_${x}_${y}`, name: address, address, x, y })
+  picked.value = null
+}
 </script>
 
 <template>
   <main class="relative flex-1 overflow-hidden" style="--sheet-full: 78dvh; --sheet-peek: 7.5rem">
-    <MapPlaceholder :show-radius="anchors.hasAnchors" />
+    <!-- 키가 없으면 자리표시자로 돈다. 키를 넣는 순간 실제 지도로 바뀐다. -->
+    <MapView
+      v-if="hasKakaoKey"
+      :listings="listings"
+      :anchors="anchors.anchors"
+      :max-minutes="filters.maxMinutes"
+      @pick="onPick"
+    />
+    <MapPlaceholder v-else :show-radius="anchors.hasAnchors" @pick="onPick" />
 
     <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
     <div class="safe-top absolute inset-x-0 top-0 z-30 p-3">
@@ -76,8 +111,44 @@ const total = computed(() => listings.value.length)
       </div>
     </div>
 
+    <!-- 지도에서 찍은 위치의 주소 확인 -->
+    <div
+      v-if="picked"
+      class="absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 rounded-xl bg-white p-4 shadow-lg"
+    >
+      <p class="text-xs text-slate-500">선택한 위치</p>
+      <p class="mt-0.5 font-semibold text-slate-900">
+        {{ picking ? '주소를 확인하는 중…' : picked.address }}
+      </p>
+      <div class="mt-3 flex gap-2">
+        <button
+          type="button"
+          class="h-11 flex-1 rounded-full border border-slate-200 text-sm font-semibold text-slate-600"
+          @click="picked = null"
+        >
+          닫기
+        </button>
+        <button
+          type="button"
+          class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
+          :disabled="picking || !anchors.canAddMore"
+          @click="addPickedAnchor"
+        >
+          {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}
+        </button>
+      </div>
+    </div>
+
     <!-- 우하단 플로팅 버튼 -->
-    <div class="absolute bottom-[calc(var(--sheet-peek)+1rem)] right-4 z-20 flex flex-col gap-3">
+    <!-- 핀 확인 카드가 뜨면 버튼을 위로 밀어 겹치지 않게 한다. -->
+    <div
+      class="absolute right-4 z-20 flex flex-col gap-3 transition-[bottom] duration-200"
+      :class="
+        picked
+          ? 'bottom-[calc(var(--sheet-peek)+10.5rem)]'
+          : 'bottom-[calc(var(--sheet-peek)+1rem)]'
+      "
+    >
       <button
         type="button"
         class="grid size-12 place-items-center rounded-full bg-white shadow-md"
