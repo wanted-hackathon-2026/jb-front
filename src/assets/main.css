@@ -1,17 +1,21 @@
 @import 'tailwindcss';
 
 @theme {
-  /* 디자인 확정 전 임시 팔레트 — 브랜드 컬러가 정해지면 교체한다. */
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-200: #bcdaff;
-  --color-brand-300: #8ec3ff;
-  --color-brand-400: #59a1ff;
-  --color-brand-500: #2f7df6;
-  --color-brand-600: #1a5fdb;
-  --color-brand-700: #164cb0;
-  --color-brand-800: #17418c;
-  --color-brand-900: #183a72;
+  /* 브랜드 팔레트 — Figma 프로토타입에서 추출(hue 174 민트).
+     500/300/200/100 은 시안에서 직접 뽑은 값이고 나머지는 같은 색상각으로 보간했다. */
+  --color-brand-50: #e5faf7;
+  --color-brand-100: #bff1ec;
+  --color-brand-200: #80e3d9;
+  --color-brand-300: #40d6c6;
+  --color-brand-400: #20cfbd;
+  --color-brand-500: #00c8b3;
+  --color-brand-600: #00a494;
+  --color-brand-700: #008074;
+  --color-brand-800: #00655d;
+  --color-brand-900: #00534c;
+
+  /* 강조 파랑 — "방정식 풀이 완료" 배너 전용. 브랜드 색이 아니다. */
+  --color-accent-500: #0c8ce9;
 
   --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
@@ -44,6 +48,22 @@ select,
 textarea,
 button {
   font-size: 16px;
+}
+
+/* Tailwind v4 preflight 는 버튼 커서를 default 로 둔다 — 클릭 가능한 요소는 손가락 커서로. */
+button:not(:disabled),
+[role='button'],
+[role='tab'],
+a[href],
+label[for],
+summary,
+select,
+input[type='range'] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 /* 키보드 사용자에게만 보이는 포커스 링 */

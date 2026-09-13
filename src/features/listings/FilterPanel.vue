@@ -1,0 +1,118 @@
+<script setup lang="ts">
+import RangeSlider from '@/components/ui/RangeSlider.vue'
+import WeightSlider from '@/components/ui/WeightSlider.vue'
+import { formatMoney } from '@/lib/format'
+import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
+import type { DealType, TransportMode } from '@/types/domain'
+
+const filters = useFiltersStore()
+
+const DEALS: { value: DealType; label: string }[] = [
+  { value: 'monthly', label: '월세' },
+  { value: 'jeonse', label: '전세' },
+  { value: 'sale', label: '매매' },
+]
+const TRANSPORTS: { value: TransportMode; label: string }[] = [
+  { value: 'transit', label: '대중교통' },
+  { value: 'car', label: '자가용' },
+  { value: 'walk', label: '도보' },
+]
+const LIFESTYLE = [
+  { key: 'light', icon: '🌤', label: '채광' },
+  { key: 'safety', icon: '🚓', label: '치안' },
+  { key: 'noise', icon: '🔇', label: '소음' },
+  { key: 'convenience', icon: '🏪', label: '편의' },
+] as const
+</script>
+
+<template>
+  <div class="flex flex-col gap-7 px-5 pb-8">
+    <section>
+      <h3 class="mb-3 font-bold text-slate-900">
+        거래유형 <span class="text-sm font-normal text-slate-500">중복선택 가능</span>
+      </h3>
+      <div class="flex gap-2">
+        <button
+          v-for="d in DEALS"
+          :key="d.value"
+          type="button"
+          class="h-11 flex-1 rounded-full border text-sm font-semibold transition-colors"
+          :class="
+            filters.dealTypes.includes(d.value)
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-slate-200 bg-white text-slate-600'
+          "
+          :aria-pressed="filters.dealTypes.includes(d.value)"
+          @click="filters.toggleDealType(d.value)"
+        >
+          {{ d.label }}
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <div class="mb-2 flex items-baseline justify-between">
+        <h3 class="font-bold text-slate-900">보증금</h3>
+        <span class="text-sm font-semibold text-brand-600">
+          {{ formatMoney(filters.deposit[0]) }} ~ {{ formatMoney(filters.deposit[1]) }}
+        </span>
+      </div>
+      <RangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />
+    </section>
+
+    <section v-if="filters.hasRent">
+      <div class="mb-2 flex items-baseline justify-between">
+        <h3 class="font-bold text-slate-900">월세</h3>
+        <span class="text-sm font-semibold text-brand-600">
+          {{ filters.rent[0] }}만원 ~ {{ filters.rent[1] }}만원
+        </span>
+      </div>
+      <RangeSlider v-model="filters.rent" v-bind="RENT_RANGE" label="월세" />
+    </section>
+
+    <section>
+      <h3 class="mb-3 font-bold text-slate-900">거점 이동시간</h3>
+      <div class="mb-3 flex gap-2">
+        <button
+          v-for="t in TRANSPORTS"
+          :key="t.value"
+          type="button"
+          class="h-9 rounded-full px-4 text-sm font-semibold transition-colors"
+          :class="
+            filters.transport === t.value
+              ? 'bg-brand-500 text-white'
+              : 'bg-slate-100 text-slate-600'
+          "
+          :aria-pressed="filters.transport === t.value"
+          @click="filters.transport = t.value"
+        >
+          {{ t.label }}
+        </button>
+      </div>
+      <WeightSlider
+        v-model="filters.maxMinutes"
+        label="최대"
+        v-bind="MINUTES_RANGE"
+        :value-text="`${filters.maxMinutes}분`"
+      />
+    </section>
+
+    <section>
+      <div class="mb-3 flex items-baseline justify-between">
+        <h3 class="font-bold text-slate-900">라이프스타일</h3>
+        <button type="button" class="text-sm font-semibold text-brand-600" @click="filters.reset">
+          초기화
+        </button>
+      </div>
+      <div class="flex flex-col gap-4">
+        <WeightSlider
+          v-for="item in LIFESTYLE"
+          :key="item.key"
+          v-model="filters.lifestyle[item.key]"
+          :icon="item.icon"
+          :label="item.label"
+        />
+      </div>
+    </section>
+  </div>
+</template>

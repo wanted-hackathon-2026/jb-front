@@ -1,0 +1,127 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import AppChip from '@/components/ui/AppChip.vue'
+import BottomSheet from '@/components/ui/BottomSheet.vue'
+import SegmentedControl from '@/components/ui/SegmentedControl.vue'
+import FilterPanel from '@/features/listings/FilterPanel.vue'
+import ListingCard from '@/features/listings/ListingCard.vue'
+import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
+import { getNearbyListings, getScoredListings } from '@/mocks/listings'
+import { useAnchorsStore } from '@/stores/anchors'
+import type { Listing } from '@/types/domain'
+
+const router = useRouter()
+const anchors = useAnchorsStore()
+
+const tab = ref<'listings' | 'filters'>('listings')
+const sheet = ref<'peek' | 'full'>('peek')
+const listings = ref<Listing[]>([])
+const loading = ref(true)
+
+const TABS = [
+  { value: 'listings' as const, label: '주변 매물' },
+  { value: 'filters' as const, label: '검색 필터' },
+]
+
+async function load() {
+  loading.value = true
+  listings.value = anchors.hasAnchors ? await getScoredListings() : await getNearbyListings()
+  loading.value = false
+}
+
+onMounted(load)
+// 거점이 바뀌면 점수 유무가 달라진다 — 목록을 다시 받는다.
+watch(() => anchors.anchors.length, load)
+
+const total = computed(() => listings.value.length)
+</script>
+
+<template>
+  <main class="relative flex-1 overflow-hidden" style="--sheet-full: 78dvh; --sheet-peek: 7.5rem">
+    <MapPlaceholder :show-radius="anchors.hasAnchors" />
+
+    <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
+    <div class="safe-top absolute inset-x-0 top-0 z-30 p-3">
+      <div class="flex items-center gap-2 rounded-full bg-white p-2 pl-3 shadow-md">
+        <div class="flex flex-1 items-center gap-2 overflow-x-auto">
+          <template v-if="anchors.hasAnchors">
+            <AppChip
+              v-for="a in anchors.anchors"
+              :key="a.id"
+              :label="a.name"
+              removable
+              @remove="anchors.remove(a.id)"
+            />
+          </template>
+          <span v-else class="truncate text-slate-400">직장, 학교, 자주 가는 곳 검색</span>
+        </div>
+        <button
+          type="button"
+          class="grid size-10 shrink-0 place-items-center rounded-full text-slate-600"
+          aria-label="거점 검색"
+          @click="router.push({ name: 'search' })"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 우하단 플로팅 버튼 -->
+    <div class="absolute bottom-[calc(var(--sheet-peek)+1rem)] right-4 z-20 flex flex-col gap-3">
+      <button
+        type="button"
+        class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+        aria-label="마이"
+      >
+        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M4.5 20a7.5 7.5 0 0115 0" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+        aria-label="관심 매물"
+      >
+        <svg viewBox="0 0 24 24" class="size-6" fill="currentColor">
+          <path d="M12 20s-7-4.5-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.5-7 9-7 9z" />
+        </svg>
+      </button>
+    </div>
+
+    <BottomSheet v-model="sheet">
+      <div class="flex shrink-0 justify-center pb-3">
+        <SegmentedControl v-model="tab" :options="TABS" />
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <FilterPanel v-if="tab === 'filters'" />
+
+        <template v-else>
+          <div class="flex items-baseline justify-between px-5 pb-1">
+            <p class="text-sm text-slate-500">총 {{ total }}건</p>
+            <p v-if="anchors.hasAnchors" class="text-sm font-semibold text-slate-700">매칭점수순</p>
+          </div>
+          <p v-if="loading" class="px-5 py-10 text-center text-sm text-slate-400">
+            매물을 불러오는 중…
+          </p>
+          <ul v-else class="divide-y divide-slate-100 px-5">
+            <li v-for="l in listings" :key="l.id">
+              <ListingCard :listing="l" />
+            </li>
+          </ul>
+        </template>
+      </div>
+    </BottomSheet>
+  </main>
+</template>
