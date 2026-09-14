@@ -77,6 +77,13 @@ body {
   /* iOS 가로모드에서 폰트가 커지는 것 방지 */
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
+  /*
+    한국어는 기본값에서 음절 사이 어디서나 줄이 바뀐다 — '안심귀가길'이 '안심귀가'와
+    '길'로 쪼개진다. keep-all 로 공백에서만 끊고, 한 단어가 줄보다 길어 넘칠 때만
+    overflow-wrap 이 받아낸다(긴 URL·영문 단어 대비).
+  */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /*
