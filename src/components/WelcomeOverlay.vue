@@ -101,17 +101,19 @@ const STEPS: Step[] = [
     tab: 'listings',
     previewScored: true,
     spots: [
+      // 설명을 둘 다 구멍 위에 둔다 — 아래에 두면 화면 아래쪽을 다 먹어서
+      // 버튼이 갈 곳이 없어지고 지도 위로 올라간다.
       {
         key: 'sort',
         title: '원하는 기준으로 줄 세우기',
         body: '매칭점수순 · 이동효율순 · 가격 낮은순 · 가격 높은순',
-        place: 'below',
+        place: 'above',
       },
       {
         key: 'listing',
         title: '4. 결과는 이렇게 나와요',
         body: '매물마다 100점 만점 매칭점수가 붙고, 점수대에 따라 도넛 색이 달라져요.',
-        place: 'below',
+        place: 'above',
         legend: true,
         // 첫 카드는 정렬 버튼과 맞닿아 테두리가 겹친다 — 가운데쯤의 카드를 짚는다.
         pick: 'middle',
@@ -122,14 +124,38 @@ const STEPS: Step[] = [
 
 /** 구멍이 대상에 딱 붙으면 눌린 것처럼 보인다 — 조금 넉넉하게 뚫는다. */
 const PAD = 8
+/**
+ * 버튼 묶음이 화면 위아래 끝에서 최소한 이만큼은 떨어져 있어야 한다.
+ * 아래쪽은 홈 인디케이터·브라우저 하단 바까지 더해서 잰다 — 모바일에서는 같은 px 라도
+ * 훨씬 붙어 보인다.
+ */
+const EDGE_GAP = 40
+
 /** 구멍이 화면 끝에 닿으면 테두리가 잘려 열린 것처럼 보인다 — 이만큼은 남긴다. */
 const EDGE_CLAMP = 8
+
+/**
+ * 바닥에 떼어 두는 버튼 자리.
+ *
+ * 구멍과 말풍선이 이 아래로 못 내려오게 막는다. 그래야 '이전/다음' 이 단계가 바뀌어도
+ * 늘 같은 자리에 있다 — 자리를 다투게 두면 화면이 짧을 때 버튼이 지도 위로 밀려 올라간다.
+ * 점 여백(16) + 버튼 높이(44) + 위아래 여백(EDGE_GAP, EDGE_CLAMP).
+ */
+const STACK_RESERVE = 16 + 44 + EDGE_GAP + EDGE_CLAMP
+
+/**
+ * 구멍 위에 말풍선이 들어갈 만큼의 자리.
+ *
+ * 여러 후보 중에 하나를 고를 때(pick: 'middle') 쓴다. 앞서 잡힌 구멍 바로 아래 것을
+ * 고르면 그 사이에 말풍선이 안 들어가 글이 앞 구멍의 테두리를 밟는다.
+ */
+const LABEL_ROOM = 110
 /**
  * 말풍선과 구멍 사이 여백.
  * 짧게 둔다 — 설명이 멀리 떨어져 있으면 무엇을 가리키는지 한눈에 안 붙는다.
  * 위쪽은 글의 마지막 줄 아래 여백이 조금 더 있어 보여서 2px 만 더 준다.
  */
-const GAP = { below: 10, above: 12 }
+const GAP = { below: 10, above: 6 }
 
 interface Hole extends Spot {
   x: number
@@ -151,13 +177,6 @@ const stackStyle = ref<Record<string, string>>({})
  */
 const swapping = ref(false)
 const headlineStyle = ref<Record<string, string>>({})
-
-/**
- * 버튼 묶음이 화면 위아래 끝에서 최소한 이만큼은 떨어져 있어야 한다.
- * 아래쪽은 홈 인디케이터·브라우저 하단 바까지 더해서 잰다 — 모바일에서는 같은 px 라도
- * 훨씬 붙어 보인다.
- */
-const EDGE_GAP = 40
 
 const safeBottom = () =>
   Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) ||
@@ -194,15 +213,25 @@ function measureHoles() {
     const css = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
     // 화면 밖으로 넘치면 테두리가 닫히지 않는다 — 보이는 만큼만 뚫는다.
     const top = Math.max(EDGE_CLAMP, r.y - base.y - PAD)
-    const bottom = Math.min(base.height - EDGE_CLAMP, r.bottom - base.y + PAD)
-    placed.push({
+    const bottom = Math.min(base.height - STACK_RESERVE, r.bottom - base.y + PAD)
+    const hole = {
       ...spot,
       x: r.x - base.x - PAD,
       y: top,
       w,
       h: Math.max(0, bottom - top),
       r: Math.min((bottom - top) / 2, css + PAD),
-    })
+    }
+    /*
+      앞서 잡힌 구멍과 겹치면 그쪽을 버리고 이것만 남긴다.
+      화면이 짧으면(320x568) 피할 자리가 없어 두 대상이 맞닿는데, 그대로 두면 테두리가
+      하나로 합쳐지고 말풍선 둘이 같은 자리에 겹쳐 앉는다. 한 번에 하나만 짚는 게 낫다.
+    */
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const p = placed[i]
+      if (hole.y < p.y + p.h && p.y < hole.y + hole.h) placed.splice(i, 1)
+    }
+    placed.push(hole)
   }
   holes.value = placed
   return { root, base, placed }
@@ -218,7 +247,7 @@ async function measure() {
   // 말풍선이 화면 아래로 넘치면(짧은 화면에서 마지막 구멍 아래에 자리가 안 남는다)
   // 전부 구멍 위로 올린다. 하나만 뒤집으면 남은 말풍선과 자리가 엉켜 서로를 덮는다.
   const spills = [...root.querySelectorAll('[data-label]')].some(
-    (el) => el.getBoundingClientRect().bottom > base.bottom - 8,
+    (el) => el.getBoundingClientRect().bottom > base.bottom - STACK_RESERVE,
   )
   // 반대로 위가 잘리면 아래로 내린다. 시트가 화면을 다 덮어 구멍이 꼭대기에 붙으면
   // '위'에 놓인 말풍선이 화면 밖으로 나가 통째로 안 보인다(실제로 iOS 에서 그랬다).
@@ -353,14 +382,30 @@ function choose(spot: Spot, base: DOMRect, placed: Hole[]): Element | null {
     const r = el.getBoundingClientRect()
     return r.top + r.height / 2 - base.top
   }
-  const ok = all.filter((el) => {
+  const inside = all.filter((el) => {
     const r = el.getBoundingClientRect()
     const top = r.top - base.top - PAD
     const bottom = r.bottom - base.top + PAD
-    if (top < 8 || bottom > base.height - 8) return false
-    return !placed.some((p) => top < p.y + p.h && p.y < bottom)
+    return top >= EDGE_CLAMP && bottom <= base.height - STACK_RESERVE
   })
-  const pool = ok.length ? ok : all
+  const gapTo = (el: Element) => {
+    const r = el.getBoundingClientRect()
+    const top = r.top - base.top - PAD
+    const bottom = r.bottom - base.top + PAD
+    return { top, bottom }
+  }
+  // 겹치지 않는 것, 그중에서도 말풍선 자리까지 있는 것을 우선한다.
+  // 한 번에 다 걸러내면 후보가 0 이 되어 맨 앞 것으로 되돌아가고, 그러면 앞 구멍과
+  // 맞닿아 테두리가 하나로 합쳐진다.
+  const clear = inside.filter((el) => {
+    const { top, bottom } = gapTo(el)
+    return placed.every((p) => bottom <= p.y || top >= p.y + p.h)
+  })
+  const roomy = clear.filter((el) => {
+    const { top, bottom } = gapTo(el)
+    return placed.every((p) => bottom <= p.y || top >= p.y + p.h + LABEL_ROOM)
+  })
+  const pool = roomy.length ? roomy : clear.length ? clear : inside.length ? inside : all
   return pool.sort((a, b) => Math.abs(center(a) - mid) - Math.abs(center(b) - mid))[0] ?? null
 }
 
