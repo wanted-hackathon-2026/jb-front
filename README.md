@@ -38,10 +38,35 @@ npm run dev   # http://localhost:5173
 ```
 src/
 ├── assets/       # main.css — Tailwind 테마 토큰 + 모바일 베이스 스타일
-├── lib/          # 순수 함수 (format, listing-sort, score, subway)
+├── components/   # 화면 조각. 하위 폴더 없이 평평하게 둔다
+├── lib/          # 도메인에 기대지 않는 함수·상수 (포맷·정렬·점수 구간·SDK 로더 등)
+│   └── api/      #   서버 호출. 키·베이스가 없으면 mocks 로 떨어진다
+├── mocks/        # ⚠️ 가짜 데이터. 백엔드 연동 시 통째로 삭제한다
 ├── pages/        # 라우트 단위 화면
-└── router/       # 라우트 정의
+├── router/       # 라우트 정의
+├── stores/       # Pinia 스토어
+└── types/        # 도메인 타입
 ```
+
+### 컴포넌트는 폴더로 나누지 않고 이름으로 구분한다
+
+`components/` 는 평평하다. 기능별(`features/`)로도, 범용/특화(`ui/`)로도 쪼개지 않는다.
+대신 **도메인을 모르는 부품에는 `Base` 접두사**를 붙인다 — Vue 스타일 가이드의 방식이다.
+
+```
+BaseBottomSheet  BaseChip  BaseRangeSlider
+BaseScoreDonut   BaseSegmentedControl  BaseWeightSlider   ← 도메인 무지
+ListingCard  FilterPanel  MapView  WelcomeOverlay  …      ← 도메인을 안다
+```
+
+폴더 대신 이름을 쓰는 이유:
+
+- 알파벳 정렬이 알아서 한 덩어리로 모아준다. 폴더 없이도 목록에서 뭉쳐 보인다
+- 성격이 바뀌어도 **파일을 옮기지 않는다** — import 경로가 깨지지 않는다
+
+판별 기준은 하나다. **`@/stores` · `@/types` · `@/lib/api` · `@/mocks` 를 import 하는가.**
+안 하면 `Base` 다. `BaseScoreDonut` 은 `score: number` 만 받고 그게 매칭 점수인지 모른다.
+`ListingCard` 는 `Listing` 을 알므로 아니다.
 
 경로 별칭 `@` 는 `src/` 를 가리킨다 (`vite.config.ts`, `tsconfig.app.json` 양쪽에 정의).
 

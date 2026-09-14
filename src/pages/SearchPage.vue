@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import AppChip from '@/components/ui/AppChip.vue'
+import BaseChip from '@/components/BaseChip.vue'
 import { searchPlaces } from '@/lib/api/places'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import type { PlaceSuggestion } from '@/types/domain'
@@ -124,7 +124,7 @@ function split(name: string) {
         </span>
       </p>
       <div class="flex flex-wrap gap-2">
-        <AppChip
+        <BaseChip
           v-for="a in anchors.anchors"
           :key="a.id"
           :label="a.name"

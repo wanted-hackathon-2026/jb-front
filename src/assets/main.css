@@ -32,7 +32,7 @@
 
 /*
   매칭 점수대별 링 색 — 시안 실측. 상위 두 구간은 브랜드색·강조색과 같은 값이다.
-  유틸리티 클래스로 쓰지 않고 ScoreDonut 의 SVG stroke 에서 var() 로 직접 읽기 때문에
+  유틸리티 클래스로 쓰지 않고 BaseScoreDonut 의 SVG stroke 에서 var() 로 직접 읽기 때문에
   static 으로 둔다 — 기본 @theme 는 유틸리티에 쓰이지 않은 변수를 출력에서 지운다.
 */
 @theme static {

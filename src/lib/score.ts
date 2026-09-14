@@ -1,7 +1,7 @@
 /**
  * 매칭 점수대별 색 — 시안 실측.
  *
- * 도넛(ScoreDonut)과 첫 진입 안내의 범례가 같은 값을 봐야 해서 여기 한 곳에 둔다.
+ * 도넛(BaseScoreDonut)과 첫 진입 안내의 범례가 같은 값을 봐야 해서 여기 한 곳에 둔다.
  * 색 자체는 main.css 의 --color-score-* 토큰이고, 여기서는 '어느 점수대가 어느 색인가'만 정한다.
  */
 export const SCORE_BANDS = [

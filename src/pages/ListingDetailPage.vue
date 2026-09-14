@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ScoreDonut from '@/components/ui/ScoreDonut.vue'
-import RouteTimeline from '@/features/listings/RouteTimeline.vue'
+import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
+import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
 import { formatCommute, formatPrice } from '@/lib/format'
 import type { Listing } from '@/types/domain'
@@ -127,7 +127,7 @@ watch(
             <p class="mt-1 truncate text-sm text-slate-500">{{ listing.address }}</p>
           </div>
 
-          <ScoreDonut v-if="listing.score !== null" :score="listing.score" :size="80" />
+          <BaseScoreDonut v-if="listing.score !== null" :score="listing.score" :size="80" />
         </section>
 
         <hr class="mx-5 border-slate-100" />

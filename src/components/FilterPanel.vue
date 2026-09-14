@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import RangeSlider from '@/components/ui/RangeSlider.vue'
-import WeightSlider from '@/components/ui/WeightSlider.vue'
+import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
+import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
 import { formatMoney } from '@/lib/format'
 import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
 import type { DealType, TransportMode } from '@/types/domain'
@@ -75,7 +75,7 @@ const LIFESTYLE = [
           {{ formatMoney(filters.deposit[0]) }} ~ {{ formatMoney(filters.deposit[1]) }}
         </span>
       </div>
-      <RangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />
+      <BaseRangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />
     </section>
 
     <section data-tour="conditions" v-if="filters.hasRent">
@@ -85,7 +85,7 @@ const LIFESTYLE = [
           {{ filters.rent[0] }}만원 ~ {{ filters.rent[1] }}만원
         </span>
       </div>
-      <RangeSlider v-model="filters.rent" v-bind="RENT_RANGE" label="월세" />
+      <BaseRangeSlider v-model="filters.rent" v-bind="RENT_RANGE" label="월세" />
     </section>
 
     <section data-tour="conditions">
@@ -111,7 +111,7 @@ const LIFESTYLE = [
           최대 {{ filters.maxMinutes }}분
         </span>
       </div>
-      <WeightSlider
+      <BaseWeightSlider
         v-model="filters.maxMinutes"
         label="거점까지 최대 이동시간"
         bare
@@ -124,7 +124,7 @@ const LIFESTYLE = [
         <h3 class="font-bold text-slate-900">라이프스타일</h3>
       </div>
       <div class="flex flex-col gap-4">
-        <WeightSlider
+        <BaseWeightSlider
           v-for="item in LIFESTYLE"
           :key="item.key"
           v-model="filters.lifestyle[item.key]"

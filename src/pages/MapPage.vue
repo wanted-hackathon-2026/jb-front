@@ -2,17 +2,17 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
-import AppChip from '@/components/ui/AppChip.vue'
-import BottomSheet from '@/components/ui/BottomSheet.vue'
-import SegmentedControl from '@/components/ui/SegmentedControl.vue'
-import FilterPanel from '@/features/listings/FilterPanel.vue'
-import ListingList from '@/features/listings/ListingList.vue'
+import BaseChip from '@/components/BaseChip.vue'
+import BaseBottomSheet from '@/components/BaseBottomSheet.vue'
+import BaseSegmentedControl from '@/components/BaseSegmentedControl.vue'
+import FilterPanel from '@/components/FilterPanel.vue'
+import ListingList from '@/components/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import WelcomeOverlay from '@/components/WelcomeOverlay.vue'
-import AnchorPickerLayer from '@/features/anchors/AnchorPickerLayer.vue'
-import { ANCHOR_PICKER } from '@/features/anchors/picker'
-import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
-import MapView from '@/features/map/MapView.vue'
+import AnchorPickerLayer from '@/components/AnchorPickerLayer.vue'
+import { ANCHOR_PICKER } from '@/lib/picker'
+import MapPlaceholder from '@/components/MapPlaceholder.vue'
+import MapView from '@/components/MapView.vue'
 import { hasKakaoKey } from '@/lib/kakao'
 import { useFiltersStore } from '@/stores/filters'
 import { useRecommendationStore } from '@/stores/recommendation'
@@ -96,7 +96,7 @@ async function onPick(coord: { x: number; y: number }) {
 }
 
 /**
- * 추천 요청. 모달은 시트 안이 아니라 페이지 루트에 둔다 — BottomSheet 가 transform 을
+ * 추천 요청. 모달은 시트 안이 아니라 페이지 루트에 둔다 — BaseBottomSheet 가 transform 을
  * 쓰기 때문에 그 안의 `fixed` 는 뷰포트가 아니라 시트를 기준으로 잡힌다.
  */
 const submitting = ref(false)
@@ -149,7 +149,7 @@ function addPickedAnchor() {
       <div data-tour="anchors" class="flex items-center gap-2 rounded-full bg-white p-2 shadow-md">
         <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
           <template v-if="anchors.hasAnchors">
-            <AppChip
+            <BaseChip
               v-for="a in anchors.anchors"
               :key="a.id"
               :label="a.name"
@@ -264,7 +264,7 @@ function addPickedAnchor() {
 
     <!--
       시안 39-2267 — 요청 직후. 기다리지 않고 나가도 된다는 걸 알려주는 게 핵심이다.
-      시트 밖에 둔다: BottomSheet 가 transform 을 쓰기 때문에 그 안의 fixed 는
+      시트 밖에 둔다: BaseBottomSheet 가 transform 을 쓰기 때문에 그 안의 fixed 는
       뷰포트가 아니라 시트를 기준으로 잡힌다.
     -->
     <div
@@ -297,7 +297,7 @@ function addPickedAnchor() {
     <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
     <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
 
-    <BottomSheet v-model="sheet.state" data-tour="sheet">
+    <BaseBottomSheet v-model="sheet.state" data-tour="sheet">
       <!--
         접힌 상태에서 탭을 누르면 시트도 함께 펼친다. 고른 탭의 내용이 접힌 채로 있으면
         눌러도 아무 일이 안 일어난 것처럼 보인다.
@@ -305,7 +305,7 @@ function addPickedAnchor() {
         그때는 값이 안 바뀌어 update 가 오지 않는다.
       -->
       <div class="flex shrink-0 justify-center pb-3" @click="sheet.state = 'full'">
-        <SegmentedControl v-model="sheet.tab" :options="TABS" data-tour="tabs" />
+        <BaseSegmentedControl v-model="sheet.tab" :options="TABS" data-tour="tabs" />
       </div>
 
       <div v-if="sheet.tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
@@ -313,6 +313,6 @@ function addPickedAnchor() {
       </div>
       <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->
       <ListingList v-else class="min-h-0 flex-1" :listings="listings" :loading="loading" />
-    </BottomSheet>
+    </BaseBottomSheet>
   </main>
 </template>

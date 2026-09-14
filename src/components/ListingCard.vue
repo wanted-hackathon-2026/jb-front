@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import ScoreDonut from '@/components/ui/ScoreDonut.vue'
+import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import { formatCommute, formatPrice } from '@/lib/format'
 import type { Listing } from '@/types/domain'
 
@@ -74,6 +74,6 @@ const detailRoute = computed(() =>
       </p>
     </div>
 
-    <ScoreDonut v-if="listing.score !== null" :score="listing.score" />
+    <BaseScoreDonut v-if="listing.score !== null" :score="listing.score" />
   </article>
 </template>

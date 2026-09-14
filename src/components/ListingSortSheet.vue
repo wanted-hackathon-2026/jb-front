@@ -46,7 +46,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
 <template>
   <!--
-    body 로 뺀다. 이 시트는 BottomSheet(transform) 안쪽에서 열리는데, transform 을 쓰는
+    body 로 뺀다. 이 시트는 BaseBottomSheet(transform) 안쪽에서 열리는데, transform 을 쓰는
     조상이 있으면 그 안의 fixed 는 뷰포트가 아니라 조상을 기준으로 잡힌다.
   -->
   <Teleport to="body">

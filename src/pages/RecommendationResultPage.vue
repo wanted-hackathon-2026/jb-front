@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ListingList from '@/features/listings/ListingList.vue'
+import ListingList from '@/components/ListingList.vue'
 import { useRecommendationStore } from '@/stores/recommendation'
 import type { RecommendationStatus } from '@/lib/api/recommendation'
 import type { Listing } from '@/types/domain'
