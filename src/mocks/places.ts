@@ -1,4 +1,4 @@
-/** ⚠️ 가짜 장소 검색. 키가 있으면 `@/api/places` 가 카카오 Places 로 붙는다. */
+/** ⚠️ 가짜 장소 검색. 키가 있으면 `@/lib/api/places` 가 카카오 Places 로 붙는다. */
 import type { PlaceSuggestion } from '@/types/domain'
 
 const PLACES: PlaceSuggestion[] = [

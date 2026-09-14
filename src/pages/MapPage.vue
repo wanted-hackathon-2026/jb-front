@@ -6,11 +6,13 @@ import BottomSheet from '@/components/ui/BottomSheet.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import FilterPanel from '@/features/listings/FilterPanel.vue'
 import ListingCard from '@/features/listings/ListingCard.vue'
+import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
 import MapView from '@/features/map/MapView.vue'
 import { hasKakaoKey } from '@/lib/kakao'
 import { useFiltersStore } from '@/stores/filters'
-import { coordToAddress } from '@/api/places'
+import { useRecommendationStore } from '@/stores/recommendation'
+import { coordToAddress } from '@/lib/api/places'
 import { getNearbyListings, getScoredListings } from '@/mocks/listings'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import type { Listing } from '@/types/domain'
@@ -18,6 +20,7 @@ import type { Listing } from '@/types/domain'
 const router = useRouter()
 const anchors = useAnchorsStore()
 const filters = useFiltersStore()
+const reco = useRecommendationStore()
 
 const tab = ref<'listings' | 'filters'>('listings')
 const sheet = ref<'peek' | 'full'>('peek')
@@ -41,6 +44,9 @@ watch(() => anchors.anchors.length, load)
 
 const total = computed(() => listings.value.length)
 
+/** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
+const runningJob = computed(() => reco.pending.at(-1) ?? null)
+
 /** 지도에서 찍은 지점 — 주소를 확인한 뒤 거점으로 등록할지 고른다. */
 const picked = ref<{ x: number; y: number; address: string } | null>(null)
 const picking = ref(false)
@@ -54,6 +60,28 @@ async function onPick(coord: { x: number; y: number }) {
     picked.value = { ...coord, address }
   }
   picking.value = false
+}
+
+/**
+ * 추천 요청. 모달은 시트 안이 아니라 페이지 루트에 둔다 — BottomSheet 가 transform 을
+ * 쓰기 때문에 그 안의 `fixed` 는 뷰포트가 아니라 시트를 기준으로 잡힌다.
+ */
+const submitting = ref(false)
+const started = ref(false)
+
+async function requestRecommendation() {
+  submitting.value = true
+  try {
+    await reco.request({
+      anchors: anchors.anchors.map(({ name, address, x, y }) => ({ name, address, x, y })),
+      weights: { ...filters.lifestyle },
+      maxMinutes: filters.maxMinutes,
+    })
+    started.value = true
+    sheet.value = 'peek'
+  } finally {
+    submitting.value = false
+  }
 }
 
 function addPickedAnchor() {
@@ -78,8 +106,13 @@ function addPickedAnchor() {
 
     <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
     <div class="safe-top absolute inset-x-0 top-0 z-30 p-3">
-      <div class="flex items-center gap-2 rounded-full bg-white p-2 pl-3 shadow-md">
-        <div class="flex flex-1 items-center gap-2 overflow-x-auto">
+      <!--
+        좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
+        아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
+        왼쪽도 8px + 내용 들여쓰기 10px 로 같은 18px 을 만든다.
+      -->
+      <div class="flex items-center gap-2 rounded-full bg-white p-2 shadow-md">
+        <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
           <template v-if="anchors.hasAnchors">
             <AppChip
               v-for="a in anchors.anchors"
@@ -111,63 +144,66 @@ function addPickedAnchor() {
       </div>
     </div>
 
-    <!-- 지도에서 찍은 위치의 주소 확인 -->
-    <div
-      v-if="picked"
-      class="absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 rounded-xl bg-white p-4 shadow-lg"
-    >
-      <p class="text-xs text-slate-500">선택한 위치</p>
-      <p class="mt-0.5 font-semibold text-slate-900">
-        {{ picking ? '주소를 확인하는 중…' : picked.address }}
-      </p>
-      <div class="mt-3 flex gap-2">
+    <!--
+      지도 위 오버레이 스택. FAB 까지 같은 flex 컬럼에 넣어두면 진행 표시·핀 카드가
+      늘었다 줄었다 해도 bottom 값을 손으로 계산할 필요가 없다.
+    -->
+    <div class="absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 flex flex-col gap-3">
+      <div class="flex flex-col items-end gap-3">
         <button
           type="button"
-          class="h-11 flex-1 rounded-full border border-slate-200 text-sm font-semibold text-slate-600"
-          @click="picked = null"
+          class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+          aria-label="마이"
         >
-          닫기
+          <svg
+            viewBox="0 0 24 24"
+            class="size-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M4.5 20a7.5 7.5 0 0115 0" stroke-linecap="round" />
+          </svg>
         </button>
         <button
           type="button"
-          class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
-          :disabled="picking || !anchors.canAddMore"
-          @click="addPickedAnchor"
+          class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+          aria-label="관심 매물"
         >
-          {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}
+          <svg viewBox="0 0 24 24" class="size-6" fill="currentColor">
+            <path d="M12 20s-7-4.5-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.5-7 9-7 9z" />
+          </svg>
         </button>
       </div>
-    </div>
 
-    <!-- 우하단 플로팅 버튼 -->
-    <!-- 핀 확인 카드가 뜨면 버튼을 위로 밀어 겹치지 않게 한다. -->
-    <div
-      class="absolute right-4 z-20 flex flex-col gap-3 transition-[bottom] duration-200"
-      :class="
-        picked
-          ? 'bottom-[calc(var(--sheet-peek)+10.5rem)]'
-          : 'bottom-[calc(var(--sheet-peek)+1rem)]'
-      "
-    >
-      <button
-        type="button"
-        class="grid size-12 place-items-center rounded-full bg-white shadow-md"
-        aria-label="마이"
-      >
-        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="8" r="3.5" />
-          <path d="M4.5 20a7.5 7.5 0 0115 0" stroke-linecap="round" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        class="grid size-12 place-items-center rounded-full bg-white shadow-md"
-        aria-label="관심 매물"
-      >
-        <svg viewBox="0 0 24 24" class="size-6" fill="currentColor">
-          <path d="M12 20s-7-4.5-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.5-7 9-7 9z" />
-        </svg>
-      </button>
+      <!-- 시안 39-1780 -->
+      <RecommendationProgress v-if="runningJob" :job="runningJob" />
+
+      <!-- 지도에서 찍은 위치의 주소 확인 -->
+      <div v-if="picked" class="rounded-xl bg-white p-4 shadow-lg">
+        <p class="text-xs text-slate-500">선택한 위치</p>
+        <p class="mt-0.5 font-semibold text-slate-900">
+          {{ picking ? '주소를 확인하는 중…' : picked.address }}
+        </p>
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="h-11 flex-1 rounded-full border border-slate-200 text-sm font-semibold text-slate-600"
+            @click="picked = null"
+          >
+            닫기
+          </button>
+          <button
+            type="button"
+            class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
+            :disabled="picking || !anchors.canAddMore"
+            @click="addPickedAnchor"
+          >
+            {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <BottomSheet v-model="sheet">
@@ -176,7 +212,11 @@ function addPickedAnchor() {
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <FilterPanel v-if="tab === 'filters'" />
+        <FilterPanel
+          v-if="tab === 'filters'"
+          :submitting="submitting"
+          @submit="requestRecommendation"
+        />
 
         <template v-else>
           <div class="flex items-baseline justify-between px-5 pb-1">
