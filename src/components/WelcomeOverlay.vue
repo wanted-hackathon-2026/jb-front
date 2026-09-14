@@ -220,8 +220,17 @@ async function measure() {
   const spills = [...root.querySelectorAll('[data-label]')].some(
     (el) => el.getBoundingClientRect().bottom > base.bottom - 8,
   )
+  // 반대로 위가 잘리면 아래로 내린다. 시트가 화면을 다 덮어 구멍이 꼭대기에 붙으면
+  // '위'에 놓인 말풍선이 화면 밖으로 나가 통째로 안 보인다(실제로 iOS 에서 그랬다).
+  const clipped = [...root.querySelectorAll('[data-label]')].some(
+    (el) => el.getBoundingClientRect().top < base.top + EDGE_CLAMP,
+  )
+
   if (spills && placed.some((h) => h.place === 'below')) {
     holes.value = placed.map((h) => ({ ...h, place: 'above' as const }))
+    await nextTick()
+  } else if (clipped && placed.some((h) => h.place === 'above')) {
+    holes.value = placed.map((h) => ({ ...h, place: 'below' as const }))
     await nextTick()
   }
 

@@ -53,7 +53,9 @@ function onClick() {
     :class="{ 'transition-transform duration-300': !dragY }"
     :style="{
       height: 'var(--sheet-full)',
-      transform: `translateY(calc(${state === 'full' ? '0px' : 'var(--sheet-full) - var(--sheet-peek)'} + ${dragY}px))`,
+      // 접었을 때 내려갈 거리는 '제 높이 − peek' 이다. translateY 의 %는 자기 높이를
+      // 기준으로 하므로 100% 라고 쓰면 --sheet-full 이 어떤 단위든 그대로 맞는다.
+      transform: `translateY(calc(${state === 'full' ? '0px' : '100% - var(--sheet-peek)'} + ${dragY}px))`,
     }"
   >
     <!-- 손잡이. 드래그와 탭 둘 다 받는다 — 탭만 되면 모바일에서 답답하다. -->
