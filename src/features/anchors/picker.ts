@@ -7,4 +7,4 @@
  * 두 경로 모두 `anchors.add()` 로 끝나므로 이 상수 한 줄로 오갈 수 있다.
  * 우편번호 쪽이 별로면 'search' 로 되돌린다.
  */
-export const ANCHOR_PICKER: 'postcode' | 'search' = 'postcode'
+export const ANCHOR_PICKER: 'postcode' | 'search' = 'search'
