@@ -47,6 +47,7 @@ function choose(key: SortKey) {
       <button
         v-if="listings.length"
         ref="trigger"
+        data-tour="sort"
         type="button"
         class="-mr-2 flex min-h-11 items-center gap-1.5 px-2 text-sm text-slate-500"
         @click="picking = true"
@@ -79,8 +80,9 @@ function choose(key: SortKey) {
         조건에 맞는 매물이 없어요<br />검색 필터를 넓혀보세요
       </p>
       <ul v-else class="divide-y divide-slate-100 px-5">
-        <li v-for="l in sorted" :key="l.id">
-          <ListingCard :listing="l" />
+        <li v-for="(l, i) in sorted" :key="l.id">
+          <!-- 첫 카드에만 표식을 단다 — 첫 진입 안내가 점수 읽는 법을 여기서 설명한다. -->
+          <ListingCard :listing="l" :data-tour="i === 0 ? 'listing' : undefined" />
         </li>
       </ul>
     </div>

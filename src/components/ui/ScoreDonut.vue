@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { scoreColor } from '@/lib/score'
 
 const props = withDefaults(defineProps<{ score: number; size?: number }>(), { size: 72 })
 
 const R = 26
 const CIRC = 2 * Math.PI * R
 
-/** 점수대별 색 — 시안 실측. 링과 가운데 숫자가 같은 색을 쓴다. */
-const BANDS = [
-  { min: 90, color: 'var(--color-score-high)' },
-  { min: 80, color: 'var(--color-score-good)' },
-  { min: 70, color: 'var(--color-score-fair)' },
-  { min: 0, color: 'var(--color-score-low)' },
-]
-
-const color = computed(() => BANDS.find((b) => props.score >= b.min)!.color)
+/** 링과 가운데 숫자가 같은 색을 쓴다. 구간표는 lib/score.ts 에 있다. */
+const color = computed(() => scoreColor(props.score))
 
 /** 100점이 한 바퀴다. */
 const arc = computed(() => (Math.max(0, Math.min(100, props.score)) / 100) * CIRC)
