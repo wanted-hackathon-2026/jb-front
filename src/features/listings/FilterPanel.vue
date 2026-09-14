@@ -44,7 +44,7 @@ const LIFESTYLE = [
 </script>
 
 <template>
-  <div class="flex flex-col gap-7 px-5 pb-8">
+  <div data-tour="filters" class="flex flex-col gap-7 px-5 pb-8">
     <section>
       <h3 class="mb-3 font-bold text-slate-900">
         거래유형 <span class="text-sm font-normal text-slate-500">중복선택 가능</span>

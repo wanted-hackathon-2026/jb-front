@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { MAX_ANCHORS } from '@/stores/anchors'
-import { useSheetStore } from '@/stores/sheet'
 import { SCORE_BANDS } from '@/lib/score'
+import { useSheetStore } from '@/stores/sheet'
 
 /**
  * 첫 방문에만 뜨는 사용법 안내.
@@ -37,37 +37,46 @@ interface Spot {
 interface Step {
   spots: Spot[]
   headline?: string
-  /** 헤드라인·버튼 묶음을 어디에 앉힐지 (구멍을 피해 단계마다 다르다) */
-  stack: 'middle' | 'bottom'
   /** 이 단계를 보려면 바텀시트가 어떤 상태여야 하는가 */
   sheet: 'peek' | 'full'
+  /** 시트 안에서 어느 탭이 열려 있어야 하는가 */
+  tab: 'listings' | 'filters'
+  /** 목록을 '추천 받은 뒤'(점수 붙은) 상태로 보여줄지 */
+  previewScored?: boolean
 }
 
 const STEPS: Step[] = [
   {
     sheet: 'peek',
-    stack: 'middle',
+    tab: 'listings',
     headline: '통근 시간과 생활 조건을 함께 계산해 100점 만점으로 집을 줄 세워요',
     spots: [
       {
         key: 'anchors',
-        title: '먼저 거점을 등록하세요',
+        title: '1. 거점을 등록하세요',
         body: `직장·학교처럼 자주 가는 곳을 최대 ${MAX_ANCHORS}곳까지. 여기서부터 걸리는 시간이 점수의 1순위예요.`,
         place: 'below',
       },
+    ],
+  },
+  {
+    // 조건을 설명하면서 조건을 안 보여줄 수는 없다 — 시트를 펼쳐 검색 필터를 띄운다.
+    sheet: 'full',
+    tab: 'filters',
+    spots: [
       {
-        key: 'tabs',
-        title: '조건을 정하고, 결과를 봅니다',
-        body: '검색 필터에서 채광·치안·조용함·편의 중요도를 조절하면, 주변 매물에 매칭점수가 붙어요.',
+        key: 'filters',
+        title: '2. 조건마다 중요도를 정하세요',
+        body: '채광·치안·소음·편의를 각각 올리고 내리면 AI가 그 비중대로 찾아줘요. 예산과 이동시간도 여기서 정합니다.',
         place: 'above',
       },
     ],
   },
   {
+    // 추천을 받은 뒤의 화면을 설명하는 단계라, 목록도 점수가 붙은 상태로 보여준다.
     sheet: 'full',
-    // 아래쪽에 앉힌다 — 화면 위에 떠 있으면 불안정해 보인다. 좁은 화면에서는 말풍선이
-    // 구멍 위로 올라가므로(measure 참고) 마지막 구멍 아래가 이 묶음의 자리로 남는다.
-    stack: 'bottom',
+    tab: 'listings',
+    previewScored: true,
     spots: [
       {
         key: 'sort',
@@ -77,14 +86,11 @@ const STEPS: Step[] = [
       },
       {
         key: 'listing',
-        title: '점수는 색으로도 읽혀요',
-        // 첫 방문에는 거점이 없어 점수 도넛이 아직 없다 — '붙는다'가 아니라
-        // '등록하면 붙는다'로 적어야 화면과 어긋나지 않는다.
-        body: '거점을 등록하면 매물마다 100점 만점 점수가 붙어요.',
+        title: '3. 결과는 이렇게 나와요',
+        body: '매물마다 100점 만점 매칭점수가 붙고, 점수대에 따라 도넛 색이 달라져요.',
         place: 'below',
         legend: true,
-        // 첫 카드는 정렬 버튼과 맞닿아 있어 테두리가 서로를 파고든다. 목록 가운데쯤의
-        // 카드를 짚으면 둘이 충분히 떨어진다.
+        // 첫 카드는 정렬 버튼과 맞닿아 테두리가 겹친다 — 가운데쯤의 카드를 짚는다.
         pick: 'middle',
       },
     ],
@@ -93,8 +99,12 @@ const STEPS: Step[] = [
 
 /** 구멍이 대상에 딱 붙으면 눌린 것처럼 보인다 — 조금 넉넉하게 뚫는다. */
 const PAD = 8
-/** 말풍선과 구멍 사이 여백. 위에 놓을 땐 바텀시트 모서리를 피하려 더 띄운다. */
-const GAP = { below: 14, above: 40 }
+/**
+ * 말풍선과 구멍 사이 여백.
+ * 짧게 둔다 — 설명이 멀리 떨어져 있으면 무엇을 가리키는지 한눈에 안 붙는다.
+ * 위쪽은 글의 마지막 줄 아래 여백이 조금 더 있어 보여서 2px 만 더 준다.
+ */
+const GAP = { below: 10, above: 12 }
 
 interface Hole extends Spot {
   x: number
@@ -105,20 +115,20 @@ interface Hole extends Spot {
 }
 
 const step = ref(0)
-/**
- * 시트가 멈췄는지. 말풍선은 이 값이 참일 때만 보인다.
- *
- * 구멍(링)은 시트를 따라 움직여야 대상 위에 붙어 있는 것으로 읽히지만, 글까지 같이
- * 움직이면 화면을 가로질러 쓸고 다닌다 — 2단계에서 1단계로 돌아갈 때 탭 말풍선이
- * 470px 를 훑고 내려갔다. 링은 따라가고, 글은 자리를 잡은 뒤 떠오른다.
- */
-const settled = ref(true)
 const holes = ref<Hole[]>([])
 const size = ref({ w: 0, h: 0 })
 const stackStyle = ref<Record<string, string>>({})
 
-/** 버튼 묶음을 바닥에서 띄우고 싶은 거리. 자리가 모자라면 남는 만큼만 띄운다. */
-const STACK_LIFT = 32
+/**
+ * 버튼 묶음이 화면 위아래 끝에서 최소한 이만큼은 떨어져 있어야 한다.
+ * 아래쪽은 홈 인디케이터·브라우저 하단 바까지 더해서 잰다 — 모바일에서는 같은 px 라도
+ * 훨씬 붙어 보인다.
+ */
+const EDGE_GAP = 40
+
+const safeBottom = () =>
+  Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) ||
+  0
 
 /**
  * 단계별로 마지막에 재 둔 버튼 묶음 자리.
@@ -197,7 +207,7 @@ function baselineStack(i: number) {
     return
   }
   // 처음 가는 단계에만 쓰는 눈대중. 38% 는 '가운데 띠'가 보통 떨어지는 자리다.
-  stackStyle.value = STEPS[i].stack === 'middle' ? { top: '38%' } : { bottom: `${STACK_LIFT}px` }
+  stackStyle.value = { top: '38%' }
 }
 
 function setStack(value: Record<string, string>) {
@@ -216,29 +226,32 @@ function placeStack(root: HTMLElement, base: DOMRect) {
   const h = el ? el.getBoundingClientRect().height : 0
   const labels = [...root.querySelectorAll('[data-label]')].map((p) => p.getBoundingClientRect())
 
-  if (STEPS[step.value].stack === 'middle') {
-    // 말풍선이 비워 둔 띠의 한가운데에 놓는다. 화면 정중앙이 아니라 '남은 자리의 중앙'이다 —
-    // 화면을 기준으로 삼으면 말풍선이 길어질 때 그 위를 덮는다.
-    let top = 0
-    let bottom = base.height
-    holes.value.forEach((hole, i) => {
-      const r = labels[i]
-      if (!r) return
-      if (hole.place === 'below') top = Math.max(top, r.bottom - base.top)
-      else bottom = Math.min(bottom, r.top - base.top)
-    })
-    const centered = top + (bottom - top - h) / 2
-    setStack({ top: `${Math.max(top + 8, Math.round(centered))}px` })
-    return
+  // 말풍선이 비워 둔 띠의 한가운데에 놓는다. 화면 정중앙이 아니라 '남은 자리의 중앙'이다 —
+  // 화면을 기준으로 삼으면 말풍선이 길어질 때 그 위를 덮는다.
+  let top = 0
+  let bottom = base.height
+  holes.value.forEach((hole, i) => {
+    const r = labels[i]
+    if (!r) return
+    if (hole.place === 'below') top = Math.max(top, r.bottom - base.top)
+    else bottom = Math.min(bottom, r.top - base.top)
+  })
+
+  /*
+    접힌 시트가 깔고 앉은 아래쪽은 빈 자리가 아니다. 그걸 빼지 않으면 '남은 자리의
+    중앙'이 눈에 보이는 여백보다 아래로 내려가 어정쩡하게 걸린다.
+    시트를 뚫어 설명하는 단계(펼친 상태)에서는 시트 안이 곧 설명 대상이라 빼지 않는다.
+  */
+  if (STEPS[step.value].sheet === 'peek') {
+    const sheetEl = document.querySelector('[data-tour="sheet"]')
+    if (sheetEl) bottom = Math.min(bottom, sheetEl.getBoundingClientRect().top - base.top)
   }
 
-  const lowest = Math.max(
-    0,
-    ...holes.value.map((x) => x.y + x.h),
-    ...labels.map((p) => p.bottom - base.top),
-  )
-  const room = base.height - h - lowest - 8
-  setStack({ bottom: `${Math.max(0, Math.min(STACK_LIFT, room))}px` })
+  const centered = top + (bottom - top - h) / 2
+  // 화면 끝에 붙지 않게 잘라낸다. 위아래가 다 빠듯하면 위쪽을 살린다(버튼이 잘리면 못 누른다).
+  const floor = base.height - EDGE_GAP - safeBottom() - h
+  const clamped = Math.min(Math.max(top + 8, centered), Math.max(EDGE_GAP, floor))
+  setStack({ top: `${Math.round(clamped)}px` })
 }
 
 /**
@@ -330,43 +343,40 @@ function labelAlign(hole: Hole) {
 function close() {
   // 안내 때문에 펼친 시트는 되돌린다 — 지도가 먼저 보이는 게 이 화면의 기본이다.
   sheet.state = STEPS[0].sheet
+  sheet.tab = STEPS[0].tab
+  sheet.previewScored = false
   emit('close')
 }
 
-/**
- * 시트가 미끄러지는 300ms 동안 매 프레임 구멍을 다시 잡는다.
- * 비워 두고 기다리면 그 시간이 통째로 '로딩'으로 보인다 — 따라가면 대상이 시트와 같이
- * 올라오는 것으로 읽혀서 기다린다는 느낌이 없다.
- */
-function trackSheet(ms: number) {
-  return new Promise<void>((resolve) => {
-    const started = performance.now()
-    const tick = () => {
-      measureHoles()
-      if (performance.now() - started < ms) requestAnimationFrame(tick)
-      else resolve()
-    }
-    requestAnimationFrame(tick)
-  })
-}
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** 단계 이동. 시트 상태는 각 단계가 들고 있어서 앞뒤 어느 쪽으로 가든 같은 코드로 맞는다. */
+/**
+ * 단계 이동.
+ *
+ * 시트를 **먼저** 움직이고 멈춘 뒤에 단계를 바꾼다. 움직이는 화면 위에서 자리를 다시
+ * 잡으면 글과 버튼이 쓸려 다닌다 — 그 동안은 이전 단계의 안내를 그대로 두고, 시트가
+ * 제자리에 선 뒤에 한 번에 갈아끼운다.
+ */
 async function goto(i: number) {
   if (i < 0) return
   if (i >= STEPS.length) return close()
-  const sheetMoves = sheet.state !== STEPS[i].sheet
-  sheet.state = STEPS[i].sheet
+
+  const target = STEPS[i]
+  const sheetMoves = sheet.state !== target.sheet
+  const listChanges = sheet.previewScored !== !!target.previewScored
+  sheet.state = target.sheet
+  sheet.tab = target.tab
+  sheet.previewScored = !!target.previewScored
+  // 시트는 transform 으로 300ms 미끄러지고, 목록이 바뀌면 다시 받아오는 시간이 든다.
+  if (sheetMoves || listChanges) await wait(340)
+
   // 옛 구멍이 남아 잠깐 엉뚱한 자리를 뚫는 걸 막는다.
   holes.value = []
   step.value = i
   // 버튼 자리를 먼저 잡아둔다 — 측정이 끝나고 잡으면 화면을 가로질러 튄다.
   baselineStack(i)
-  settled.value = !sheetMoves
   await nextTick()
-  // 시트가 transform 으로 300ms 미끄러진다.
-  if (sheetMoves) await trackSheet(320)
   await measure()
-  settled.value = true
 }
 
 /**
@@ -460,8 +470,8 @@ onBeforeUnmount(() => {
         v-for="h in holes"
         :key="h.key"
         data-label
-        class="absolute inset-x-0 px-7 transition-opacity duration-200"
-        :class="[labelAlign(h), settled ? 'opacity-100' : 'opacity-0']"
+        class="absolute inset-x-0 px-7"
+        :class="labelAlign(h)"
         :style="labelStyle(h)"
       >
         <span class="block font-bold text-brand-300">{{ h.title }}</span>

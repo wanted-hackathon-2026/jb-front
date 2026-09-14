@@ -28,8 +28,6 @@ const filters = useFiltersStore()
 const reco = useRecommendationStore()
 const sheet = useSheetStore()
 
-const tab = ref<'listings' | 'filters'>('listings')
-
 /**
  * 첫 방문 안내. 한 번 닫으면 localStorage 에 남아 새로고침해도 다시 뜨지 않는다.
  * 스토어를 거치지 않는 이유는 이 값을 볼 곳이 이 화면 하나뿐이어서다.
@@ -45,13 +43,18 @@ const TABS = [
 
 async function load() {
   loading.value = true
-  listings.value = anchors.hasAnchors ? await getScoredListings() : await getNearbyListings()
+  listings.value =
+    anchors.hasAnchors || sheet.previewScored
+      ? await getScoredListings()
+      : await getNearbyListings()
   loading.value = false
 }
 
 onMounted(load)
 // 거점이 바뀌면 점수 유무가 달라진다 — 목록을 다시 받는다.
 watch(() => anchors.anchors.length, load)
+// 안내가 '추천 받은 뒤'를 설명하는 동안에는 점수가 붙은 목록으로 바꿔 보여준다.
+watch(() => sheet.previewScored, load)
 
 /** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
@@ -284,7 +287,7 @@ function addPickedAnchor() {
     <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
     <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
 
-    <BottomSheet v-model="sheet.state">
+    <BottomSheet v-model="sheet.state" data-tour="sheet">
       <!--
         접힌 상태에서 탭을 누르면 시트도 함께 펼친다. 고른 탭의 내용이 접힌 채로 있으면
         눌러도 아무 일이 안 일어난 것처럼 보인다.
@@ -292,10 +295,10 @@ function addPickedAnchor() {
         그때는 값이 안 바뀌어 update 가 오지 않는다.
       -->
       <div class="flex shrink-0 justify-center pb-3" @click="sheet.state = 'full'">
-        <SegmentedControl v-model="tab" :options="TABS" data-tour="tabs" />
+        <SegmentedControl v-model="sheet.tab" :options="TABS" data-tour="tabs" />
       </div>
 
-      <div v-if="tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
+      <div v-if="sheet.tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
         <FilterPanel :submitting="submitting" @submit="requestRecommendation" />
       </div>
       <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->

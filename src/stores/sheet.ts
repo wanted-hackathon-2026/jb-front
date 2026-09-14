@@ -10,5 +10,15 @@ import { defineStore } from 'pinia'
  */
 export const useSheetStore = defineStore('sheet', () => {
   const state = ref<'peek' | 'full'>('peek')
-  return { state }
+  /** 시트 안에서 어느 탭을 보고 있는지. 첫 진입 안내가 '검색 필터'를 펼쳐 보여준다. */
+  const tab = ref<'listings' | 'filters'>('listings')
+  /**
+   * 첫 진입 안내가 '추천을 받은 뒤'를 설명하는 동안만 참.
+   *
+   * 안내 3단계는 결과 화면을 설명하는데, 첫 방문에는 거점도 추천도 없어서 목록에
+   * 점수가 없다. 설명만 점수 얘기를 하고 화면엔 없으면 어긋나므로, 그 동안만 점수가
+   * 붙은 목록을 보여준다. 안내가 끝나면 원래대로 돌아간다.
+   */
+  const previewScored = ref(false)
+  return { state, tab, previewScored }
 })
