@@ -1,10 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import ScoreDonut from '@/components/ui/ScoreDonut.vue'
 import { formatCommute, formatPrice } from '@/lib/format'
 import type { Listing } from '@/types/domain'
 
-defineProps<{ listing: Listing }>()
+const props = defineProps<{
+  listing: Listing
+  /** 추천 결과 목록에서 왔다면 그 추천의 id. 주변 매물 목록에서는 없다. */
+  recommendationId?: string
+}>()
+
+/** 맥락이 있으면 추천 상세로, 없으면 매물 상세로 보낸다. */
+const detailRoute = computed(() =>
+  props.recommendationId
+    ? {
+        name: 'recommendation-listing',
+        params: { recommendationId: props.recommendationId, id: props.listing.id },
+      }
+    : { name: 'listing-detail', params: { id: props.listing.id } },
+)
 </script>
 
 <template>
@@ -14,7 +29,7 @@ defineProps<{ listing: Listing }>()
       인터랙티브 요소가 되어 접근성이 깨지므로, 링크를 겹쳐 깔고 찜 버튼만 위로 올린다.
     -->
     <RouterLink
-      :to="{ name: 'listing-detail', params: { id: listing.id } }"
+      :to="detailRoute"
       class="absolute inset-0 z-10 rounded-xl"
       :aria-label="`${formatPrice(listing.dealType, listing.deposit, listing.rent)} 상세 보기`"
     />

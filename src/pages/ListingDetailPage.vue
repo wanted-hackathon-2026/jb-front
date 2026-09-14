@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ScoreDonut from '@/components/ui/ScoreDonut.vue'
 import RouteTimeline from '@/features/listings/RouteTimeline.vue'
-import { getListing } from '@/lib/api/listings'
+import { getListing, getRecommendedListing } from '@/lib/api/listings'
 import { formatCommute, formatPrice } from '@/lib/format'
 import type { Listing } from '@/types/domain'
 
-const props = defineProps<{ id: string }>()
+const props = defineProps<{
+  id: string
+  /** 추천 결과에서 들어왔다면 그 추천의 id. 주변 매물에서 들어오면 없다. */
+  recommendationId?: string
+}>()
 
 const router = useRouter()
 const listing = ref<Listing | null>(null)
@@ -28,13 +32,26 @@ const commute = computed(() => {
   return c ? formatCommute(c.minutes, c.transfers, c.walkMinutes) : null
 })
 
-onMounted(async () => {
-  try {
-    listing.value = await getListing(props.id)
-  } catch {
-    failed.value = true
-  }
-})
+/**
+ * 같은 컴포넌트가 두 라우트(/listings/:id, /recommendations/:recId/listings/:id)를 맡는다.
+ * onMounted 로만 받아오면 라우트만 바뀌고 인스턴스가 재사용될 때 옛 매물이 남는다.
+ */
+watch(
+  () => [props.id, props.recommendationId],
+  async () => {
+    listing.value = null
+    failed.value = false
+    try {
+      // 맥락이 있으면 점수·순위·이동 동선이 함께 오는 쪽으로 묻는다.
+      listing.value = props.recommendationId
+        ? await getRecommendedListing(props.recommendationId, props.id)
+        : await getListing(props.id)
+    } catch {
+      failed.value = true
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

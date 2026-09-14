@@ -14,6 +14,18 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: '매물 상세' },
   },
+  /**
+   * 추천 맥락이 붙은 상세. 같은 매물이라도 어느 추천 기준이냐에 따라 점수·순위·이동
+   * 동선이 달라진다 — 맥락 없는 /listings/:id 는 그 값들을 아예 싣지 않는다.
+   * 백엔드도 같은 이유로 엔드포인트를 둘로 나눠 뒀다(lib/api/listings.ts).
+   */
+  {
+    path: '/recommendations/:recommendationId/listings/:id',
+    name: 'recommendation-listing',
+    component: () => import('@/pages/ListingDetailPage.vue'),
+    props: true,
+    meta: { title: '매물 상세' },
+  },
   {
     path: '/recommendations/:recommendationId',
     name: 'recommendation-result',

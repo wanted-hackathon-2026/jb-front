@@ -5,23 +5,22 @@ import ListingSortSheet from './ListingSortSheet.vue'
 import { SORT_LABELS, sortListings, type SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
-const props = defineProps<{ listings: Listing[]; loading?: boolean }>()
+const props = defineProps<{
+  listings: Listing[]
+  loading?: boolean
+  /** 추천 결과 목록이면 그 추천의 id — 카드가 어느 상세로 갈지 정한다. */
+  recommendationId?: string
+}>()
 
 /**
  * 정렬은 이미 받아둔 목록을 프론트에서 다시 줄 세우는 것이다. 목록 API 가 생기면
  * 정렬 키를 서버로 넘기는 쪽으로 옮긴다(README '역할 분담' — 정렬은 백엔드 몫).
  */
-/** 점수가 하나도 없으면(거점 미설정) 점수·이동 기준 정렬은 보여줄 수 없다. */
+/** 점수가 붙어 있으면 추천 결과 목록, 없으면 그냥 매물 조회 목록이다. */
 const hasScores = computed(() => props.listings.some((l) => l.score !== null))
-const options = computed<SortKey[]>(() =>
-  hasScores.value ? ['score', 'commute', 'priceAsc', 'priceDesc'] : ['priceAsc', 'priceDesc'],
-)
+const options: SortKey[] = ['score', 'commute', 'priceAsc', 'priceDesc']
 
-const picked = ref<SortKey>('score')
-// 거점을 지우면 고른 정렬이 목록에서 사라질 수 있다 — 그때는 첫 항목으로 되돌린다.
-const active = computed(() =>
-  options.value.includes(picked.value) ? picked.value : options.value[0],
-)
+const active = ref<SortKey>('score')
 const sorted = computed(() => sortListings(props.listings, active.value))
 
 const picking = ref(false)
@@ -34,14 +33,19 @@ function close() {
 }
 
 function choose(key: SortKey) {
-  picked.value = key
+  active.value = key
   close()
 }
 </script>
 
 <template>
   <div class="flex flex-col">
-    <div class="flex shrink-0 items-center justify-between px-5">
+    <!--
+      집계·정렬 줄은 점수가 있을 때만 둔다.
+      시안이 그렇게 나뉜다 — 추천 결과 화면(39-2654)에는 '총 34건 / 매칭점수순' 이 있고,
+      거점 없이 보는 매물 조회 화면(39-3373)에는 탭 바로 아래가 카드다.
+    -->
+    <div v-if="hasScores" class="flex shrink-0 items-center justify-between px-5">
       <p class="text-sm text-slate-500">총 {{ listings.length }}건</p>
       <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 시안의 오른쪽 정렬은 유지한다. -->
       <button
@@ -82,7 +86,7 @@ function choose(key: SortKey) {
       <ul v-else class="divide-y divide-slate-100 px-5">
         <li v-for="l in sorted" :key="l.id">
           <!-- 첫 진입 안내가 점수 읽는 법을 설명할 때 이 중 하나를 골라 짚는다. -->
-          <ListingCard :listing="l" data-tour="listing" />
+          <ListingCard :listing="l" :recommendation-id="recommendationId" data-tour="listing" />
         </li>
       </ul>
     </div>

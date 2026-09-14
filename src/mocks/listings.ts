@@ -96,10 +96,24 @@ export async function getNearbyListings(): Promise<Listing[]> {
 }
 
 /**
- * 단건 조회. 목록과 같은 목 데이터에서 찾는다.
- * 순위는 매물이 아니라 추천 결과의 성질이라, 목록과 같은 점수순 기준으로 매겨 돌려준다.
+ * 맥락 없는 단건 조회.
+ *
+ * 점수·순위·이동 동선은 '어느 추천 기준이냐'가 있어야 나오는 값이라 싣지 않는다.
+ * 추천을 돌린 적도 없는데 "추천 1순위 · 20분 · 도보 5분" 을 단언하면 거짓말이 된다.
  */
 export async function getMockListing(id: string): Promise<Listing | null> {
+  await new Promise((r) => setTimeout(r, 180))
+  const found = ALL.find((l) => l.id === id)
+  return found ? { ...found, score: null, rank: null, commutes: [], route: [] } : null
+}
+
+/**
+ * 추천 맥락이 붙은 단건 조회. 점수·순위·이동 동선이 함께 온다.
+ *
+ * 목 데이터는 추천마다 다른 점수를 갖지 않아서 recommendationId 를 쓰지 않는다 —
+ * 실제 API 는 이 값으로 기준을 갈라 다른 점수를 내려준다.
+ */
+export async function getMockRecommendedListing(id: string): Promise<Listing | null> {
   await new Promise((r) => setTimeout(r, 180))
   const ranked = await getScoredListings()
   return ranked.find((l) => l.id === id) ?? null

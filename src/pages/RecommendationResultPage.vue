@@ -70,6 +70,11 @@ onMounted(async () => {
       </button>
     </div>
 
-    <ListingList v-else class="min-h-0 flex-1 pt-4" :listings="items" />
+    <ListingList
+      v-else
+      class="min-h-0 flex-1 pt-4"
+      :listings="items"
+      :recommendation-id="recommendationId"
+    />
   </main>
 </template>
