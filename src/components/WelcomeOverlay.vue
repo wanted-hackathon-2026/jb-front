@@ -143,6 +143,13 @@ const step = ref(0)
 const holes = ref<Hole[]>([])
 const size = ref({ w: 0, h: 0 })
 const stackStyle = ref<Record<string, string>>({})
+/**
+ * 단계를 갈아끼우는 중인지.
+ *
+ * 옛 구멍을 그대로 둔 채 시트를 움직이면, 민트 영역이 이미 비켜난 자리를 가리키며
+ * 남아 있다가 툭 사라진다. 누르는 즉시 지우고, 새 안내는 떠오르듯 들어오게 한다.
+ */
+const swapping = ref(false)
 const headlineStyle = ref<Record<string, string>>({})
 
 /**
@@ -280,11 +287,16 @@ function placeStack(root: HTMLElement, base: DOMRect) {
   // 물리면 비어 있는 띠 중 넓은 쪽 한가운데로 피한다.
   const tops = taken.map((t) => t.top)
   const bottoms = taken.map((t) => t.bottom)
-  const above = { top: EDGE_GAP, bottom: tops.length ? Math.min(...tops) : floor }
+  // 띠의 시작은 화면 끝(EDGE_CLAMP)으로 잡는다. 여백은 아래에서 gap 으로 한 번 더
+  // 보장하므로, 여기서 EDGE_GAP 을 먼저 빼면 좁은 띠가 실제보다 작아져 밖으로 밀린다.
+  const above = { top: EDGE_CLAMP, bottom: tops.length ? Math.min(...tops) : floor }
   const below = { top: bottoms.length ? Math.max(...bottoms) : EDGE_GAP, bottom: floor }
   const band = below.bottom - below.top >= above.bottom - above.top ? below : above
+  // 띠가 버튼보다 좁으면 EDGE_GAP 을 고집할 수 없다 — 그대로 두면 말풍선 위로 밀려 올라간다.
+  // 320x568 의 2단계가 그랬다(띠 58px, 버튼 66px).
+  const gap = band.bottom - band.top >= h + EDGE_GAP * 2 ? EDGE_GAP : EDGE_CLAMP
   const centered = band.top + (band.bottom - band.top - h) / 2
-  setStack({ top: `${Math.round(Math.max(EDGE_GAP, Math.min(centered, floor - h)))}px` })
+  setStack({ top: `${Math.round(Math.max(gap, Math.min(centered, floor - h)))}px` })
 }
 
 /** 헤드라인은 말풍선과 버튼 사이에 남은 띠의 한가운데에 놓는다. */
@@ -424,6 +436,12 @@ async function goto(i: number) {
   if (i >= STEPS.length) return close()
 
   const target = STEPS[i]
+
+  // 옛 안내를 먼저 지운다 — 대상이 움직이는 동안 남아 있으면 엉뚱한 자리를 가리킨다.
+  swapping.value = true
+  holes.value = []
+  await nextTick()
+
   const sheetMoves = sheet.state !== target.sheet
   const listChanges =
     sheet.previewScored !== !!target.previewScored ||
@@ -444,13 +462,12 @@ async function goto(i: number) {
       ?.scrollIntoView({ block: spot.union ? 'start' : 'center' })
   }
 
-  // 옛 구멍이 남아 잠깐 엉뚱한 자리를 뚫는 걸 막는다.
-  holes.value = []
   step.value = i
   // 버튼 자리를 먼저 잡아둔다 — 측정이 끝나고 잡으면 화면을 가로질러 튄다.
   baselineStack(i)
   await nextTick()
   await measure()
+  swapping.value = false
 }
 
 /**
@@ -544,8 +561,8 @@ onBeforeUnmount(() => {
         v-for="h in holes"
         :key="h.key"
         data-label
-        class="absolute inset-x-0 px-7"
-        :class="labelAlign(h)"
+        class="absolute inset-x-0 px-7 transition-opacity duration-200"
+        :class="[labelAlign(h), swapping ? 'opacity-0' : 'opacity-100']"
         :style="labelStyle(h)"
       >
         <span class="block font-bold text-brand-300">{{ h.title }}</span>
@@ -570,7 +587,8 @@ onBeforeUnmount(() => {
       <p
         v-if="STEPS[step].headline"
         data-headline
-        class="absolute inset-x-0 text-balance px-7 text-center text-xl font-bold leading-snug break-keep text-white"
+        class="absolute inset-x-0 text-balance px-7 text-center text-xl font-bold leading-snug break-keep text-white transition-opacity duration-200"
+        :class="swapping ? 'opacity-0' : 'opacity-100'"
         :style="headlineStyle"
       >
         {{ STEPS[step].headline }}
