@@ -21,10 +21,25 @@ const TRANSPORTS: { value: TransportMode; label: string }[] = [
   { value: 'walk', label: '도보' },
 ]
 const LIFESTYLE = [
-  { key: 'sunlight', icon: '🌤', label: '채광' },
-  { key: 'safety', icon: '🚓', label: '치안' },
-  { key: 'quietness', icon: '🔇', label: '조용함' },
-  { key: 'infrastructure', icon: '🏪', label: '편의' },
+  {
+    key: 'sunlight',
+    icon: '🌤',
+    label: '채광',
+    hint: '방향·동간거리·주변 고층건물 유무 기반 일조량',
+  },
+  { key: 'safety', icon: '🚓', label: '치안', hint: 'CCTV 밀도·가로등·안심귀가길·경찰서 접근성' },
+  {
+    key: 'quietness',
+    icon: '🔇',
+    label: '조용함',
+    hint: '대로변·철도·유흥가와의 이격거리, 주변 상권 밀집도',
+  },
+  {
+    key: 'infrastructure',
+    icon: '🏪',
+    label: '편의',
+    hint: '편의점·마트·병원·약국·공원 도보 접근성',
+  },
 ] as const
 </script>
 
@@ -75,7 +90,8 @@ const LIFESTYLE = [
 
     <section>
       <h3 class="mb-3 font-bold text-slate-900">거점 이동시간</h3>
-      <div class="mb-3 flex gap-2">
+      <!-- 시안: 이동수단 칩과 '최대 N분'이 같은 줄에 있고, 슬라이더는 그 아래 전체 폭이다. -->
+      <div class="mb-3 flex items-center gap-2">
         <button
           v-for="t in TRANSPORTS"
           :key="t.value"
@@ -91,12 +107,15 @@ const LIFESTYLE = [
         >
           {{ t.label }}
         </button>
+        <span class="ml-auto shrink-0 text-sm font-semibold text-brand-600">
+          최대 {{ filters.maxMinutes }}분
+        </span>
       </div>
       <WeightSlider
         v-model="filters.maxMinutes"
-        label="최대"
+        label="거점까지 최대 이동시간"
+        bare
         v-bind="MINUTES_RANGE"
-        :value-text="`${filters.maxMinutes}분`"
       />
     </section>
 
@@ -111,6 +130,7 @@ const LIFESTYLE = [
           v-model="filters.lifestyle[item.key]"
           :icon="item.icon"
           :label="item.label"
+          :hint="item.hint"
         />
       </div>
     </section>

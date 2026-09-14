@@ -52,6 +52,22 @@ export interface LifestyleWeights {
   infrastructure: number
 }
 
+/**
+ * 이동 동선의 한 구간. 시안의 막대 한 칸 + 그 아래 정류 표시가 이 단위다.
+ *
+ * ⚠️ 백엔드에 대응하는 테이블이 없다(bc2dc5b 기준 property·recommendation_* 어디에도
+ * 경로·역·구간 컬럼이 없다). 대중교통 경로는 ODsay 같은 외부 API 를 백엔드가 풀어
+ * 내려줘야 채워지는 값이라, 지금은 화면을 굴리기 위한 목 전용 모양이다.
+ */
+export interface RouteLeg {
+  mode: 'subway' | 'bus' | 'walk' | 'transfer'
+  minutes: number
+  /** 노선명('8호선'). 막대 색과 동그라미 표기를 여기서 고른다. 도보·환승은 없다. */
+  line?: string
+  /** 아래 정류 표시에 찍을 곳. 환승 구간은 표시하지 않으므로 없다. */
+  stop?: string
+}
+
 export interface Listing {
   id: string
   dealType: DealType
@@ -72,6 +88,27 @@ export interface Listing {
   commutes: CommuteInfo[]
   /** 인근 지하철 노선 */
   lines: string[]
+
+  /*
+   * 아래는 상세 화면 시안이 요구하는데 **백엔드에 출처가 없는** 값들이다
+   * (jb-backend bc2dc5b 의 Flyway 마이그레이션 기준).
+   * property 에는 exclusive_area(전용면적)까지만 있고 공급면적·욕실 수·사진이 없으며,
+   * recommendation_result 는 (추천, 매물) 짝만 들고 있어 점수도 순위도 없다.
+   * 계약이 생기면 여기부터 지운다.
+   */
+
+  /** 공급면적(평) */
+  supplyPyeong: number
+  /** 욕실 수 */
+  bathrooms: number
+  /** 사진 장수 — 시안의 "4 / 13" 인디케이터 */
+  photoCount: number
+  /** AI 추천 요약 한 줄 */
+  aiSummary: string
+  /** 이 추천 안에서의 순위. 1~3 위만 배지로 보여준다. */
+  rank: number | null
+  /** 거점까지의 이동 동선 */
+  route: RouteLeg[]
 }
 
 /** 검색 자동완성 결과 */
