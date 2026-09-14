@@ -143,6 +143,7 @@ const step = ref(0)
 const holes = ref<Hole[]>([])
 const size = ref({ w: 0, h: 0 })
 const stackStyle = ref<Record<string, string>>({})
+const headlineStyle = ref<Record<string, string>>({})
 
 /**
  * 버튼 묶음이 화면 위아래 끝에서 최소한 이만큼은 떨어져 있어야 한다.
@@ -218,6 +219,9 @@ async function measure() {
   }
 
   placeStack(root, base)
+  await nextTick()
+  const stackEl = root.querySelector('[data-stack]')
+  placeHeadline(root, base, stackEl ? stackEl.getBoundingClientRect().top - base.top : base.height)
 }
 
 /**
@@ -281,6 +285,22 @@ function placeStack(root: HTMLElement, base: DOMRect) {
   const band = below.bottom - below.top >= above.bottom - above.top ? below : above
   const centered = band.top + (band.bottom - band.top - h) / 2
   setStack({ top: `${Math.round(Math.max(EDGE_GAP, Math.min(centered, floor - h)))}px` })
+}
+
+/** 헤드라인은 말풍선과 버튼 사이에 남은 띠의 한가운데에 놓는다. */
+function placeHeadline(root: HTMLElement, base: DOMRect, stackTop: number) {
+  const el = root.querySelector('[data-headline]')
+  if (!el) {
+    headlineStyle.value = {}
+    return
+  }
+  const h = el.getBoundingClientRect().height
+  const labelBottoms = [...root.querySelectorAll('[data-label]')].map(
+    (p) => p.getBoundingClientRect().bottom - base.top,
+  )
+  const top = Math.max(EDGE_GAP, ...labelBottoms, ...holes.value.map((x) => x.y + x.h))
+  const centered = top + (stackTop - EDGE_GAP - top - h) / 2
+  headlineStyle.value = { top: `${Math.round(Math.max(top + EDGE_GAP, centered))}px` }
 }
 
 /** 같은 표식이 붙은 것들을 하나로 묶은 사각형. 여러 섹션을 한 영역으로 보여줄 때 쓴다. */
@@ -543,15 +563,21 @@ onBeforeUnmount(() => {
         </span>
       </p>
 
-      <!-- 헤드라인과 진행 버튼. 단계마다 구멍을 피해 자리를 옮긴다. -->
-      <div data-stack class="absolute inset-x-0 px-7 text-center" :style="stackStyle">
-        <p
-          v-if="STEPS[step].headline"
-          class="mb-6 text-balance text-xl font-bold leading-snug break-keep text-white"
-        >
-          {{ STEPS[step].headline }}
-        </p>
+      <!--
+        서비스 한 줄 소개. 버튼과 한 덩어리로 묶어두면 버튼을 바닥에 고정할 때 문구까지
+        같이 내려가 화면 한가운데가 텅 빈다. 떼어 두고 각자 제자리를 잡게 한다.
+      -->
+      <p
+        v-if="STEPS[step].headline"
+        data-headline
+        class="absolute inset-x-0 text-balance px-7 text-center text-xl font-bold leading-snug break-keep text-white"
+        :style="headlineStyle"
+      >
+        {{ STEPS[step].headline }}
+      </p>
 
+      <!-- 진행 버튼. 단계가 바뀌어도 같은 자리에 둔다. -->
+      <div data-stack class="absolute inset-x-0 px-7 text-center" :style="stackStyle">
         <div class="flex items-center justify-center gap-1.5" aria-hidden="true">
           <span
             v-for="(_, i) in STEPS"
