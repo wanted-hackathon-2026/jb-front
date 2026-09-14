@@ -7,6 +7,8 @@ import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import FilterPanel from '@/features/listings/FilterPanel.vue'
 import ListingList from '@/features/listings/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
+import AnchorPickerLayer from '@/features/anchors/AnchorPickerLayer.vue'
+import { ANCHOR_PICKER } from '@/features/anchors/picker'
 import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
 import MapView from '@/features/map/MapView.vue'
 import { hasKakaoKey } from '@/lib/kakao'
@@ -45,6 +47,17 @@ watch(() => anchors.anchors.length, load)
 
 /** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
+
+/**
+ * 거점 고르기 진입점. 두 방식 모두 anchors.add() 로 끝나므로 여기서만 갈린다
+ * (features/anchors/picker.ts 의 상수 한 줄로 되돌릴 수 있다).
+ */
+const pickerOpen = ref(false)
+
+function openAnchorPicker() {
+  if (ANCHOR_PICKER === 'postcode') pickerOpen.value = true
+  else router.push({ name: 'search' })
+}
 
 /** 지도에서 찍은 지점 — 주소를 확인한 뒤 거점으로 등록할지 고른다. */
 const picked = ref<{ x: number; y: number; address: string } | null>(null)
@@ -127,7 +140,7 @@ function addPickedAnchor() {
               v-if="anchors.canAddMore"
               type="button"
               class="inline-flex h-9 shrink-0 items-center rounded-full border border-slate-200 px-3 text-sm font-medium text-slate-600"
-              @click="router.push({ name: 'search' })"
+              @click="openAnchorPicker"
             >
               + 거점 추가
             </button>
@@ -137,7 +150,7 @@ function addPickedAnchor() {
             v-else
             type="button"
             class="min-h-11 flex-1 truncate text-left text-slate-400"
-            @click="router.push({ name: 'search' })"
+            @click="openAnchorPicker"
           >
             직장, 학교, 자주 가는 곳 검색
           </button>
@@ -146,7 +159,7 @@ function addPickedAnchor() {
           type="button"
           class="grid size-10 shrink-0 place-items-center rounded-full text-slate-600"
           aria-label="거점 검색"
-          @click="router.push({ name: 'search' })"
+          @click="openAnchorPicker"
         >
           <svg
             viewBox="0 0 24 24"
@@ -256,6 +269,8 @@ function addPickedAnchor() {
         </div>
       </div>
     </div>
+
+    <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
 
     <BottomSheet v-model="sheet.state">
       <div class="flex shrink-0 justify-center pb-3">
