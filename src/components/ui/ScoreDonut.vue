@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{ score: number; size?: number }>(), { size: 56 })
+const props = withDefaults(defineProps<{ score: number; size?: number }>(), { size: 72 })
 
 const R = 26
 const CIRC = 2 * Math.PI * R
-// 점수대별 색 규칙은 아직 미확정이라 단일 브랜드 색으로 간다.
-const dash = computed(() => `${(props.score / 100) * CIRC} ${CIRC}`)
+
+/** 점수대별 색 — 시안 실측. 링과 가운데 숫자가 같은 색을 쓴다. */
+const BANDS = [
+  { min: 90, color: 'var(--color-score-high)' },
+  { min: 80, color: 'var(--color-score-good)' },
+  { min: 70, color: 'var(--color-score-fair)' },
+  { min: 0, color: 'var(--color-score-low)' },
+]
+
+const color = computed(() => BANDS.find((b) => props.score >= b.min)!.color)
+
+/** 100점이 한 바퀴다. */
+const arc = computed(() => (Math.max(0, Math.min(100, props.score)) / 100) * CIRC)
+const dash = computed(() => `${arc.value} ${CIRC - arc.value}`)
+/**
+ * 호의 '끝'을 12시에 붙인다. 음수 오프셋이 대시 패턴을 그만큼 앞으로 밀어서, 점수가
+ * 낮아지면 시작점만 시계방향으로 물러난다 — 시안의 네 도넛 모두 틈이 12시에서 시작한다.
+ */
+const offset = computed(() => arc.value - CIRC)
 </script>
 
 <template>
@@ -23,13 +40,14 @@ const dash = computed(() => `${(props.score / 100) * CIRC} ${CIRC}`)
         cy="30"
         :r="R"
         fill="none"
-        stroke="var(--color-brand-500)"
+        :stroke="color"
         stroke-width="5"
         stroke-linecap="round"
         :stroke-dasharray="dash"
+        :stroke-dashoffset="offset"
       />
     </svg>
-    <span class="absolute inset-0 grid place-items-center text-base font-bold text-slate-900">
+    <span class="absolute inset-0 grid place-items-center text-lg font-bold" :style="{ color }">
       {{ score }}
     </span>
   </div>

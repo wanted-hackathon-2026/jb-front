@@ -32,18 +32,22 @@ const label = computed(() =>
 </script>
 
 <template>
-  <div class="rounded-xl bg-white p-4 shadow-lg">
-    <p class="text-center text-sm font-medium text-slate-700">{{ label }}</p>
+  <!-- 시안: 지도가 비쳐 보이는 반투명 흰 카드. 흐림(blur)은 쓰지 않는다 —
+       시안에서도 아래 지도 글자가 또렷하게 읽힌다. -->
+  <div class="rounded-card bg-white/80 p-4 shadow-lg">
+    <p class="text-center text-sm font-bold text-slate-900">{{ label }} 👀</p>
     <div
-      class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200"
+      class="mt-2 h-5 overflow-hidden rounded-full bg-slate-200/60"
       role="progressbar"
       :aria-valuenow="Math.round(percent)"
       aria-valuemin="0"
       aria-valuemax="100"
       :aria-label="label"
     >
+      <!-- 그라디언트는 채움 막대 자신에게 건다. 시안에서도 채운 구간 안에서
+           민트→파랑이 다 돌기 때문에, 막대가 자랄수록 색이 늘어나는 게 맞다. -->
       <div
-        class="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out"
+        class="h-full rounded-full bg-linear-to-r/srgb from-brand-500 to-accent-500 transition-[width] duration-500 ease-out"
         :style="{ width: `${percent}%` }"
       />
     </div>

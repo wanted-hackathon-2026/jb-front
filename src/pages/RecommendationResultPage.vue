@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ListingCard from '@/features/listings/ListingCard.vue'
+import ListingList from '@/features/listings/ListingList.vue'
 import { useRecommendationStore } from '@/stores/recommendation'
 import type { RecommendationStatus } from '@/lib/api/recommendation'
 import type { Listing } from '@/types/domain'
@@ -70,13 +70,6 @@ onMounted(async () => {
       </button>
     </div>
 
-    <template v-else>
-      <p class="px-5 pt-4 text-sm text-slate-500">총 {{ items.length }}건</p>
-      <ul class="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto px-5">
-        <li v-for="l in items" :key="l.id">
-          <ListingCard :listing="l" />
-        </li>
-      </ul>
-    </template>
+    <ListingList v-else class="min-h-0 flex-1 pt-4" :listings="items" />
   </main>
 </template>

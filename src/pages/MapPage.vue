@@ -5,7 +5,7 @@ import AppChip from '@/components/ui/AppChip.vue'
 import BottomSheet from '@/components/ui/BottomSheet.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import FilterPanel from '@/features/listings/FilterPanel.vue'
-import ListingCard from '@/features/listings/ListingCard.vue'
+import ListingList from '@/features/listings/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
 import MapView from '@/features/map/MapView.vue'
@@ -41,8 +41,6 @@ async function load() {
 onMounted(load)
 // 거점이 바뀌면 점수 유무가 달라진다 — 목록을 다시 받는다.
 watch(() => anchors.anchors.length, load)
-
-const total = computed(() => listings.value.length)
 
 /** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
@@ -93,7 +91,8 @@ function addPickedAnchor() {
 </script>
 
 <template>
-  <main class="relative flex-1 overflow-hidden" style="--sheet-full: 78dvh; --sheet-peek: 7.5rem">
+  <!-- --sheet-full / --sheet-peek 는 main.css 의 :root 에 있다(완료 배너도 같은 값을 본다). -->
+  <main class="relative flex-1 overflow-hidden">
     <!-- 키가 없으면 자리표시자로 돈다. 키를 넣는 순간 실제 지도로 바뀐다. -->
     <MapView
       v-if="hasKakaoKey"
@@ -105,7 +104,8 @@ function addPickedAnchor() {
     <MapPlaceholder v-else :show-radius="anchors.hasAnchors" @pick="onPick" />
 
     <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
-    <div class="safe-top absolute inset-x-0 top-0 z-30 p-3">
+    <!-- 상단 여백 14px 은 시안에서 실측한 값이다(좌우는 아래 주석의 광학 정렬을 따른다). -->
+    <div class="safe-top absolute inset-x-0 top-0 z-30 p-3 pt-3.5">
       <!--
         좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
         아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
@@ -196,8 +196,9 @@ function addPickedAnchor() {
         </button>
       </div>
 
-      <!-- 시안 39-1780 -->
-      <RecommendationProgress v-if="runningJob" :job="runningJob" />
+      <!-- 시안 39-1780. 모달이 떠 있는 동안엔 감춘다 — 시안 1번 프레임에는 진행 바가 없고,
+           같은 말을 모달과 두 번 하게 된다. -->
+      <RecommendationProgress v-if="runningJob && !started" :job="runningJob" />
 
       <!-- 지도에서 찍은 위치의 주소 확인 -->
       <div v-if="picked" class="rounded-xl bg-white p-4 shadow-lg">
@@ -232,22 +233,26 @@ function addPickedAnchor() {
     -->
     <div
       v-if="started"
-      class="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-6"
+      class="fixed inset-0 z-50 grid place-items-center bg-black/50"
       role="dialog"
       aria-modal="true"
     >
-      <div class="w-full max-w-xs rounded-2xl bg-white p-6 text-center">
-        <p class="font-bold text-slate-900">나만의 방정식이 생성됐어요 ✅</p>
-        <p class="mt-2 text-sm leading-relaxed text-slate-600">
-          AI가 조건에 딱 맞는 매물을 검색하고 있어요!<br />완료되면 바로 알려드릴게요 :)
-        </p>
-        <button
-          type="button"
-          class="mt-5 h-12 w-full rounded-full bg-brand-500 font-semibold text-white"
-          @click="started = false"
-        >
-          확인
-        </button>
+      <!-- 카드는 셸 폭 안에서 좌우 24px 을 남기고 꽉 찬다(시안 실측). fixed 라
+           뷰포트 기준으로 잡히므로 max-w-shell 로 한 번 묶어줘야 데스크톱에서 안 퍼진다. -->
+      <div class="w-full max-w-shell p-6">
+        <div class="rounded-card bg-white p-5 text-center">
+          <p class="text-lg font-bold text-slate-900">나만의 방정식이 생성됐어요 ✅</p>
+          <p class="mt-5 leading-normal text-slate-500">
+            AI가 조건에 딱 맞는 매물을 검색하고 있어요!<br />완료되면 바로 알려드릴게요 :)
+          </p>
+          <button
+            type="button"
+            class="mt-5 h-15 w-full rounded-full bg-brand-500 text-lg font-semibold text-white"
+            @click="started = false"
+          >
+            확인
+          </button>
+        </div>
       </div>
     </div>
 
@@ -256,28 +261,11 @@ function addPickedAnchor() {
         <SegmentedControl v-model="tab" :options="TABS" />
       </div>
 
-      <div class="min-h-0 flex-1 overflow-y-auto">
-        <FilterPanel
-          v-if="tab === 'filters'"
-          :submitting="submitting"
-          @submit="requestRecommendation"
-        />
-
-        <template v-else>
-          <div class="flex items-baseline justify-between px-5 pb-1">
-            <p class="text-sm text-slate-500">총 {{ total }}건</p>
-            <p v-if="anchors.hasAnchors" class="text-sm font-semibold text-slate-700">매칭점수순</p>
-          </div>
-          <p v-if="loading" class="px-5 py-10 text-center text-sm text-slate-400">
-            매물을 불러오는 중…
-          </p>
-          <ul v-else class="divide-y divide-slate-100 px-5">
-            <li v-for="l in listings" :key="l.id">
-              <ListingCard :listing="l" />
-            </li>
-          </ul>
-        </template>
+      <div v-if="tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
+        <FilterPanel :submitting="submitting" @submit="requestRecommendation" />
       </div>
+      <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->
+      <ListingList v-else class="min-h-0 flex-1" :listings="listings" :loading="loading" />
     </BottomSheet>
   </main>
 </template>

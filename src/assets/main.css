@@ -1,21 +1,26 @@
 @import 'tailwindcss';
 
 @theme {
-  /* 브랜드 팔레트 — Figma 프로토타입에서 추출(hue 174 민트).
-     500/300/200/100 은 시안에서 직접 뽑은 값이고 나머지는 같은 색상각으로 보간했다. */
-  --color-brand-50: #e5faf7;
-  --color-brand-100: #bff1ec;
-  --color-brand-200: #80e3d9;
-  --color-brand-300: #40d6c6;
-  --color-brand-400: #20cfbd;
-  --color-brand-500: #00c8b3;
-  --color-brand-600: #00a494;
-  --color-brand-700: #008074;
-  --color-brand-800: #00655d;
-  --color-brand-900: #00534c;
+  /* 브랜드 팔레트 — 시안 스크린샷에서 직접 뽑은 민트.
+     500 은 시안 픽셀값 그대로(#5ac5b3 = hsl(170 48% 56%))이고, 나머지는 같은
+     색상각·채도로 명도만 옮겼다. 600/700 은 흰 바탕 위 본문색으로 쓰이는 자리라
+     명도는 대비비(3.2:1 / 5.2:1)를 보고 잡았다 — 이전 값보다 낮아지지 않게. */
+  --color-brand-50: #f0faf8;
+  --color-brand-100: #d9f2ee;
+  --color-brand-200: #b7e6de;
+  --color-brand-300: #92d9cd;
+  --color-brand-400: #73cebf;
+  --color-brand-500: #5ac5b3;
+  --color-brand-600: #389f8d;
+  --color-brand-700: #2a796c;
+  --color-brand-800: #215e54;
+  --color-brand-900: #1b4b43;
 
-  /* 강조 파랑 — "방정식 풀이 완료" 배너 전용. 브랜드 색이 아니다. */
-  --color-accent-500: #0c8ce9;
+  /* 강조 파랑 — 진행 바와 완료 배너 그라디언트의 '끝색'이다. 단독으로는 쓰지 않는다. */
+  --color-accent-500: #459bf7;
+
+  /* 지도 위에 뜨는 카드(모달·진행 표시·완료 배너)의 공통 라운드. 시안 실측 20px. */
+  --radius-card: 1.25rem;
 
   --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
@@ -25,8 +30,25 @@
   --spacing-shell: 30rem;
 }
 
+/*
+  매칭 점수대별 링 색 — 시안 실측. 상위 두 구간은 브랜드색·강조색과 같은 값이다.
+  유틸리티 클래스로 쓰지 않고 ScoreDonut 의 SVG stroke 에서 var() 로 직접 읽기 때문에
+  static 으로 둔다 — 기본 @theme 는 유틸리티에 쓰이지 않은 변수를 출력에서 지운다.
+*/
+@theme static {
+  --color-score-high: var(--color-brand-500); /* 90점 이상 */
+  --color-score-good: var(--color-accent-500); /* 80~89 */
+  --color-score-fair: #96c092; /* 70~79 */
+  --color-score-low: #e5c884; /* 69 이하 */
+}
+
 :root {
   color-scheme: light;
+
+  /* 바텀시트 높이. MapPage 가 쓰지만 시트 위에 떠야 하는 완료 배너(App.vue)도
+     같은 값을 봐야 해서 한 곳에 둔다. */
+  --sheet-full: 78dvh;
+  --sheet-peek: 7.5rem;
 }
 
 html,
@@ -35,18 +57,37 @@ body,
   height: 100%;
 }
 
-body {
-  @apply bg-slate-100 text-slate-900 antialiased;
-  /* iOS 가로모드에서 폰트가 커지는 것 방지 */
-  -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: none;
+/*
+  문서 자체를 스크롤 대상에서 뺀다. 이걸 안 하면 모바일에서 두 가지가 생긴다.
+  ① 스크롤할 때 주소창이 접혔다 펴지며 dvh 가 바뀌어 셸 높이가 출렁이고,
+     그 찰나에 내용이 뷰포트를 넘겨 스크롤바가 번쩍인다.
+  ② iOS 러버밴드로 셸 바깥이 드러나 위아래에 빈 공간이 보인다.
+  body 를 고정하면 문서가 스크롤되지 않으므로 주소창도 움직이지 않고, 스크롤은
+  전부 셸 안쪽 영역이 맡는다.
+*/
+html {
+  overflow: hidden;
 }
 
-/* iOS 에서 16px 미만 입력창은 포커스 시 화면이 확대된다 — 최소 16px 유지 */
+body {
+  @apply bg-slate-100 text-slate-900 antialiased;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* iOS 가로모드에서 폰트가 커지는 것 방지 */
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+/*
+  iOS 에서 16px 미만 입력창은 포커스 시 화면이 확대된다 — 최소 16px 유지.
+  button 은 일부러 뺐다: 확대는 '입력 가능한' 컨트롤에 포커스할 때만 일어나므로 버튼엔
+  필요 없는데, 이 규칙이 레이어 밖에 있어서 @layer utilities 의 text-* 를 전부 덮어버린다
+  (레이어 없는 선언이 레이어 선언을 이긴다). 그래서 버튼의 글자 크기 지정이 먹지 않았다.
+*/
 input,
 select,
-textarea,
-button {
+textarea {
   font-size: 16px;
 }
 
@@ -85,11 +126,18 @@ button:disabled {
   }
 }
 
-/* 노치 대응 — 상·하단 고정 요소에 사용 */
+/*
+  노치 대응 — 상·하단 고정 요소에 사용.
+
+  padding 이 아니라 margin 인 이유: 이 유틸리티는 p-3 / py-3 같은 자체 여백과 함께
+  쓰이는데, padding 으로 두면 같은 속성을 덮어써서 둘 중 하나만 남는다. 실제로
+  safe-top 이 p-3 를 이겨 padding-top 이 0 이 되는 바람에(인셋 없는 기기에서는
+  env() 가 0) 검색바가 화면 꼭대기에 붙어 있었다. margin 은 겹치지 않고 더해진다.
+*/
 @utility safe-top {
-  padding-top: env(safe-area-inset-top);
+  margin-top: env(safe-area-inset-top);
 }
 
 @utility safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  margin-bottom: env(safe-area-inset-bottom);
 }
