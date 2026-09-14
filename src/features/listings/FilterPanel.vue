@@ -103,9 +103,6 @@ const LIFESTYLE = [
     <section>
       <div class="mb-3 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">라이프스타일</h3>
-        <button type="button" class="text-sm font-semibold text-brand-600" @click="filters.reset">
-          초기화
-        </button>
       </div>
       <div class="flex flex-col gap-4">
         <WeightSlider
@@ -118,13 +115,28 @@ const LIFESTYLE = [
       </div>
     </section>
 
-    <button
-      type="button"
-      class="h-14 w-full rounded-full bg-slate-900 text-base font-bold text-white disabled:opacity-50"
-      :disabled="submitting"
-      @click="$emit('submit')"
-    >
-      {{ submitting ? '요청하는 중…' : 'AI 추천 매물 받아보기' }}
-    </button>
+    <!--
+      시안: 시트 맨 아래에 적용(채움) · 필터 초기화(테두리)를 쌓는다.
+      초기화가 라이프스타일 헤더에 있을 때는 그 섹션만 되돌릴 것처럼 보였는데,
+      실제로는 거래유형·보증금·월세·이동시간까지 전부 되돌린다. 맨 아래로 내려오면
+      되돌리는 범위가 시트 전체라는 게 위치로 드러난다.
+    -->
+    <div class="flex flex-col gap-3">
+      <button
+        type="button"
+        class="h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white disabled:opacity-50"
+        :disabled="submitting"
+        @click="$emit('submit')"
+      >
+        {{ submitting ? '요청하는 중…' : '적용' }}
+      </button>
+      <button
+        type="button"
+        class="h-14 w-full rounded-full border border-slate-200 bg-white text-base font-bold text-slate-900"
+        @click="filters.reset"
+      >
+        필터 초기화
+      </button>
+    </div>
   </div>
 </template>
