@@ -32,7 +32,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="flex flex-1 flex-col bg-white">
+  <main class="flex min-h-0 flex-1 flex-col bg-white">
     <header class="safe-top flex items-center gap-1 border-b border-slate-100 px-2 py-3">
       <button
         type="button"
@@ -72,7 +72,7 @@ onMounted(async () => {
 
     <template v-else>
       <p class="px-5 pt-4 text-sm text-slate-500">총 {{ items.length }}건</p>
-      <ul class="flex-1 divide-y divide-slate-100 overflow-y-auto px-5">
+      <ul class="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto px-5">
         <li v-for="l in items" :key="l.id">
           <ListingCard :listing="l" />
         </li>

@@ -121,8 +121,25 @@ function addPickedAnchor() {
               removable
               @remove="anchors.remove(a.id)"
             />
+            <!-- 시안 프레임 1: 거점이 있을 때는 칩 옆의 이 버튼이 검색으로 가는 길이다. -->
+            <button
+              v-if="anchors.canAddMore"
+              type="button"
+              class="inline-flex h-9 shrink-0 items-center rounded-full border border-slate-200 px-3 text-sm font-medium text-slate-600"
+              @click="router.push({ name: 'search' })"
+            >
+              + 거점 추가
+            </button>
           </template>
-          <span v-else class="truncate text-slate-400">직장, 학교, 자주 가는 곳 검색</span>
+          <!-- 거점이 없으면 바 전체가 검색으로 들어가는 버튼이다(돋보기만으로는 표적이 너무 작다). -->
+          <button
+            v-else
+            type="button"
+            class="min-h-11 flex-1 truncate text-left text-slate-400"
+            @click="router.push({ name: 'search' })"
+          >
+            직장, 학교, 자주 가는 곳 검색
+          </button>
         </div>
         <button
           type="button"
@@ -155,15 +172,14 @@ function addPickedAnchor() {
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="마이"
         >
-          <svg
-            viewBox="0 0 24 24"
-            class="size-6"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="8" r="3.5" />
-            <path d="M4.5 20a7.5 7.5 0 0115 0" stroke-linecap="round" />
+          <!-- 시안 export. width/height 는 떼고 viewBox 만 남겨 size-6 로 제어한다. -->
+          <svg viewBox="0 0 20 19" class="size-6" fill="none" aria-hidden="true">
+            <path
+              d="M10 11.9189C11.3433 11.9189 12.6863 12.0816 14.0293 12.4053C15.2046 12.6886 16.3792 13.0947 17.5527 13.625L18.0547 13.8594C18.6204 14.1372 19.0688 14.5268 19.4014 15.0283C19.7347 15.5286 19.9003 16.0639 19.9004 16.6357V17.5098C19.9003 17.9055 19.7669 18.2335 19.502 18.501C19.2368 18.7666 18.9103 18.9004 18.5156 18.9004H1.48535C1.09093 18.9003 0.76411 18.7665 0.499023 18.5C0.233894 18.2333 0.100505 17.9048 0.0996094 17.5088V16.6357C0.0996838 16.0639 0.265247 15.5286 0.597656 15.0283C0.931215 14.5268 1.3787 14.1362 1.94336 13.8584C3.28575 13.2113 4.6289 12.728 5.97168 12.4053C7.31373 12.0816 8.65668 11.9189 10 11.9189ZM10 0.0996094C11.1601 0.100564 12.1455 0.510295 12.9619 1.33008C13.7783 2.14985 14.1855 3.14088 14.1855 4.30859C14.1855 5.47622 13.7783 6.46738 12.9619 7.28711C12.1455 8.10676 11.16 8.51565 10 8.5166C8.84002 8.51754 7.85447 8.10868 7.03809 7.28711C6.22163 6.4654 5.8145 5.47426 5.81445 4.30859C5.81445 3.14287 6.22162 2.15182 7.03809 1.33008C7.8545 0.508406 8.83995 0.0986734 10 0.0996094Z"
+              fill="#777777"
+              stroke="white"
+              stroke-width="0.2"
+            />
           </svg>
         </button>
         <button
@@ -171,8 +187,11 @@ function addPickedAnchor() {
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="관심 매물"
         >
-          <svg viewBox="0 0 24 24" class="size-6" fill="currentColor">
-            <path d="M12 20s-7-4.5-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.5-7 9-7 9z" />
+          <svg viewBox="0 0 17 15" class="size-6" fill="none" aria-hidden="true">
+            <path
+              d="M7.89484 14.7579C8.0653 14.9249 8.27839 15 8.5 15C8.72161 15 8.9347 14.9165 9.10516 14.7579L15.4977 8.4962C17.5008 6.53421 17.5008 3.44511 15.4977 1.47477C13.5374 -0.428777 10.5115 -0.487219 8.5 1.3078C6.48847 -0.487219 3.46265 -0.437126 1.50226 1.47477C-0.500752 3.44511 -0.500752 6.53421 1.50226 8.4962L7.89484 14.7579Z"
+              fill="#777777"
+            />
           </svg>
         </button>
       </div>

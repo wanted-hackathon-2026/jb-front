@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChip from '@/components/ui/AppChip.vue'
 import { searchPlaces } from '@/lib/api/places'
@@ -24,6 +24,38 @@ function pick(place: PlaceSuggestion) {
   if (!anchors.canAddMore) router.push({ name: 'map' })
 }
 
+/**
+ * 시안의 두 섹션은 헤더 아이콘과 행을 눌렀을 때의 동작만 다르고 생김새가 같다.
+ * 마크업을 한 벌만 두고 여기서 차이를 기술한다.
+ */
+const sections = computed(() => [
+  {
+    key: 'anchor' as const,
+    title: '최근 등록한 거점',
+    empty: '최근 등록한 거점이 없어요',
+    removeLabel: '거점 기록 삭제',
+    clear: anchors.clearRecentAnchors,
+    rows: anchors.recentAnchors.map((p) => ({
+      label: p.name,
+      // 히스토리에 좌표까지 들고 있어서 검색 없이 바로 다시 등록된다.
+      select: () => pick(p),
+      forget: () => anchors.forgetRecentAnchor(p.name),
+    })),
+  },
+  {
+    key: 'search' as const,
+    title: '최근 검색',
+    empty: '최근 검색 기록이 없어요',
+    removeLabel: '검색 기록 삭제',
+    clear: anchors.clearSearches,
+    rows: anchors.recentSearches.map((k) => ({
+      label: k,
+      select: () => (keyword.value = k),
+      forget: () => anchors.forgetSearch(k),
+    })),
+  },
+])
+
 /** 입력어와 일치하는 앞부분만 강조한다. */
 function split(name: string) {
   const q = keyword.value.trim()
@@ -34,8 +66,8 @@ function split(name: string) {
 </script>
 
 <template>
-  <main class="flex flex-1 flex-col bg-white">
-    <div class="safe-top flex items-center gap-1 px-2 py-3">
+  <main class="flex min-h-0 flex-1 flex-col bg-slate-50">
+    <div class="safe-top flex items-center gap-1 bg-white px-2 py-3">
       <button
         type="button"
         class="grid size-10 shrink-0 place-items-center text-slate-700"
@@ -46,7 +78,7 @@ function split(name: string) {
           <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <div class="flex flex-1 items-center rounded-full bg-slate-100 px-4">
+      <div class="flex flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
         <input
           v-model="keyword"
           type="search"
@@ -54,13 +86,40 @@ function split(name: string) {
           placeholder="직장, 학교 등 자주가는 곳 검색"
           autofocus
         />
+        <svg
+          viewBox="0 0 24 24"
+          class="size-5 shrink-0 text-slate-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="M16 16l4.5 4.5" stroke-linecap="round" />
+        </svg>
       </div>
     </div>
 
-    <div v-if="anchors.hasAnchors" class="border-b border-slate-100 px-5 pb-4">
-      <p class="mb-2 text-sm font-bold text-slate-900">
+    <!--
+      시안 프레임 5: 등록한 거점 칩은 '검색어 입력 중' 화면에만 있다.
+      비어 있을 때는 최근 목록 두 섹션이 그 자리를 대신한다.
+    -->
+    <div v-if="keyword.trim() && anchors.hasAnchors" class="bg-white px-5 pb-3">
+      <p class="mb-2 flex items-center gap-1.5 font-bold text-slate-900">
+        <svg
+          viewBox="0 0 24 24"
+          class="size-5 text-brand-500"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
+        </svg>
         등록한 거점
-        <span class="ml-1 text-xs font-normal text-slate-500">
+        <span class="text-sm font-normal text-slate-500">
           주요 거점 순으로 정렬하세요 · 최대 {{ MAX_ANCHORS }}곳
         </span>
       </p>
@@ -75,8 +134,7 @@ function split(name: string) {
       </div>
     </div>
 
-    <!-- 검색어가 있으면 자동완성, 없으면 최근 검색 -->
-    <ul v-if="keyword.trim()" class="flex-1 overflow-y-auto">
+    <ul v-if="keyword.trim()" class="min-h-0 flex-1 overflow-y-auto bg-white">
       <li v-for="p in results" :key="p.id" class="border-b border-slate-100">
         <button type="button" class="w-full px-5 py-3 text-left" @click="pick(p)">
           <p class="font-semibold text-slate-900">
@@ -95,46 +153,76 @@ function split(name: string) {
       </li>
     </ul>
 
-    <div v-else class="flex-1 overflow-y-auto px-5 pt-4">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-sm font-bold text-slate-900">최근 검색</p>
-        <button
-          v-if="anchors.recentSearches.length"
-          type="button"
-          class="text-sm text-slate-400"
-          @click="anchors.clearSearches"
-        >
-          전체삭제
-        </button>
-      </div>
-      <ul v-if="anchors.recentSearches.length" class="overflow-hidden rounded-xl bg-slate-50">
-        <li
-          v-for="k in anchors.recentSearches"
-          :key="k"
-          class="flex items-center justify-between border-b border-white px-4 last:border-0"
-        >
-          <button type="button" class="flex-1 py-3 text-left text-slate-800" @click="keyword = k">
-            {{ k }}
-          </button>
-          <button
-            type="button"
-            class="grid size-8 place-items-center text-slate-400"
-            :aria-label="`${k} 검색 기록 삭제`"
-            @click="anchors.forgetSearch(k)"
-          >
+    <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
+      <section v-for="s in sections" :key="s.key" class="pt-4">
+        <div class="mb-2 flex items-center justify-between px-1">
+          <p class="flex items-center gap-1.5 font-bold text-slate-900">
             <svg
-              viewBox="0 0 16 16"
-              class="size-3.5"
+              viewBox="0 0 24 24"
+              class="size-5 text-brand-500"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
+              aria-hidden="true"
             >
-              <path d="M2 2l12 12M14 2L2 14" />
+              <template v-if="s.key === 'anchor'">
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
+              </template>
+              <template v-else>
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="M16 16l4.5 4.5" stroke-linecap="round" />
+              </template>
             </svg>
+            {{ s.title }}
+          </p>
+          <button
+            v-if="s.rows.length"
+            type="button"
+            class="text-sm text-slate-400"
+            @click="s.clear()"
+          >
+            전체삭제
           </button>
-        </li>
-      </ul>
-      <p v-else class="py-10 text-center text-sm text-slate-400">최근 검색 기록이 없어요</p>
+        </div>
+
+        <ul v-if="s.rows.length" class="overflow-hidden rounded-2xl bg-white">
+          <li
+            v-for="row in s.rows"
+            :key="row.label"
+            class="flex items-center gap-1 border-b border-slate-100 px-4 last:border-0"
+          >
+            <button
+              type="button"
+              class="min-h-11 flex-1 truncate py-3 text-left text-slate-800"
+              @click="row.select()"
+            >
+              {{ row.label }}
+            </button>
+            <button
+              type="button"
+              class="grid size-8 shrink-0 place-items-center text-slate-400"
+              :aria-label="`${row.label} ${s.removeLabel}`"
+              @click="row.forget()"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                class="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M2 2l12 12M14 2L2 14" />
+              </svg>
+            </button>
+          </li>
+        </ul>
+        <p v-else class="rounded-2xl bg-white py-10 text-center text-sm text-slate-400">
+          {{ s.empty }}
+        </p>
+      </section>
     </div>
   </main>
 </template>
