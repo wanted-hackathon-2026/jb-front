@@ -7,6 +7,9 @@ import type { DealType, TransportMode } from '@/types/domain'
 
 const filters = useFiltersStore()
 
+defineProps<{ submitting?: boolean }>()
+defineEmits<{ submit: [] }>()
+
 const DEALS: { value: DealType; label: string }[] = [
   { value: 'monthly', label: '월세' },
   { value: 'jeonse', label: '전세' },
@@ -114,5 +117,14 @@ const LIFESTYLE = [
         />
       </div>
     </section>
+
+    <button
+      type="button"
+      class="h-14 w-full rounded-full bg-slate-900 text-base font-bold text-white disabled:opacity-50"
+      :disabled="submitting"
+      @click="$emit('submit')"
+    >
+      {{ submitting ? '요청하는 중…' : 'AI 추천 매물 받아보기' }}
+    </button>
   </div>
 </template>
