@@ -4,12 +4,13 @@ import { useDocumentVisibility, useIntervalFn, useStorage } from '@vueuse/core'
 import {
   createRecommendation,
   getRecommendation,
+  getRecommendedListings,
   NotFoundError,
   SUCCESS_STATUS,
   type RecommendRequest,
-  type RecommendationResult,
   type RecommendationStatus,
 } from '@/lib/api/recommendation'
+import type { Listing } from '@/types/domain'
 
 /**
  * 추천 작업의 단일 진실 공급원.
@@ -34,7 +35,7 @@ export const useRecommendationStore = defineStore('recommendation', () => {
   // localStorage — 탭을 닫았다 와도 진행 중이던 작업을 기억한다.
   const jobs = useStorage<Job[]>('jb:reco-jobs:v1', [])
   /** 결과 본문은 저장하지 않는다(용량·신선도). 메모리 캐시로만 들고 있는다. */
-  const results = new Map<string, RecommendationResult>()
+  const results = new Map<string, Listing[]>()
 
   const pending = computed(() => jobs.value.filter((j) => !isDone(j.status)))
   /** 완료 팝업이 바라보는 값. 닫으면 null 로 되돌린다. */
@@ -57,10 +58,8 @@ export const useRecommendationStore = defineStore('recommendation', () => {
       try {
         const res = await getRecommendation(job.id)
         job.status = res.status
-        if (res.status === SUCCESS_STATUS) {
-          if (res.result) results.set(job.id, res.result)
-          arrived.value = job
-        }
+        // 목록은 결과 화면이 따로 받아온다 — 폴링이 매 3초마다 끌고 올 이유가 없다.
+        if (res.status === SUCCESS_STATUS) arrived.value = job
       } catch (e) {
         // 서버가 더는 모르는 작업이면 영원히 폴링하지 않도록 정리한다.
         if (e instanceof NotFoundError) job.status = 'FAILED'
@@ -76,13 +75,20 @@ export const useRecommendationStore = defineStore('recommendation', () => {
     return res.recommendationId
   }
 
-  /** 결과 페이지용. 캐시에 없으면 서버에서 받아온다. */
+  /**
+   * 결과 페이지용. 상태를 먼저 묻고, 완료면 목록을 따로 받아온다.
+   * 엔드포인트가 둘로 나뉘어 있어서(API 정의: 처리상태 조회 / 추천 매물 목록) 호출도 둘이다.
+   */
   async function fetchResult(id: string) {
     const cached = results.get(id)
-    if (cached) return { status: SUCCESS_STATUS as RecommendationStatus, result: cached }
+    if (cached) return { status: SUCCESS_STATUS as RecommendationStatus, items: cached }
+
     const res = await getRecommendation(id)
-    if (res.result) results.set(id, res.result)
-    return { status: res.status, result: res.result }
+    if (res.status !== SUCCESS_STATUS) return { status: res.status, items: [] }
+
+    const items = await getRecommendedListings(id)
+    results.set(id, items)
+    return { status: res.status, items }
   }
 
   // 백그라운드 탭에서는 브라우저가 setInterval 을 1분까지 늦춘다. 복귀 즉시 한 번 확인해

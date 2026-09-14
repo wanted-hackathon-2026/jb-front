@@ -22,7 +22,7 @@ onMounted(async () => {
   try {
     const res = await reco.fetchResult(props.recommendationId)
     status.value = res.status
-    items.value = res.result?.items ?? []
+    items.value = res.items
   } catch {
     // 만료·미존재 모두 여기로 온다. 사용자는 며칠 뒤 북마크로 들어올 수 있다(§4.3).
     status.value = 'FAILED'

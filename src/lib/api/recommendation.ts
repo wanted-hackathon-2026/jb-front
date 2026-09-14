@@ -23,14 +23,9 @@ export interface RecommendRequest {
   maxMinutes: number
 }
 
-export interface RecommendationResult {
-  items: Listing[]
-}
-
 export interface RecommendationResponse {
   recommendationId: string
   status: RecommendationStatus
-  result: RecommendationResult | null
   error?: { code: string; message: string }
   estimatedSeconds?: number
 }
@@ -45,17 +40,28 @@ export async function createRecommendation(
   })
 }
 
+/**
+ * 처리 상태 조회. **목록은 여기 오지 않는다** — API 정의상 이 엔드포인트의 응답은
+ * 처리상태(PENDING/PROCESSING/FAILED/…) 뿐이고, 추천 매물 목록은 아래가 따로 맡는다.
+ * 3초마다 도는 폴링이 목록까지 끌고 오지 않는다는 뜻이기도 하다.
+ */
 export async function getRecommendation(id: string): Promise<RecommendationResponse> {
   if (!hasApiBase) {
     const job = readMockJob(id)
     if (!job) throw new NotFoundError(404)
-    return {
-      recommendationId: id,
-      status: job.status,
-      result: job.status === SUCCESS_STATUS ? { items: await getScoredListings() } : null,
-    }
+    return { recommendationId: id, status: job.status }
   }
   return request<RecommendationResponse>(`/api/recommendations/${id}`)
+}
+
+/** 추천 매물 목록. 상태가 완료로 바뀐 뒤에 부른다. */
+export async function getRecommendedListings(id: string): Promise<Listing[]> {
+  if (!hasApiBase) {
+    const job = readMockJob(id)
+    if (!job) throw new NotFoundError(404)
+    return job.status === SUCCESS_STATUS ? getScoredListings() : []
+  }
+  return request<Listing[]>(`/api/recommendations/${id}/properties`)
 }
 
 export { NotFoundError }
