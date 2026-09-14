@@ -65,7 +65,9 @@ const STEPS: Step[] = [
   },
   {
     sheet: 'full',
-    stack: 'top-2',
+    // 아래쪽에 앉힌다 — 화면 위에 떠 있으면 불안정해 보인다. 좁은 화면에서는 말풍선이
+    // 구멍 위로 올라가므로(measure 참고) 마지막 구멍 아래가 이 묶음의 자리로 남는다.
+    stack: 'bottom-2',
     spots: [
       {
         key: 'sort',
@@ -221,6 +223,19 @@ function labelStyle(hole: Hole) {
     : { bottom: `${size.value.h - hole.y + GAP.above}px` }
 }
 
+/**
+ * 글을 구멍이 있는 쪽으로 붙인다.
+ *
+ * 말풍선은 셸 폭을 다 쓰지만 구멍은 그렇지 않다. 정렬 버튼처럼 오른쪽 끝에 있는 작은
+ * 대상 아래에 왼쪽 정렬 글이 오면, 세로로는 붙어 있어도 가로로 240px 쯤 떨어져 보여
+ * 무엇을 가리키는지 흐려진다.
+ */
+function labelAlign(hole: Hole) {
+  const center = hole.x + hole.w / 2
+  if (center > size.value.w * 0.62) return 'text-right'
+  return 'text-left'
+}
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function close() {
@@ -332,12 +347,17 @@ onBeforeUnmount(() => {
         :key="h.key"
         data-label
         class="absolute inset-x-0 px-7"
+        :class="labelAlign(h)"
         :style="labelStyle(h)"
       >
         <span class="block font-bold text-brand-300">{{ h.title }}</span>
         <span class="mt-1 block text-sm leading-normal text-white/85">{{ h.body }}</span>
         <!-- 점수대별 색 범례. 도넛과 같은 표(lib/score.ts)를 본다. -->
-        <span v-if="h.legend" class="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-white/70">
+        <span
+          v-if="h.legend"
+          class="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-white/70"
+          :class="labelAlign(h) === 'text-right' ? 'justify-end' : 'justify-start'"
+        >
           <span v-for="b in SCORE_BANDS" :key="b.label" class="inline-flex items-center gap-1.5">
             <span class="size-2.5 rounded-full" :style="{ background: b.color }" />
             {{ b.label }}
