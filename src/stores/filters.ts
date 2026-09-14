@@ -12,7 +12,12 @@ export const MINUTES_RANGE = { min: 0, max: 60, step: 5 }
  * 첫 진입 기본값 — 시안의 예시 숫자(채광 45·치안 73)를 그대로 쓴다.
  * 초기화가 돌아갈 곳은 이 값이 아니라 아래 NEUTRAL_* 다.
  */
-const DEFAULT_LIFESTYLE: LifestyleWeights = { light: 45, safety: 73, noise: 50, convenience: 50 }
+const DEFAULT_LIFESTYLE: LifestyleWeights = {
+  sunlight: 45,
+  quietness: 50,
+  safety: 73,
+  infrastructure: 50,
+}
 
 /**
  * 초기화가 돌아갈 '조건 없음' 상태.
@@ -22,7 +27,12 @@ const DEFAULT_LIFESTYLE: LifestyleWeights = { light: 45, safety: 73, noise: 50, 
  * 가중치형(라이프스타일)은 **중앙**이 '선호 없음'이다. 가중치를 0 으로 두면
  * "무엇도 중요하지 않다"가 되어 모든 매물이 동점이 된다.
  */
-const NEUTRAL_LIFESTYLE: LifestyleWeights = { light: 50, safety: 50, noise: 50, convenience: 50 }
+const NEUTRAL_LIFESTYLE: LifestyleWeights = {
+  sunlight: 50,
+  quietness: 50,
+  safety: 50,
+  infrastructure: 50,
+}
 
 export const useFiltersStore = defineStore('filters', () => {
   // 거래유형은 중복 선택이다(시안: "중복선택 가능").
@@ -31,7 +41,7 @@ export const useFiltersStore = defineStore('filters', () => {
   const rent = useStorage<[number, number]>('jb:rent:v1', [0, 40])
   const transport = useStorage<TransportMode>('jb:transport:v1', 'transit')
   const maxMinutes = useStorage('jb:max-minutes:v1', 30)
-  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v1', { ...DEFAULT_LIFESTYLE })
+  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v2', { ...DEFAULT_LIFESTYLE })
 
   const hasRent = computed(() => dealTypes.value.includes('monthly'))
 

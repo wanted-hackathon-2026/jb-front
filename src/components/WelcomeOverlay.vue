@@ -58,7 +58,7 @@ const STEPS: Step[] = [
       {
         key: 'tabs',
         title: '조건을 정하고, 결과를 봅니다',
-        body: '검색 필터에서 채광·치안·소음·편의 중요도를 조절하면, 주변 매물에 매칭점수가 붙어요.',
+        body: '검색 필터에서 채광·치안·조용함·편의 중요도를 조절하면, 주변 매물에 매칭점수가 붙어요.',
         place: 'above',
       },
     ],
@@ -119,6 +119,15 @@ const stackStyle = ref<Record<string, string>>({})
 
 /** 버튼 묶음을 바닥에서 띄우고 싶은 거리. 자리가 모자라면 남는 만큼만 띄운다. */
 const STACK_LIFT = 32
+
+/**
+ * 단계별로 마지막에 재 둔 버튼 묶음 자리.
+ *
+ * 되돌아갈 때 추정값으로 세웠다가 측정값으로 보정하면 그 차이만큼 움직인다(1단계에서
+ * 321px → 328px 로 7px 이 툭 내려갔다). 한 번 가 본 단계는 잰 값이 그대로 맞으므로
+ * 추정하지 않고 꺼내 쓴다. 화면 크기가 바뀌면 값이 무의미해지니 비운다.
+ */
+const stackCache = new Map<number, Record<string, string>>()
 
 const panel = ref<HTMLElement | null>(null)
 /** 딤과 설명이 들어가는 셸 폭 상자. 좌표 기준이자 측정 대상이다. */
@@ -182,8 +191,18 @@ async function measure() {
  * 먼저 목적지 근처에 세워두고, 측정 뒤 placeStack 이 몇 픽셀만 다듬는다.
  */
 function baselineStack(i: number) {
-  // 38% 는 '가운데 띠'가 보통 떨어지는 자리를 눈대중한 값일 뿐이다. 정확한 값은 placeStack 이 잡는다.
+  const cached = stackCache.get(i)
+  if (cached) {
+    stackStyle.value = cached
+    return
+  }
+  // 처음 가는 단계에만 쓰는 눈대중. 38% 는 '가운데 띠'가 보통 떨어지는 자리다.
   stackStyle.value = STEPS[i].stack === 'middle' ? { top: '38%' } : { bottom: `${STACK_LIFT}px` }
+}
+
+function setStack(value: Record<string, string>) {
+  stackStyle.value = value
+  stackCache.set(step.value, value)
 }
 
 /**
@@ -209,7 +228,7 @@ function placeStack(root: HTMLElement, base: DOMRect) {
       else bottom = Math.min(bottom, r.top - base.top)
     })
     const centered = top + (bottom - top - h) / 2
-    stackStyle.value = { top: `${Math.max(top + 8, Math.round(centered))}px` }
+    setStack({ top: `${Math.max(top + 8, Math.round(centered))}px` })
     return
   }
 
@@ -219,7 +238,7 @@ function placeStack(root: HTMLElement, base: DOMRect) {
     ...labels.map((p) => p.bottom - base.top),
   )
   const room = base.height - h - lowest - 8
-  stackStyle.value = { bottom: `${Math.max(0, Math.min(STACK_LIFT, room))}px` }
+  setStack({ bottom: `${Math.max(0, Math.min(STACK_LIFT, room))}px` })
 }
 
 /**
@@ -356,6 +375,8 @@ async function goto(i: number) {
  */
 let settle: ReturnType<typeof setTimeout> | undefined
 function remeasure() {
+  // 화면이 바뀌면 재 둔 자리는 더 이상 맞지 않는다.
+  stackCache.clear()
   requestAnimationFrame(measure)
   clearTimeout(settle)
   settle = setTimeout(measure, 350)

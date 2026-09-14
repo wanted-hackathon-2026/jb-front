@@ -21,10 +21,10 @@ const TRANSPORTS: { value: TransportMode; label: string }[] = [
   { value: 'walk', label: '도보' },
 ]
 const LIFESTYLE = [
-  { key: 'light', icon: '🌤', label: '채광' },
+  { key: 'sunlight', icon: '🌤', label: '채광' },
   { key: 'safety', icon: '🚓', label: '치안' },
-  { key: 'noise', icon: '🔇', label: '소음' },
-  { key: 'convenience', icon: '🏪', label: '편의' },
+  { key: 'quietness', icon: '🔇', label: '조용함' },
+  { key: 'infrastructure', icon: '🏪', label: '편의' },
 ] as const
 </script>
 

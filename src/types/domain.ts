@@ -35,12 +35,21 @@ export interface CommuteInfo {
   walkMinutes: number
 }
 
-/** 라이프스타일 가중치 — 전부 1~100 스케일 */
+/**
+ * 라이프스타일 가중치 — 전부 1~100 스케일.
+ *
+ * 키는 DB 컬럼명에 맞춘다. 특히 quietness 는 '소음'이 아니라 **'조용함'** 이다 —
+ * 슬라이더를 올릴수록 조용한 곳을 원한다는 뜻이고, 이름을 noise 로 두면 뜻이 정반대라
+ * 조용한 곳을 원하는 사람이 시끄러운 집을 추천받는다.
+ *
+ * 출처: V2__create_core_domain_tables.sql:113-116 recommendation_criteria
+ *      (jb-backend bc2dc5b)
+ */
 export interface LifestyleWeights {
-  light: number
+  sunlight: number
+  quietness: number
   safety: number
-  noise: number
-  convenience: number
+  infrastructure: number
 }
 
 export interface Listing {
