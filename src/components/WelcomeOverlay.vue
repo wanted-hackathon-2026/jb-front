@@ -105,6 +105,14 @@ interface Hole extends Spot {
 }
 
 const step = ref(0)
+/**
+ * 시트가 멈췄는지. 말풍선은 이 값이 참일 때만 보인다.
+ *
+ * 구멍(링)은 시트를 따라 움직여야 대상 위에 붙어 있는 것으로 읽히지만, 글까지 같이
+ * 움직이면 화면을 가로질러 쓸고 다닌다 — 2단계에서 1단계로 돌아갈 때 탭 말풍선이
+ * 470px 를 훑고 내려갔다. 링은 따라가고, 글은 자리를 잡은 뒤 떠오른다.
+ */
+const settled = ref(true)
 const holes = ref<Hole[]>([])
 const size = ref({ w: 0, h: 0 })
 const stackStyle = ref<Record<string, string>>({})
@@ -334,10 +342,12 @@ async function goto(i: number) {
   step.value = i
   // 버튼 자리를 먼저 잡아둔다 — 측정이 끝나고 잡으면 화면을 가로질러 튄다.
   baselineStack(i)
+  settled.value = !sheetMoves
   await nextTick()
   // 시트가 transform 으로 300ms 미끄러진다.
   if (sheetMoves) await trackSheet(320)
-  measure()
+  await measure()
+  settled.value = true
 }
 
 /**
@@ -429,8 +439,8 @@ onBeforeUnmount(() => {
         v-for="h in holes"
         :key="h.key"
         data-label
-        class="absolute inset-x-0 px-7"
-        :class="labelAlign(h)"
+        class="absolute inset-x-0 px-7 transition-opacity duration-200"
+        :class="[labelAlign(h), settled ? 'opacity-100' : 'opacity-0']"
         :style="labelStyle(h)"
       >
         <span class="block font-bold text-brand-300">{{ h.title }}</span>
