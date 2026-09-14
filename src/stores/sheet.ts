@@ -20,5 +20,7 @@ export const useSheetStore = defineStore('sheet', () => {
    * 붙은 목록을 보여준다. 안내가 끝나면 원래대로 돌아간다.
    */
   const previewScored = ref(false)
-  return { state, tab, previewScored }
+  /** 첫 진입 안내가 'AI가 찾는 중' 화면을 설명하는 동안만 참. 가짜 진행 표시를 띄운다. */
+  const previewProgress = ref(false)
+  return { state, tab, previewScored, previewProgress }
 })

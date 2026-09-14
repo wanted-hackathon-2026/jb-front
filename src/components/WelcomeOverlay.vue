@@ -27,6 +27,10 @@ interface Spot {
   place: 'above' | 'below'
   /** 점수대별 색 범례를 붙일지 */
   legend?: boolean
+  /** 스크롤 영역 안에 있어 화면 밖으로 밀려나 있을 수 있는 대상인지 */
+  scroll?: boolean
+  /** 같은 표식이 여럿이면 하나로 묶어 통째로 뚫을지(여러 섹션을 한 영역으로 보여준다) */
+  union?: boolean
   /**
    * 같은 표식이 여럿일 때 고르는 법.
    * 'middle' — 화면 한가운데에 가장 가까운 것. 목록처럼 같은 요소가 죽 늘어선 경우에 쓴다.
@@ -43,6 +47,8 @@ interface Step {
   tab: 'listings' | 'filters'
   /** 목록을 '추천 받은 뒤'(점수 붙은) 상태로 보여줄지 */
   previewScored?: boolean
+  /** 'AI가 찾는 중' 진행 표시를 띄워 보여줄지 */
+  previewProgress?: boolean
 }
 
 const STEPS: Step[] = [
@@ -65,9 +71,26 @@ const STEPS: Step[] = [
     tab: 'filters',
     spots: [
       {
-        key: 'filters',
+        key: 'conditions',
         title: '2. 조건마다 중요도를 정하세요',
-        body: '채광·치안·소음·편의를 각각 올리고 내리면 AI가 그 비중대로 찾아줘요. 예산과 이동시간도 여기서 정합니다.',
+        body: '예산·이동시간에 더해, 채광·치안·조용함·인프라를 각각 올리고 내리면 AI가 그 비중대로 찾아줘요.',
+        place: 'above',
+        scroll: true,
+        union: true,
+      },
+    ],
+  },
+  {
+    // '적용' 버튼 자체는 글자 그대로라 설명할 게 없다. 정작 모르면 당황하는 건
+    // '눌러도 바로 안 나온다'는 동작이라, 그 화면을 직접 띄워 보여준다.
+    sheet: 'peek',
+    tab: 'listings',
+    previewProgress: true,
+    spots: [
+      {
+        key: 'progress',
+        title: '3. 적용을 누르면 AI가 찾기 시작해요',
+        body: '분석에는 시간이 걸려요. 기다리지 않고 다른 걸 보고 있어도 끝나면 알려드립니다.',
         place: 'above',
       },
     ],
@@ -86,7 +109,7 @@ const STEPS: Step[] = [
       },
       {
         key: 'listing',
-        title: '3. 결과는 이렇게 나와요',
+        title: '4. 결과는 이렇게 나와요',
         body: '매물마다 100점 만점 매칭점수가 붙고, 점수대에 따라 도넛 색이 달라져요.',
         place: 'below',
         legend: true,
@@ -99,6 +122,8 @@ const STEPS: Step[] = [
 
 /** 구멍이 대상에 딱 붙으면 눌린 것처럼 보인다 — 조금 넉넉하게 뚫는다. */
 const PAD = 8
+/** 구멍이 화면 끝에 닿으면 테두리가 잘려 열린 것처럼 보인다 — 이만큼은 남긴다. */
+const EDGE_CLAMP = 8
 /**
  * 말풍선과 구멍 사이 여백.
  * 짧게 둔다 — 설명이 멀리 떨어져 있으면 무엇을 가리키는지 한눈에 안 붙는다.
@@ -155,18 +180,20 @@ function measureHoles() {
   for (const spot of STEPS[step.value].spots) {
     const el = choose(spot, base, placed)
     if (!el) continue
-    const r = el.getBoundingClientRect()
+    const r = spot.union ? unionRect(spot.key) : el.getBoundingClientRect()
     const w = r.width + PAD * 2
-    const h = r.height + PAD * 2
     // 알약 모양(rounded-full)은 계산값이 사실상 무한대로 나온다 — 높이 절반으로 눌러 담는다.
     const css = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
+    // 화면 밖으로 넘치면 테두리가 닫히지 않는다 — 보이는 만큼만 뚫는다.
+    const top = Math.max(EDGE_CLAMP, r.y - base.y - PAD)
+    const bottom = Math.min(base.height - EDGE_CLAMP, r.bottom - base.y + PAD)
     placed.push({
       ...spot,
       x: r.x - base.x - PAD,
-      y: r.y - base.y - PAD,
+      y: top,
       w,
-      h,
-      r: Math.min(h / 2, css + PAD),
+      h: Math.max(0, bottom - top),
+      r: Math.min((bottom - top) / 2, css + PAD),
     })
   }
   holes.value = placed
@@ -226,32 +253,46 @@ function placeStack(root: HTMLElement, base: DOMRect) {
   const h = el ? el.getBoundingClientRect().height : 0
   const labels = [...root.querySelectorAll('[data-label]')].map((p) => p.getBoundingClientRect())
 
-  // 말풍선이 비워 둔 띠의 한가운데에 놓는다. 화면 정중앙이 아니라 '남은 자리의 중앙'이다 —
-  // 화면을 기준으로 삼으면 말풍선이 길어질 때 그 위를 덮는다.
-  let top = 0
-  let bottom = base.height
-  holes.value.forEach((hole, i) => {
-    const r = labels[i]
-    if (!r) return
-    if (hole.place === 'below') top = Math.max(top, r.bottom - base.top)
-    else bottom = Math.min(bottom, r.top - base.top)
-  })
+  // 말풍선과 구멍이 차지한 자리. 둘 다 피해야 버튼이 글자 위에 얹히지 않는다.
+  const taken = [
+    ...labels.map((r) => ({ top: r.top - base.top, bottom: r.bottom - base.top })),
+    ...holes.value.map((x) => ({ top: x.y, bottom: x.y + x.h })),
+  ]
+  const hits = (top: number) => taken.some((t) => t.top < top + h && top < t.bottom)
+
+  const floor = base.height - safeBottom() - EDGE_GAP
 
   /*
-    접힌 시트가 깔고 앉은 아래쪽은 빈 자리가 아니다. 그걸 빼지 않으면 '남은 자리의
-    중앙'이 눈에 보이는 여백보다 아래로 내려가 어정쩡하게 걸린다.
-    시트를 뚫어 설명하는 단계(펼친 상태)에서는 시트 안이 곧 설명 대상이라 빼지 않는다.
+    자리는 단계가 바뀌어도 되도록 같은 곳이어야 한다 — 버튼이 매번 다른 데 있으면
+    누를 때마다 눈으로 찾아야 한다. 그래서 '바닥에서 EDGE_GAP 띄운 자리'를 기본으로
+    삼고, 거기가 구멍·말풍선에 물릴 때만 피해서 옮긴다.
   */
-  if (STEPS[step.value].sheet === 'peek') {
-    const sheetEl = document.querySelector('[data-tour="sheet"]')
-    if (sheetEl) bottom = Math.min(bottom, sheetEl.getBoundingClientRect().top - base.top)
+  const anchored = floor - h
+  if (anchored >= EDGE_GAP && !hits(anchored)) {
+    setStack({ top: `${Math.round(anchored)}px` })
+    return
   }
 
-  const centered = top + (bottom - top - h) / 2
-  // 화면 끝에 붙지 않게 잘라낸다. 위아래가 다 빠듯하면 위쪽을 살린다(버튼이 잘리면 못 누른다).
-  const floor = base.height - EDGE_GAP - safeBottom() - h
-  const clamped = Math.min(Math.max(top + 8, centered), Math.max(EDGE_GAP, floor))
-  setStack({ top: `${Math.round(clamped)}px` })
+  // 물리면 비어 있는 띠 중 넓은 쪽 한가운데로 피한다.
+  const tops = taken.map((t) => t.top)
+  const bottoms = taken.map((t) => t.bottom)
+  const above = { top: EDGE_GAP, bottom: tops.length ? Math.min(...tops) : floor }
+  const below = { top: bottoms.length ? Math.max(...bottoms) : EDGE_GAP, bottom: floor }
+  const band = below.bottom - below.top >= above.bottom - above.top ? below : above
+  const centered = band.top + (band.bottom - band.top - h) / 2
+  setStack({ top: `${Math.round(Math.max(EDGE_GAP, Math.min(centered, floor - h)))}px` })
+}
+
+/** 같은 표식이 붙은 것들을 하나로 묶은 사각형. 여러 섹션을 한 영역으로 보여줄 때 쓴다. */
+function unionRect(key: string): DOMRect {
+  const rects = [...document.querySelectorAll(`[data-tour="${key}"]`)].map((el) =>
+    el.getBoundingClientRect(),
+  )
+  const x = Math.min(...rects.map((r) => r.x))
+  const y = Math.min(...rects.map((r) => r.y))
+  const right = Math.max(...rects.map((r) => r.right))
+  const bottom = Math.max(...rects.map((r) => r.bottom))
+  return new DOMRect(x, y, right - x, bottom - y)
 }
 
 /**
@@ -345,6 +386,7 @@ function close() {
   sheet.state = STEPS[0].sheet
   sheet.tab = STEPS[0].tab
   sheet.previewScored = false
+  sheet.previewProgress = false
   emit('close')
 }
 
@@ -363,12 +405,24 @@ async function goto(i: number) {
 
   const target = STEPS[i]
   const sheetMoves = sheet.state !== target.sheet
-  const listChanges = sheet.previewScored !== !!target.previewScored
+  const listChanges =
+    sheet.previewScored !== !!target.previewScored ||
+    sheet.previewProgress !== !!target.previewProgress
   sheet.state = target.sheet
   sheet.tab = target.tab
   sheet.previewScored = !!target.previewScored
+  sheet.previewProgress = !!target.previewProgress
   // 시트는 transform 으로 300ms 미끄러지고, 목록이 바뀌면 다시 받아오는 시간이 든다.
   if (sheetMoves || listChanges) await wait(340)
+
+  // 스크롤 영역 안에 있는 대상은 보이는 자리로 끌어온다 — 화면 밖에 있으면 뚫을 수도,
+  // 테두리를 닫을 수도 없다.
+  for (const spot of target.spots) {
+    if (!spot.scroll) continue
+    document
+      .querySelector(`[data-tour="${spot.key}"]`)
+      ?.scrollIntoView({ block: spot.union ? 'start' : 'center' })
+  }
 
   // 옛 구멍이 남아 잠깐 엉뚱한 자리를 뚫는 걸 막는다.
   holes.value = []

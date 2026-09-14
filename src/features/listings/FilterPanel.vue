@@ -44,7 +44,7 @@ const LIFESTYLE = [
 </script>
 
 <template>
-  <div data-tour="filters" class="flex flex-col gap-7 px-5 pb-8">
+  <div class="flex flex-col gap-7 px-5 pb-8">
     <section>
       <h3 class="mb-3 font-bold text-slate-900">
         거래유형 <span class="text-sm font-normal text-slate-500">중복선택 가능</span>
@@ -78,7 +78,7 @@ const LIFESTYLE = [
       <RangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />
     </section>
 
-    <section v-if="filters.hasRent">
+    <section data-tour="conditions" v-if="filters.hasRent">
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">월세</h3>
         <span class="text-sm font-semibold text-brand-600">
@@ -88,7 +88,7 @@ const LIFESTYLE = [
       <RangeSlider v-model="filters.rent" v-bind="RENT_RANGE" label="월세" />
     </section>
 
-    <section>
+    <section data-tour="conditions">
       <h3 class="mb-3 font-bold text-slate-900">거점 이동시간</h3>
       <!-- 시안: 이동수단 칩과 '최대 N분'이 같은 줄에 있고, 슬라이더는 그 아래 전체 폭이다. -->
       <div class="mb-3 flex items-center gap-2">
@@ -119,7 +119,7 @@ const LIFESTYLE = [
       />
     </section>
 
-    <section>
+    <section data-tour="conditions">
       <div class="mb-3 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">라이프스타일</h3>
       </div>
@@ -144,6 +144,7 @@ const LIFESTYLE = [
     <div class="flex flex-col gap-3">
       <button
         type="button"
+        data-tour="apply"
         class="h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white disabled:opacity-50"
         :disabled="submitting"
         @click="$emit('submit')"

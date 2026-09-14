@@ -60,6 +60,16 @@ watch(() => sheet.previewScored, load)
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
 
 /**
+ * 첫 진입 안내가 'AI가 찾는 중' 을 설명하는 동안에는 가짜 작업으로 진행 표시를 띄운다.
+ * 추천을 실제로 돌리지 않고도 그 화면이 어떻게 생겼는지 보여줘야 해서다.
+ */
+const shownJob = computed(() =>
+  sheet.previewProgress
+    ? { id: 'tour-preview', status: 'PROCESSING' as const, createdAt: Date.now() }
+    : runningJob.value,
+)
+
+/**
  * 거점 고르기 진입점. 두 방식 모두 anchors.add() 로 끝나므로 여기서만 갈린다
  * (features/anchors/picker.ts 의 상수 한 줄로 되돌릴 수 있다).
  */
@@ -224,7 +234,7 @@ function addPickedAnchor() {
 
       <!-- 시안 39-1780. 모달이 떠 있는 동안엔 감춘다 — 시안 1번 프레임에는 진행 바가 없고,
            같은 말을 모달과 두 번 하게 된다. -->
-      <RecommendationProgress v-if="runningJob && !started" :job="runningJob" />
+      <RecommendationProgress v-if="shownJob && !started" :job="shownJob" data-tour="progress" />
 
       <!-- 지도에서 찍은 위치의 주소 확인 -->
       <div v-if="picked" class="rounded-xl bg-white p-4 shadow-lg">
