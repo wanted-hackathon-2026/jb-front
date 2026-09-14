@@ -135,6 +135,15 @@ const EDGE_GAP = 40
 const EDGE_CLAMP = 8
 
 /**
+ * 구멍의 좌우가 화면 끝에서 최소한 이만큼은 떨어져 있어야 한다.
+ *
+ * 목록·필터의 좌우 여백(px-5 = 20)에서 구멍 여백(PAD)을 뺀 값이다. 대상마다 제 상자가
+ * 조금씩 달라서 — 정렬 버튼은 -mr-2 로 콘텐츠 열 밖으로 8px 나와 있다 — 그대로 두면
+ * 어떤 테두리는 화면 끝에 4px 까지 붙고 어떤 건 12px 떨어져 제각각으로 보인다.
+ */
+const SIDE_INSET = 12
+
+/**
  * 바닥에 떼어 두는 버튼 자리.
  *
  * 구멍과 말풍선이 이 아래로 못 내려오게 막는다. 그래야 '이전/다음' 이 단계가 바뀌어도
@@ -208,17 +217,18 @@ function measureHoles() {
     const el = choose(spot, base, placed)
     if (!el) continue
     const r = spot.union ? unionRect(spot.key) : el.getBoundingClientRect()
-    const w = r.width + PAD * 2
     // 알약 모양(rounded-full)은 계산값이 사실상 무한대로 나온다 — 높이 절반으로 눌러 담는다.
     const css = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
     // 화면 밖으로 넘치면 테두리가 닫히지 않는다 — 보이는 만큼만 뚫는다.
     const top = Math.max(EDGE_CLAMP, r.y - base.y - PAD)
     const bottom = Math.min(base.height - STACK_RESERVE, r.bottom - base.y + PAD)
+    const left = Math.max(SIDE_INSET, r.x - base.x - PAD)
+    const right = Math.min(base.width - SIDE_INSET, r.right - base.x + PAD)
     const hole = {
       ...spot,
-      x: r.x - base.x - PAD,
+      x: left,
       y: top,
-      w,
+      w: Math.max(0, right - left),
       h: Math.max(0, bottom - top),
       r: Math.min((bottom - top) / 2, css + PAD),
     }
