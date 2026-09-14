@@ -12,6 +12,7 @@ import MapView from '@/features/map/MapView.vue'
 import { hasKakaoKey } from '@/lib/kakao'
 import { useFiltersStore } from '@/stores/filters'
 import { useRecommendationStore } from '@/stores/recommendation'
+import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
 import { getNearbyListings, getScoredListings } from '@/mocks/listings'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
@@ -21,9 +22,9 @@ const router = useRouter()
 const anchors = useAnchorsStore()
 const filters = useFiltersStore()
 const reco = useRecommendationStore()
+const sheet = useSheetStore()
 
 const tab = ref<'listings' | 'filters'>('listings')
-const sheet = ref<'peek' | 'full'>('peek')
 const listings = ref<Listing[]>([])
 const loading = ref(true)
 
@@ -76,7 +77,7 @@ async function requestRecommendation() {
       maxMinutes: filters.maxMinutes,
     })
     started.value = true
-    sheet.value = 'peek'
+    sheet.state = 'peek'
   } finally {
     submitting.value = false
   }
@@ -256,7 +257,7 @@ function addPickedAnchor() {
       </div>
     </div>
 
-    <BottomSheet v-model="sheet">
+    <BottomSheet v-model="sheet.state">
       <div class="flex shrink-0 justify-center pb-3">
         <SegmentedControl v-model="tab" :options="TABS" />
       </div>
