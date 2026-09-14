@@ -38,7 +38,7 @@ npm run dev   # http://localhost:5173
 ```
 src/
 ├── assets/       # main.css — Tailwind 테마 토큰 + 모바일 베이스 스타일
-├── lib/          # 순수 함수 (format, listing-sort)
+├── lib/          # 순수 함수 (format, listing-sort, score, subway)
 ├── pages/        # 라우트 단위 화면
 └── router/       # 라우트 정의
 ```

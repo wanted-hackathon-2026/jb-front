@@ -95,8 +95,12 @@ export async function getNearbyListings(): Promise<Listing[]> {
   return ALL.map((l) => ({ ...l, score: null, commutes: [] }))
 }
 
-/** 단건 조회. 목록과 같은 목 데이터에서 찾는다. */
+/**
+ * 단건 조회. 목록과 같은 목 데이터에서 찾는다.
+ * 순위는 매물이 아니라 추천 결과의 성질이라, 목록과 같은 점수순 기준으로 매겨 돌려준다.
+ */
 export async function getMockListing(id: string): Promise<Listing | null> {
   await new Promise((r) => setTimeout(r, 180))
-  return ALL.find((l) => l.id === id) ?? null
+  const ranked = await getScoredListings()
+  return ranked.find((l) => l.id === id) ?? null
 }
