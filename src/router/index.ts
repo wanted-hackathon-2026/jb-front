@@ -8,6 +8,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '지도' },
   },
   {
+    path: '/listings/:id',
+    name: 'listing-detail',
+    component: () => import('@/pages/ListingDetailPage.vue'),
+    props: true,
+    meta: { title: '매물 상세' },
+  },
+  {
     path: '/recommendations/:recommendationId',
     name: 'recommendation-result',
     component: () => import('@/pages/RecommendationResultPage.vue'),

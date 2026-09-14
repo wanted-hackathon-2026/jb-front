@@ -49,3 +49,9 @@ export async function getNearbyListings(): Promise<Listing[]> {
   await new Promise((r) => setTimeout(r, 220))
   return ALL.map((l) => ({ ...l, score: null, commutes: [] }))
 }
+
+/** 단건 조회. 목록과 같은 목 데이터에서 찾는다. */
+export async function getMockListing(id: string): Promise<Listing | null> {
+  await new Promise((r) => setTimeout(r, 180))
+  return ALL.find((l) => l.id === id) ?? null
+}
