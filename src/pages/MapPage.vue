@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import AppChip from '@/components/ui/AppChip.vue'
 import BottomSheet from '@/components/ui/BottomSheet.vue'
@@ -7,6 +8,7 @@ import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import FilterPanel from '@/features/listings/FilterPanel.vue'
 import ListingList from '@/features/listings/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
+import WelcomeOverlay from '@/components/WelcomeOverlay.vue'
 import AnchorPickerLayer from '@/features/anchors/AnchorPickerLayer.vue'
 import { ANCHOR_PICKER } from '@/features/anchors/picker'
 import MapPlaceholder from '@/features/map/MapPlaceholder.vue'
@@ -27,6 +29,12 @@ const reco = useRecommendationStore()
 const sheet = useSheetStore()
 
 const tab = ref<'listings' | 'filters'>('listings')
+
+/**
+ * 첫 방문 안내. 한 번 닫으면 localStorage 에 남아 새로고침해도 다시 뜨지 않는다.
+ * 스토어를 거치지 않는 이유는 이 값을 볼 곳이 이 화면 하나뿐이어서다.
+ */
+const onboarded = useStorage('jb:onboarded:v1', false)
 const listings = ref<Listing[]>([])
 const loading = ref(true)
 
@@ -125,7 +133,7 @@ function addPickedAnchor() {
         아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
         왼쪽도 8px + 내용 들여쓰기 10px 로 같은 18px 을 만든다.
       -->
-      <div class="flex items-center gap-2 rounded-full bg-white p-2 shadow-md">
+      <div data-tour="anchors" class="flex items-center gap-2 rounded-full bg-white p-2 shadow-md">
         <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
           <template v-if="anchors.hasAnchors">
             <AppChip
@@ -198,6 +206,7 @@ function addPickedAnchor() {
         </button>
         <button
           type="button"
+          data-tour="saved"
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="관심 매물"
         >
@@ -272,9 +281,12 @@ function addPickedAnchor() {
 
     <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
 
+    <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
+    <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
+
     <BottomSheet v-model="sheet.state">
       <div class="flex shrink-0 justify-center pb-3">
-        <SegmentedControl v-model="tab" :options="TABS" />
+        <SegmentedControl v-model="tab" :options="TABS" data-tour="tabs" />
       </div>
 
       <div v-if="tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
