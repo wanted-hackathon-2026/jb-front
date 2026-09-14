@@ -532,12 +532,21 @@ async function goto(i: number) {
   await nextTick()
   await measure()
   swapping.value = false
+
+  /*
+    한 번 더 잰다. iOS 는 주소창이 접히거나 스크롤이 늦게 정착하면서 레이아웃이 한 박자
+    뒤에 바뀌는 일이 있다 — 그때 처음 잰 값으로 그린 구멍은 엉뚱한 자리에 남는다.
+    measure 는 같은 값을 다시 써도 아무 일이 없으니(멱등) 보험으로 한 번 더 돌린다.
+  */
+  clearTimeout(recheck)
+  recheck = setTimeout(measure, 260)
 }
 
 /**
  * 리사이즈(회전) 대응. 한 프레임 뒤에 한 번, 350ms 뒤에 또 한 번 잰다.
  * 바텀시트가 transform 으로 300ms 미끄러지기 때문에 첫 측정은 애니메이션 중간값을 잡는다.
  */
+let recheck: ReturnType<typeof setTimeout> | undefined
 let settle: ReturnType<typeof setTimeout> | undefined
 function remeasure() {
   // 화면이 바뀌면 재 둔 자리는 더 이상 맞지 않는다.
@@ -560,6 +569,7 @@ onMounted(() => {
   panel.value?.focus()
 })
 onBeforeUnmount(() => {
+  clearTimeout(recheck)
   clearTimeout(settle)
   window.removeEventListener('resize', remeasure)
   document.removeEventListener('keydown', onKey)
