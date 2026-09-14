@@ -37,8 +37,8 @@ interface Spot {
 interface Step {
   spots: Spot[]
   headline?: string
-  /** 헤드라인·버튼 묶음의 세로 위치 (구멍을 피해 단계마다 다르다) */
-  stack: string
+  /** 헤드라인·버튼 묶음을 어디에 앉힐지 (구멍을 피해 단계마다 다르다) */
+  stack: 'middle' | 'bottom'
   /** 이 단계를 보려면 바텀시트가 어떤 상태여야 하는가 */
   sheet: 'peek' | 'full'
 }
@@ -46,7 +46,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     sheet: 'peek',
-    stack: 'top-[30%]',
+    stack: 'middle',
     headline: '통근 시간과 생활 조건을 함께 계산해 100점 만점으로 집을 줄 세워요',
     spots: [
       {
@@ -67,7 +67,7 @@ const STEPS: Step[] = [
     sheet: 'full',
     // 아래쪽에 앉힌다 — 화면 위에 떠 있으면 불안정해 보인다. 좁은 화면에서는 말풍선이
     // 구멍 위로 올라가므로(measure 참고) 마지막 구멍 아래가 이 묶음의 자리로 남는다.
-    stack: 'bottom-2',
+    stack: 'bottom',
     spots: [
       {
         key: 'sort',
@@ -107,6 +107,10 @@ interface Hole extends Spot {
 const step = ref(0)
 const holes = ref<Hole[]>([])
 const size = ref({ w: 0, h: 0 })
+const stackStyle = ref<Record<string, string>>({})
+
+/** 버튼 묶음을 바닥에서 띄우고 싶은 거리. 자리가 모자라면 남는 만큼만 띄운다. */
+const STACK_LIFT = 32
 
 const panel = ref<HTMLElement | null>(null)
 /** 딤과 설명이 들어가는 셸 폭 상자. 좌표 기준이자 측정 대상이다. */
@@ -147,7 +151,34 @@ async function measure() {
   )
   if (spills && placed.some((h) => h.place === 'below')) {
     holes.value = placed.map((h) => ({ ...h, place: 'above' as const }))
+    await nextTick()
   }
+
+  placeStack(root, base)
+}
+
+/**
+ * 헤드라인·버튼 묶음의 자리.
+ *
+ * 'bottom' 이면 바닥에서 STACK_LIFT 만큼 띄우되, 마지막 구멍·말풍선 아래로 남는 자리를
+ * 넘지 않게 깎는다. 고정값을 쓰면 320x568 처럼 아래가 빠듯한 화면에서 구멍을 밟는다.
+ */
+function placeStack(root: HTMLElement, base: DOMRect) {
+  if (STEPS[step.value].stack === 'middle') {
+    stackStyle.value = { top: '30%' }
+    return
+  }
+  const el = root.querySelector('[data-stack]')
+  const h = el ? el.getBoundingClientRect().height : 0
+  const lowest = Math.max(
+    0,
+    ...holes.value.map((x) => x.y + x.h),
+    ...[...root.querySelectorAll('[data-label]')].map(
+      (p) => p.getBoundingClientRect().bottom - base.top,
+    ),
+  )
+  const room = base.height - h - lowest - 8
+  stackStyle.value = { bottom: `${Math.max(0, Math.min(STACK_LIFT, room))}px` }
 }
 
 /**
@@ -366,7 +397,7 @@ onBeforeUnmount(() => {
       </p>
 
       <!-- 헤드라인과 진행 버튼. 단계마다 구멍을 피해 자리를 옮긴다. -->
-      <div class="absolute inset-x-0 px-7 text-center" :class="STEPS[step].stack">
+      <div data-stack class="absolute inset-x-0 px-7 text-center" :style="stackStyle">
         <p
           v-if="STEPS[step].headline"
           class="mb-6 text-balance text-xl font-bold leading-snug break-keep text-white"
