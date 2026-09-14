@@ -82,6 +82,14 @@ body {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  /*
+    iOS 에서 position:fixed 의 기준은 '레이아웃 뷰포트'라, 주소창이 떠 있어도 화면보다
+    큰 높이를 잡는다. 그러면 셸 전체가 보이는 영역보다 커져서 그 안의 시트(--sheet-full
+    은 셸의 78%)도 같이 커지고, 바텀시트가 화면을 통째로 덮는다.
+    svh 는 브라우저 크롬이 다 보일 때의 높이 — 이 앱은 문서 스크롤이 없어 크롬이
+    접히지 않으므로 이 값이 언제나 실제로 보이는 높이다.
+  */
+  height: 100svh;
   /* iOS 가로모드에서 폰트가 커지는 것 방지 */
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
