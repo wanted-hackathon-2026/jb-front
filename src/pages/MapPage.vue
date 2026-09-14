@@ -206,6 +206,32 @@ function addPickedAnchor() {
       </div>
     </div>
 
+    <!--
+      시안 39-2267 — 요청 직후. 기다리지 않고 나가도 된다는 걸 알려주는 게 핵심이다.
+      시트 밖에 둔다: BottomSheet 가 transform 을 쓰기 때문에 그 안의 fixed 는
+      뷰포트가 아니라 시트를 기준으로 잡힌다.
+    -->
+    <div
+      v-if="started"
+      class="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-6"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="w-full max-w-xs rounded-2xl bg-white p-6 text-center">
+        <p class="font-bold text-slate-900">나만의 방정식이 생성됐어요 ✅</p>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600">
+          AI가 조건에 딱 맞는 매물을 검색하고 있어요!<br />완료되면 바로 알려드릴게요 :)
+        </p>
+        <button
+          type="button"
+          class="mt-5 h-12 w-full rounded-full bg-brand-500 font-semibold text-white"
+          @click="started = false"
+        >
+          확인
+        </button>
+      </div>
+    </div>
+
     <BottomSheet v-model="sheet">
       <div class="flex shrink-0 justify-center pb-3">
         <SegmentedControl v-model="tab" :options="TABS" />
