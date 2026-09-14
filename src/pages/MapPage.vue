@@ -285,7 +285,13 @@ function addPickedAnchor() {
     <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
 
     <BottomSheet v-model="sheet.state">
-      <div class="flex shrink-0 justify-center pb-3">
+      <!--
+        접힌 상태에서 탭을 누르면 시트도 함께 펼친다. 고른 탭의 내용이 접힌 채로 있으면
+        눌러도 아무 일이 안 일어난 것처럼 보인다.
+        v-model 이 아니라 클릭으로 받는 이유: 이미 선택된 탭을 다시 눌러도 펼쳐져야 하는데
+        그때는 값이 안 바뀌어 update 가 오지 않는다.
+      -->
+      <div class="flex shrink-0 justify-center pb-3" @click="sheet.state = 'full'">
         <SegmentedControl v-model="tab" :options="TABS" data-tour="tabs" />
       </div>
 
