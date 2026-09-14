@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { useRouter, RouterView } from 'vue-router'
+import RecommendationToast from '@/components/RecommendationToast.vue'
+import { useRecommendationStore } from '@/stores/recommendation'
+
+// 여기서 스토어가 깨어나며 진행 중이던 추천 작업의 '이어받기'가 돈다.
+// 라우트 이동과 무관하게 살아 있어야 해서 App 이 소유한다.
+const reco = useRecommendationStore()
+const router = useRouter()
+
+function open(id: string) {
+  reco.arrived = null
+  router.push({ name: 'recommendation-result', params: { recommendationId: id } })
+}
 </script>
 
 <template>
@@ -12,4 +24,11 @@ import { RouterView } from 'vue-router'
   >
     <RouterView />
   </div>
+
+  <RecommendationToast
+    v-if="reco.arrived"
+    :job="reco.arrived"
+    @open="open(reco.arrived.id)"
+    @close="reco.arrived = null"
+  />
 </template>
