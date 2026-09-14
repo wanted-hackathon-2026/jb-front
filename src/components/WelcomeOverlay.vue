@@ -116,9 +116,10 @@ const panel = ref<HTMLElement | null>(null)
 /** 딤과 설명이 들어가는 셸 폭 상자. 좌표 기준이자 측정 대상이다. */
 const frame = ref<HTMLElement | null>(null)
 
-async function measure() {
+/** 구멍 자리만 다시 잡는다(동기). 시트가 미끄러지는 동안 매 프레임 부르는 쪽이다. */
+function measureHoles() {
   const root = frame.value
-  if (!root) return
+  if (!root) return null
   // 좌표는 뷰포트가 아니라 셸(= 이 상자) 기준이다. 데스크톱에서 셸은 가운데 480px 만
   // 차지하므로, 뷰포트 좌표를 그대로 쓰면 구멍이 옆으로 밀린다.
   const base = root.getBoundingClientRect()
@@ -142,6 +143,14 @@ async function measure() {
     })
   }
   holes.value = placed
+  return { root, base, placed }
+}
+
+/** 구멍을 잡고, 말풍선이 그려진 뒤 넘침 보정과 버튼 자리까지 마무리한다. */
+async function measure() {
+  const m = measureHoles()
+  if (!m) return
+  const { root, base, placed } = m
 
   await nextTick()
   // 말풍선이 화면 아래로 넘치면(짧은 화면에서 마지막 구멍 아래에 자리가 안 남는다)
@@ -158,24 +167,48 @@ async function measure() {
 }
 
 /**
+ * 단계가 바뀌는 즉시 잡아두는 버튼 묶음의 대략 자리.
+ *
+ * 정확한 값은 재 봐야 나오지만, 그때까지 이전 단계의 자리를 들고 있으면 측정이 끝나는
+ * 순간 화면 절반을 가로질러 튄다(1단계 가운데 → 2단계 아래로 500px 가까이 움직였다).
+ * 먼저 목적지 근처에 세워두고, 측정 뒤 placeStack 이 몇 픽셀만 다듬는다.
+ */
+function baselineStack(i: number) {
+  // 38% 는 '가운데 띠'가 보통 떨어지는 자리를 눈대중한 값일 뿐이다. 정확한 값은 placeStack 이 잡는다.
+  stackStyle.value = STEPS[i].stack === 'middle' ? { top: '38%' } : { bottom: `${STACK_LIFT}px` }
+}
+
+/**
  * 헤드라인·버튼 묶음의 자리.
  *
  * 'bottom' 이면 바닥에서 STACK_LIFT 만큼 띄우되, 마지막 구멍·말풍선 아래로 남는 자리를
  * 넘지 않게 깎는다. 고정값을 쓰면 320x568 처럼 아래가 빠듯한 화면에서 구멍을 밟는다.
  */
 function placeStack(root: HTMLElement, base: DOMRect) {
-  if (STEPS[step.value].stack === 'middle') {
-    stackStyle.value = { top: '30%' }
-    return
-  }
   const el = root.querySelector('[data-stack]')
   const h = el ? el.getBoundingClientRect().height : 0
+  const labels = [...root.querySelectorAll('[data-label]')].map((p) => p.getBoundingClientRect())
+
+  if (STEPS[step.value].stack === 'middle') {
+    // 말풍선이 비워 둔 띠의 한가운데에 놓는다. 화면 정중앙이 아니라 '남은 자리의 중앙'이다 —
+    // 화면을 기준으로 삼으면 말풍선이 길어질 때 그 위를 덮는다.
+    let top = 0
+    let bottom = base.height
+    holes.value.forEach((hole, i) => {
+      const r = labels[i]
+      if (!r) return
+      if (hole.place === 'below') top = Math.max(top, r.bottom - base.top)
+      else bottom = Math.min(bottom, r.top - base.top)
+    })
+    const centered = top + (bottom - top - h) / 2
+    stackStyle.value = { top: `${Math.max(top + 8, Math.round(centered))}px` }
+    return
+  }
+
   const lowest = Math.max(
     0,
     ...holes.value.map((x) => x.y + x.h),
-    ...[...root.querySelectorAll('[data-label]')].map(
-      (p) => p.getBoundingClientRect().bottom - base.top,
-    ),
+    ...labels.map((p) => p.bottom - base.top),
   )
   const room = base.height - h - lowest - 8
   stackStyle.value = { bottom: `${Math.max(0, Math.min(STACK_LIFT, room))}px` }
@@ -267,12 +300,27 @@ function labelAlign(hole: Hole) {
   return 'text-left'
 }
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
 function close() {
   // 안내 때문에 펼친 시트는 되돌린다 — 지도가 먼저 보이는 게 이 화면의 기본이다.
   sheet.state = STEPS[0].sheet
   emit('close')
+}
+
+/**
+ * 시트가 미끄러지는 300ms 동안 매 프레임 구멍을 다시 잡는다.
+ * 비워 두고 기다리면 그 시간이 통째로 '로딩'으로 보인다 — 따라가면 대상이 시트와 같이
+ * 올라오는 것으로 읽혀서 기다린다는 느낌이 없다.
+ */
+function trackSheet(ms: number) {
+  return new Promise<void>((resolve) => {
+    const started = performance.now()
+    const tick = () => {
+      measureHoles()
+      if (performance.now() - started < ms) requestAnimationFrame(tick)
+      else resolve()
+    }
+    requestAnimationFrame(tick)
+  })
 }
 
 /** 단계 이동. 시트 상태는 각 단계가 들고 있어서 앞뒤 어느 쪽으로 가든 같은 코드로 맞는다. */
@@ -284,9 +332,11 @@ async function goto(i: number) {
   // 옛 구멍이 남아 잠깐 엉뚱한 자리를 뚫는 걸 막는다.
   holes.value = []
   step.value = i
+  // 버튼 자리를 먼저 잡아둔다 — 측정이 끝나고 잡으면 화면을 가로질러 튄다.
+  baselineStack(i)
   await nextTick()
-  // 시트가 transform 으로 300ms 미끄러진다 — 멈춘 뒤에 재야 제자리가 나온다.
-  if (sheetMoves) await wait(340)
+  // 시트가 transform 으로 300ms 미끄러진다.
+  if (sheetMoves) await trackSheet(320)
   measure()
 }
 
@@ -306,6 +356,8 @@ const onKey = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  // 첫 렌더에 자리 없이 그려지면 측정 뒤 한 번 튄다.
+  baselineStack(step.value)
   requestAnimationFrame(measure)
   window.addEventListener('resize', remeasure)
   document.addEventListener('keydown', onKey)
