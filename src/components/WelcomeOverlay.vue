@@ -148,9 +148,10 @@ const SIDE_INSET = 12
  *
  * 구멍과 말풍선이 이 아래로 못 내려오게 막는다. 그래야 '이전/다음' 이 단계가 바뀌어도
  * 늘 같은 자리에 있다 — 자리를 다투게 두면 화면이 짧을 때 버튼이 지도 위로 밀려 올라간다.
- * 점 여백(16) + 버튼 높이(44) + 위아래 여백(EDGE_GAP, EDGE_CLAMP).
+ * 점 여백(16) + 버튼 높이(44) + 위아래 여백(EDGE_GAP 씩). 위쪽 여백을 아끼면 구멍
+ * 테두리가 버튼에 2px 까지 붙는다.
  */
-const STACK_RESERVE = 16 + 44 + EDGE_GAP + EDGE_CLAMP
+const STACK_RESERVE = 16 + 44 + EDGE_GAP * 2
 
 /**
  * 구멍 위에 말풍선이 들어갈 만큼의 자리.
@@ -521,25 +522,68 @@ async function goto(i: number) {
   // 테두리를 닫을 수도 없다.
   for (const spot of target.spots) {
     if (!spot.scroll) continue
-    document
-      .querySelector(`[data-tour="${spot.key}"]`)
-      ?.scrollIntoView({ block: spot.union ? 'start' : 'center' })
+    const el = document.querySelector<HTMLElement>(`[data-tour="${spot.key}"]`)
+    if (el) reveal(el, spot.union ? 'start' : 'center')
   }
 
   step.value = i
   // 버튼 자리를 먼저 잡아둔다 — 측정이 끝나고 잡으면 화면을 가로질러 튄다.
   baselineStack(i)
   await nextTick()
-  await measure()
+  await measureUntilStable()
   swapping.value = false
 
-  /*
-    한 번 더 잰다. iOS 는 주소창이 접히거나 스크롤이 늦게 정착하면서 레이아웃이 한 박자
-    뒤에 바뀌는 일이 있다 — 그때 처음 잰 값으로 그린 구멍은 엉뚱한 자리에 남는다.
-    measure 는 같은 값을 다시 써도 아무 일이 없으니(멱등) 보험으로 한 번 더 돌린다.
-  */
+  // 그 뒤에도 늦게 바뀌는 경우가 있어(주소창 접힘 등) 한 번 더 확인한다. 멱등이라 같은
+  // 값이면 아무 일도 일어나지 않는다.
   clearTimeout(recheck)
-  recheck = setTimeout(measure, 260)
+  recheck = setTimeout(measure, 300)
+}
+
+/** 요소를 품은 스크롤 영역을 찾는다. 없으면 null. */
+function scrollerOf(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const overflow = getComputedStyle(p).overflowY
+    if ((overflow === 'auto' || overflow === 'scroll') && p.scrollHeight > p.clientHeight) return p
+  }
+  return null
+}
+
+/**
+ * 대상을 스크롤 영역 안의 보이는 자리로 끌어온다.
+ *
+ * scrollIntoView 를 쓰지 않는다 — iOS 는 그걸 부르면 중첩 스크롤 영역만이 아니라 창
+ * (비주얼 뷰포트)까지 밀어버린다. 그러면 getBoundingClientRect 가 주는 좌표와 실제로
+ * 보이는 화면이 어긋나, 구멍이 엉뚱한 자리에 그려진다. 스크롤 영역만 직접 움직인다.
+ */
+function reveal(el: HTMLElement, align: 'start' | 'center') {
+  const scroller = scrollerOf(el)
+  if (!scroller) return
+  const gap = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  const offset =
+    align === 'center'
+      ? (scroller.clientHeight - el.getBoundingClientRect().height) / 2
+      : EDGE_CLAMP
+  scroller.scrollTop += gap - offset
+}
+
+/**
+ * 값이 두 번 연속 같아질 때까지 다시 잰다.
+ *
+ * '340ms 면 다 끝났겠지' 라는 가정을 버린다. 시트가 미끄러지고, 탭이 바뀌며 필터 패널이
+ * 새로 붙고, 스크롤이 자리를 잡는 일이 순서대로 일어나는데 기기가 느리면 그 사이에
+ * 재게 된다 — 아이폰에서 2단계 구멍이 엉뚱한 데 생긴 게 이것이다.
+ * 재는 동안에는 안내가 감춰져 있어(swapping) 값이 흔들려도 화면에 보이지 않는다.
+ */
+async function measureUntilStable(maxMs = 900) {
+  const started = performance.now()
+  let previous = ''
+  while (performance.now() - started < maxMs) {
+    await measure()
+    const now = holes.value.map((h) => `${h.x},${h.y},${h.w},${h.h}`).join('|')
+    if (now && now === previous) return
+    previous = now
+    await new Promise((r) => requestAnimationFrame(r))
+  }
 }
 
 /**
