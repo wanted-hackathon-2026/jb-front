@@ -135,6 +135,18 @@ button:disabled {
   @apply outline-2 outline-offset-2 outline-brand-500;
 }
 
+/*
+  안쪽 스크롤 영역의 고무줄 튕김을 막는다.
+
+  iOS 는 스크롤 끝에서 컨테이너를 밀어내며 그 뒤 배경을 드러낸다 — 매물 상세를 아래로
+  당기면 사진 위에 흰 띠가 보였다(main 의 bg-white). body 에 건 overscroll-behavior 는
+  문서 스크롤에만 걸려서, 안쪽 스크롤러에는 따로 걸어야 한다.
+*/
+.overflow-y-auto,
+.overflow-y-scroll {
+  overscroll-behavior-y: none;
+}
+
 /* 터치 기기에서 탭 하이라이트 제거 (포커스 링으로 대체) */
 * {
   -webkit-tap-highlight-color: transparent;
