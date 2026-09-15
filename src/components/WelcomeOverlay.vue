@@ -73,7 +73,10 @@ const STEPS: Step[] = [
       {
         key: 'conditions',
         title: '2. 조건마다 중요도를 정하세요',
-        body: '예산·이동시간에 더해, 채광·치안·조용함·인프라를 각각 올리고 내리면 AI가 그 비중대로 찾아줘요.',
+        // 화면 높이에 따라 묶음에 들어가는 섹션 수가 달라진다 — 좁으면 라이프스타일만
+        // 남는다. 그래서 문구는 늘 보이는 것(중요도 조절)을 앞에 두고, 예산·이동시간은
+        // '같은 화면에 있다'고만 말한다.
+        body: '채광·치안·조용함·인프라를 각각 올리고 내리면 AI가 그 비중대로 찾아줘요. 예산과 이동시간도 같은 화면에서 정합니다.',
         place: 'above',
         scroll: true,
         union: true,
@@ -364,11 +367,19 @@ function placeHeadline(root: HTMLElement, base: DOMRect, stackTop: number) {
   headlineStyle.value = { top: `${Math.round(Math.max(top + EDGE_GAP, centered))}px` }
 }
 
-/** 같은 표식이 붙은 것들을 하나로 묶은 사각형. 여러 섹션을 한 영역으로 보여줄 때 쓴다. */
+/**
+ * 같은 표식이 붙은 것들을 하나로 묶은 사각형.
+ *
+ * 스크롤 영역 위로 밀려난 섹션은 뺀다. 넣으면 안 보이는 데까지 테두리가 뻗고, 화면에
+ * 안 들어가 아래가 잘리면서 목록 한가운데가 끊긴다(라이프스타일에서 채광만 남았다).
+ * 들어가는 만큼만 묶는 쪽이 낫다.
+ */
 function unionRect(key: string): DOMRect {
-  const rects = [...document.querySelectorAll(`[data-tour="${key}"]`)].map((el) =>
-    el.getBoundingClientRect(),
-  )
+  const els = [...document.querySelectorAll<HTMLElement>(`[data-tour="${key}"]`)]
+  const scroller = els[0] ? scrollerOf(els[0]) : null
+  const limit = scroller ? scroller.getBoundingClientRect().top : Number.NEGATIVE_INFINITY
+  const visible = els.map((el) => el.getBoundingClientRect()).filter((r) => r.top >= limit - 1)
+  const rects = visible.length ? visible : els.map((el) => el.getBoundingClientRect())
   const x = Math.min(...rects.map((r) => r.x))
   const y = Math.min(...rects.map((r) => r.y))
   const right = Math.max(...rects.map((r) => r.right))
@@ -522,8 +533,11 @@ async function goto(i: number) {
   // 테두리를 닫을 수도 없다.
   for (const spot of target.spots) {
     if (!spot.scroll) continue
-    const el = document.querySelector<HTMLElement>(`[data-tour="${spot.key}"]`)
-    if (el) reveal(el, spot.union ? 'start' : 'center')
+    if (spot.union) revealUnion(spot.key)
+    else {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${spot.key}"]`)
+      if (el) reveal(el, 'center')
+    }
   }
 
   step.value = i
@@ -564,6 +578,24 @@ function reveal(el: HTMLElement, align: 'start' | 'center') {
       ? (scroller.clientHeight - el.getBoundingClientRect().height) / 2
       : EDGE_CLAMP
   scroller.scrollTop += gap - offset
+}
+
+/**
+ * 묶음은 '마지막 섹션의 아래'가 버튼 자리 바로 위에 오도록 스크롤한다.
+ *
+ * 첫 섹션을 위에 맞추면 아래가 화면 밖으로 넘쳐 잘린다. 아래를 기준으로 맞추면 위쪽
+ * 섹션이 스크롤 밖으로 밀려나는데, 그건 unionRect 가 알아서 묶음에서 뺀다.
+ */
+function revealUnion(key: string) {
+  const els = [...document.querySelectorAll<HTMLElement>(`[data-tour="${key}"]`)]
+  const last = els.at(-1)
+  const root = frame.value
+  if (!last || !root) return
+  const scroller = scrollerOf(last)
+  if (!scroller) return
+  const base = root.getBoundingClientRect()
+  const availBottom = base.top + base.height - STACK_RESERVE
+  scroller.scrollTop += last.getBoundingClientRect().bottom + PAD - availBottom
 }
 
 /**
