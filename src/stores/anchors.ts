@@ -7,6 +7,7 @@ import { createWorkplace, listWorkplaces } from '@/lib/api/workplaces'
 import { ApiError } from '@/lib/api/http'
 import { ERROR_CODE } from '@/types/backend'
 import { useAuthStore } from './auth'
+import { useNoticeStore } from './notice'
 
 /**
  * 서버가 거절한 이유를 사용자 말로 옮긴다. `detail` 을 그대로 쓰지 않는 건 명세가
@@ -45,6 +46,7 @@ export const MAX_ANCHORS = 3
  */
 export const useAnchorsStore = defineStore('anchors', () => {
   const auth = useAuthStore()
+  const notice = useNoticeStore()
 
   const anchors = useStorage<Anchor[]>('jb:anchors:v1', [])
   const recentSearches = useStorage<string[]>('jb:recent-searches:v1', [])
@@ -54,8 +56,6 @@ export const useAnchorsStore = defineStore('anchors', () => {
    */
   const recentAnchors = useStorage<PlaceSuggestion[]>('jb:recent-anchors:v1', [])
 
-  /** 서버 반영 실패 사유. 로컬에는 들어갔지만 저장되지 않았다는 뜻이다. */
-  const syncError = ref<string | null>(null)
   const syncing = ref(false)
 
   const hasAnchors = computed(() => anchors.value.length > 0)
@@ -67,9 +67,8 @@ export const useAnchorsStore = defineStore('anchors', () => {
     syncing.value = true
     try {
       anchors.value = await listWorkplaces()
-      syncError.value = null
     } catch (e) {
-      syncError.value = reasonOf(e, '거점을 불러오지 못했어요')
+      notice.error(reasonOf(e, '거점을 불러오지 못했어요'))
     } finally {
       syncing.value = false
     }
@@ -78,7 +77,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
   /**
    * 거점 추가. **절대 reject 하지 않는다** — 호출부(SearchPage·MapPage·
    * AnchorPickerLayer)가 await 하지 않고 부르므로, 던지면 unhandled rejection 이 된다.
-   * 실패는 `syncError` 로만 알린다.
+   * 실패는 토스트로만 알린다(stores/notice.ts).
    */
   async function add(place: PlaceSuggestion) {
     if (!canAddMore.value) return
@@ -106,11 +105,12 @@ export const useAnchorsStore = defineStore('anchors', () => {
       // 되살리지 않는다 — 지운 게 나중 의사다.
       const at = anchors.value.findIndex((a) => a.id === optimisticId)
       if (at !== -1) anchors.value[at] = saved
-      syncError.value = null
     } catch (e) {
       // 로컬에는 남겨 둔다. 지오코딩 실패(지번 주소 등)로 서버가 거절해도
       // 사용자가 방금 고른 거점이 화면에서 사라지면 더 혼란스럽다.
-      syncError.value = reasonOf(e, '거점을 저장하지 못했어요')
+      // 다만 **말은 해야 한다** — 화면엔 추가됐는데 서버엔 없는 상태라, 아무 표시가
+      // 없으면 다음 로그인 때 조용히 사라진 것처럼 보인다.
+      notice.error(reasonOf(e, '거점을 저장하지 못했어요'))
     }
   }
 
@@ -160,7 +160,6 @@ export const useAnchorsStore = defineStore('anchors', () => {
     anchors,
     recentSearches,
     recentAnchors,
-    syncError,
     syncing,
     hasAnchors,
     canAddMore,

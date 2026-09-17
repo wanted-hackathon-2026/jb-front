@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
+import BaseToast from '@/components/BaseToast.vue'
 import RecommendationToast from '@/components/RecommendationToast.vue'
+import { useNoticeStore } from '@/stores/notice'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { useSheetStore } from '@/stores/sheet'
 
@@ -11,6 +13,7 @@ const reco = useRecommendationStore()
 const router = useRouter()
 const route = useRoute()
 const sheet = useSheetStore()
+const notice = useNoticeStore()
 
 /**
  * 완료 배너가 앉을 자리.
@@ -40,6 +43,23 @@ function open(id: string) {
     class="mx-auto flex h-full max-w-shell flex-col overflow-hidden bg-white shadow-[0_0_1.5rem_rgba(15,23,42,0.08)]"
   >
     <RouterView />
+  </div>
+
+  <!--
+    실패 알림. **화면 위쪽**에 둔다 — 아래는 시트·완료 배너·FAB 가 이미 쓰는 자리라
+    겹치면 서로를 가린다. 여러 건이면 쌓이고, 각자 따로 사라진다.
+  -->
+  <div
+    v-if="notice.notices.length"
+    class="safe-top pointer-events-none fixed inset-x-0 top-0 z-60 mx-auto flex max-w-shell flex-col gap-2 px-4 pt-2"
+  >
+    <BaseToast
+      v-for="n in notice.notices"
+      :key="n.id"
+      class="pointer-events-auto"
+      :message="n.message"
+      @dismiss="notice.dismiss(n.id)"
+    />
   </div>
 
   <!-- 셸 폭 안에서만 뜨도록 max-w-shell 로 묶는다 — 데스크톱에서 화면 전체로 퍼지지 않게. -->

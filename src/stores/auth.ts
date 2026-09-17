@@ -14,6 +14,7 @@ import type { AccountResponse } from '@/types/backend'
 import { getAccount, updateNickname as patchNickname } from '@/lib/api/account'
 import { loginWithGoogle, logout as apiLogout, reissue } from '@/lib/api/auth'
 import { GoogleSignInCancelled, hasGoogleClientId, promptGoogleIdToken } from '@/lib/google'
+import { useNoticeStore } from './notice'
 
 /**
  * idle: 아직 복원을 시도하지 않았다 (앱 시작 직후)
@@ -23,6 +24,8 @@ import { GoogleSignInCancelled, hasGoogleClientId, promptGoogleIdToken } from '@
 export type AuthStatus = 'idle' | 'restoring' | 'authenticated' | 'anonymous'
 
 export const useAuthStore = defineStore('auth', () => {
+  const notice = useNoticeStore()
+
   const user = ref<AccountResponse | null>(null)
   const status = ref<AuthStatus>('idle')
   /**
@@ -34,8 +37,6 @@ export const useAuthStore = defineStore('auth', () => {
    * 실제 인증은 언제나 서버의 쿠키 검증이 한다.
    */
   const hadSession = useStorage<boolean>('jb:had-session:v1', false)
-  /** 마지막 실패 사유. 사용자가 그만둔 경우(취소)는 오류가 아니라 여기 담기지 않는다. */
-  const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => status.value === 'authenticated')
   /**
@@ -79,19 +80,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 구글 로그인. 사용자가 One Tap 을 닫으면 조용히 원래 상태로 돌아간다. */
   async function login(): Promise<void> {
-    error.value = null
     try {
       const idToken = await promptGoogleIdToken()
-      const res = await loginWithGoogle(idToken)
+      // 응답의 isNewUser 는 쓰지 않는다 — 신규 가입자는 닉네임이 null 이라
+      // `needsProfile` 이 같은 것을 더 정확히 말해준다(재로그인한 미완성 계정도 잡는다).
+      await loginWithGoogle(idToken)
       // 로그인 응답의 user 는 AccountResponse 보다 좁다(provider·role·createdAt 이 없다).
       // 화면이 기대하는 건 넓은 쪽이므로 곧바로 /api/me 로 채운다.
       user.value = await getAccount()
       status.value = 'authenticated'
       hadSession.value = true
-      if (res.isNewUser) error.value = null
     } catch (e) {
+      // 사용자가 One Tap 을 닫은 건 실패가 아니다. 조용히 원래 상태로 돌아간다.
       if (e instanceof GoogleSignInCancelled) return
-      error.value = e instanceof Error ? e.message : '로그인에 실패했어요'
+      notice.error('로그인에 실패했어요')
       status.value = 'anonymous'
     }
   }
@@ -111,7 +113,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     status,
-    error,
     isAuthenticated,
     needsProfile,
     canLogin,
