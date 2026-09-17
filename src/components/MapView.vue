@@ -5,6 +5,7 @@ import {
   CLUSTER_STEPS,
   CLUSTER_STYLES,
   LISTING_MARKER,
+  PICKED_MARKER,
   loadKakaoMaps,
 } from '@/lib/kakao'
 import type { Anchor, Listing } from '@/types/domain'
@@ -30,8 +31,16 @@ let pinMarker: kakao.maps.Marker | null = null
 
 /** 지도에서 찍은 위치를 표시한다. 매물 마커와 달리 클러스터에 넣지 않는다. */
 function dropPin(latlng: kakao.maps.LatLng) {
-  if (!pinMarker) pinMarker = new kakao.maps.Marker({ position: latlng })
-  else pinMarker.setPosition(latlng)
+  if (!pinMarker) {
+    pinMarker = new kakao.maps.Marker({
+      position: latlng,
+      image: new kakao.maps.MarkerImage(
+        PICKED_MARKER.src,
+        new kakao.maps.Size(PICKED_MARKER.width, PICKED_MARKER.height),
+        { offset: new kakao.maps.Point(PICKED_MARKER.anchor.x, PICKED_MARKER.anchor.y) },
+      ),
+    })
+  } else pinMarker.setPosition(latlng)
   pinMarker.setMap(map)
 }
 

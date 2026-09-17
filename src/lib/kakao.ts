@@ -48,6 +48,34 @@ export const LISTING_MARKER = {
 }
 
 /**
+ * 지도를 눌러 고른 지점.
+ *
+ * 매물은 여러 개가 흩뿌려지는 점이지만 이건 '지금 여기' 하나라 핀이 맞다 — 모양이
+ * 달라서 고른 지점이 매물 틈에 묻히지 않는다. 기본 마커를 쓰면 파란 물방울이라
+ * 색 언어도 어긋난다.
+ *
+ * 시안 에셋(Asset 4)을 벡터로 옮겨 그렸다. 원본은 957×1361 PNG 를 감싼 SVG 라 23px 로
+ * 쓰기에 27KB 는 과하고 색이 비트맵에 박혀 팔레트를 따라오지 못한다. 치수는 원본에서
+ * 실측했다 — 원 중심 (13.6, 9.5) r 9.4, 바늘 끝 (1.4, 32.4).
+ */
+const PIN = `<svg xmlns="http://www.w3.org/2000/svg" width="23" height="33" viewBox="0 0 23 33" fill="none">
+  <path d="M9.6 17.6 1.4 32.4" stroke="#616161" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="13.6" cy="9.5" r="9.4" fill="#00c8b3"/>
+  <path d="M15.9 2.8A7.2 7.2 0 0 1 21.2 9.9" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+</svg>`
+
+export const PICKED_MARKER = {
+  src: `data:image/svg+xml;utf8,${encodeURIComponent(PIN)}`,
+  width: 23,
+  height: 33,
+  /**
+   * 좌표에 닿는 지점. 핀은 **중심이 아니라 바늘 끝**이 위치다 — 이걸 안 주면 이미지
+   * 중앙이 좌표에 놓여 핀이 누른 곳보다 위로 밀려 꽂힌다.
+   */
+  anchor: { x: 1, y: 32 },
+}
+
+/**
  * 클러스터로 묶기 시작하는 지도 레벨. 카카오의 레벨은 **클수록 멀리 본다** —
  * 이 값 이상(=더 축소된 상태)에서만 숫자 배지가 되고, 더 확대하면 낱개 점으로 풀린다.
  *
