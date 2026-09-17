@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   CLUSTER_MIN_LEVEL,
-  CLUSTER_STEPS,
   CLUSTER_STYLES,
   LISTING_MARKER,
   PICKED_MARKER,
@@ -21,6 +20,33 @@ const emit = defineEmits<{ pick: [{ x: number; y: number }] }>()
 
 const el = ref<HTMLElement>()
 const failed = ref(false)
+
+/**
+ * 카카오는 level 이 작을수록 확대다(1 이 가장 가까이). 범위 밖 값을 넣으면 SDK 가 조용히
+ * 무시하므로, 끝에 닿으면 버튼을 잠근다 — 눌리는데 아무 일도 안 나는 상태를 만들지 않는다.
+ */
+const MIN_LEVEL = 1
+const MAX_LEVEL = 14
+const INITIAL_LEVEL = 5
+const level = ref(INITIAL_LEVEL)
+
+function zoomBy(step: number) {
+  if (!map) return
+  const current = map.getLevel()
+  const next = Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, current + step))
+  if (next === current) return
+  // 애니메이션은 레벨 차가 2 이하일 때만 먹는다(SDK 제약). 한 칸씩만 움직이니 항상 해당된다.
+  map.setLevel(next, { animate: true })
+}
+
+// 버튼은 MapPage 의 FAB 컬럼에 있다 — 지도 위 오버레이의 세로 위치를 한 곳에서 계산하기
+// 위해서다(MapPage 의 '오버레이 스택' 주석). 지도 인스턴스는 여기 있으므로 조작만 넘긴다.
+defineExpose({
+  zoomIn: () => zoomBy(-1),
+  zoomOut: () => zoomBy(1),
+  canZoomIn: computed(() => level.value > MIN_LEVEL),
+  canZoomOut: computed(() => level.value < MAX_LEVEL),
+})
 
 let map: kakao.maps.Map | null = null
 let clusterer: kakao.maps.MarkerClusterer | null = null
@@ -50,9 +76,15 @@ function dropPin(latlng: kakao.maps.LatLng) {
  *
  * ⚠️ 분당 500m(=시속 30km)로 두니 기본값 30분이 반경 15km 가 되어, 지름 30km 짜리 원이
  * 화면(가로 1.5km 남짓)을 통째로 덮었다. 원이 원으로 보이지도 않고 지도만 민트색으로
- * 물들었다. 도보 속도(분당 약 67m)로 낮춰 동네 스케일에 맞춘다.
+ * 물들었다.
+ *
+ * 지금 값(25)은 도보 속도(분당 약 67m)보다도 느리다 — 일부러 그렇다. 아래 fitToCircles 가
+ * 원에 맞춰 화면을 잡으므로 원은 반경과 무관하게 늘 화면을 채우고, 반경이 실제로 정하는 건
+ * '원이 얼마나 크냐'가 아니라 '지도가 얼마나 확대되냐'다. 67 로 두면 기본값 30분에서
+ * 반경 2km 라 구 단위까지 축소돼 골목이 안 보였다. 25 로 낮춰 시안과 같은 동네 스케일
+ * (30분 → 반경 750m)로 맞춘다. 실제 도달권은 백엔드 몫이라 여기 숫자에 이동 의미는 없다.
  */
-const METERS_PER_MINUTE = 67
+const METERS_PER_MINUTE = 25
 /** 이동시간 슬라이더는 0분까지 내려간다 — 반경 0 이면 원이 안 보이고 화면 맞추기도 한 점으로 무너진다. */
 const MIN_RADIUS = 200
 const radiusOf = (minutes: number) => Math.max(MIN_RADIUS, minutes * METERS_PER_MINUTE)
@@ -111,7 +143,16 @@ function drawAnchors(fit = false) {
       strokeWeight: 2,
       strokeColor: color,
       strokeOpacity: 1,
-      strokeStyle: 'dashed',
+      // 'dashed' 는 대시가 짧아 멀리서 보면 실선에 가깝게 뭉친다. 시안의 성긴 파선은
+      // longdash 다 — 원이 크고 곡률이 완만해서 대시가 길어야 파선으로 읽힌다.
+      strokeStyle: 'longdash',
+      /*
+        시안의 채움은 그라데이션이지만 여기선 단색이다. Circle 의 fillColor 가 색 하나만
+        받아서, 그라데이션을 내려면 벡터 오버레이를 버리고 CustomOverlay(DOM)로 가야 한다.
+        실제로 해 봤더니 카카오가 줌 애니메이션 동안 CustomOverlay 를 통째로 숨겨서
+        원이 304ms 사라졌다 나타났다 — 화면의 절반을 차지하는 요소라 눈에 띈다.
+        줌은 자주 쓰는 동작이라 그 대가를 치르지 않기로 했다.
+      */
       fillColor: color,
       fillOpacity: 0.1,
     })
@@ -147,7 +188,15 @@ onMounted(async () => {
   const first = props.anchors[0]
   map = new kakao.maps.Map(el.value!, {
     center: new kakao.maps.LatLng(first?.y ?? 37.5006, first?.x ?? 127.0276),
-    level: 5,
+    level: INITIAL_LEVEL,
+  })
+  // 줌 한계를 지도에 못박는다. SDK 기본 상한에 기대면 버튼이 잠기는 지점과 지도가 실제로
+  // 멈추는 지점이 어긋나, 끝에서 눌러도 아무 일이 안 일어나는 버튼이 된다.
+  map.setMinLevel(MIN_LEVEL)
+  map.setMaxLevel(MAX_LEVEL)
+  // 레벨은 버튼 말고 핀치·더블탭·클러스터 클릭·setBounds 로도 바뀐다 — 한 곳에서 받는다.
+  kakao.maps.event.addListener(map, 'zoom_changed', () => {
+    level.value = map!.getLevel()
   })
   clusterer = new kakao.maps.MarkerClusterer({
     map,
@@ -159,7 +208,6 @@ onMounted(async () => {
     // 시안의 8·10·35 는 여러 건이 뭉친 숫자지 낱개가 아니다.
     minClusterSize: 2,
     disableClickZoom: false,
-    calculator: CLUSTER_STEPS,
     styles: CLUSTER_STYLES,
   })
   drawListings()

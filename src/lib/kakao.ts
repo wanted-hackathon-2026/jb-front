@@ -85,26 +85,24 @@ export const PICKED_MARKER = {
 export const CLUSTER_MIN_LEVEL = 4
 
 /**
- * 배지가 커지는 구간. 묶인 개수가 10 미만 / 10~29 / 30 이상 순으로 아래 styles 와
- * 짝을 이룬다 — 시안에서 35 가 12 보다 확연히 큰 것이 이 규칙이다.
+ * 클러스터 배지. **개수와 무관하게 한 크기다** — 시안의 배지 다섯 개(8·10·12·15·35)를
+ * 재보니 전부 지름 45.7px, 숫자 18px 이었다. 한때 개수별로 키웠는데(44/52/60) 시안에
+ * 없는 규칙이라 되돌린다. 커지는 건 숫자지 원이 아니다.
+ *
+ * SDK 가 지도 오버레이 레이어에 직접 만드는 DOM 이라 CSS 변수를 쓰면 해석되는 맥락이
+ * 우리 컴포넌트 트리 밖이라 조용히 실패할 수 있다 — 값을 그대로 적는다.
  */
-export const CLUSTER_STEPS = [10, 30]
-
-/**
- * 클러스터 배지는 SDK 가 지도 오버레이 레이어에 직접 만든다. 여기에 CSS 변수를 쓰면
- * 해석되는 맥락이 우리 컴포넌트 트리 밖이라 조용히 실패할 수 있어 값을 그대로 적는다.
- */
-const badge = (size: number, fontSize: number) => ({
-  width: `${size}px`,
-  height: `${size}px`,
-  background: '#00c8b3',
-  borderRadius: `${size / 2}px`,
-  color: '#fff',
-  textAlign: 'center',
-  lineHeight: `${size}px`,
-  fontSize: `${fontSize}px`,
-  fontWeight: '700',
-  boxShadow: '0 2px 6px rgb(15 23 42 / 0.2)',
-})
-
-export const CLUSTER_STYLES = [badge(44, 14), badge(52, 16), badge(60, 18)]
+export const CLUSTER_STYLES = [
+  {
+    width: '46px',
+    height: '46px',
+    background: '#00c8b3',
+    borderRadius: '23px',
+    color: '#fff',
+    textAlign: 'center',
+    lineHeight: '46px',
+    fontSize: '18px',
+    fontWeight: '700',
+    boxShadow: '0 2px 6px rgb(15 23 42 / 0.2)',
+  },
+]

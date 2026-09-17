@@ -1,3 +1,13 @@
+/*
+  Pretendard — 시안의 지정 폰트다. 아래 --font-sans 가 이 이름을 맨 앞에 두고 있는데
+  한동안 파일을 불러오는 곳이 없어서, 기기에 깔려 있지 않은 사용자는 전부 시스템 폰트
+  (iOS SF Pro / Android Roboto)로 떨어지고 있었다.
+
+  variable 통짜(2.0MB) 대신 dynamic-subset(92개 청크)을 쓴다. unicode-range 로 쪼개져
+  있어 브라우저가 화면에 실제 나온 글자의 청크만 받는다 — 한글은 통짜로 받으면 첫 로드에
+  메가 단위가 걸리는데, 모바일 전용 앱이라 그 비용을 감당할 이유가 없다.
+*/
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 @import 'tailwindcss';
 
 @theme {

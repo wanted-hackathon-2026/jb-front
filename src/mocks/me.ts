@@ -21,7 +21,7 @@ export async function getMockSearchHistory(): Promise<SearchHistoryEntry[]> {
     {
       id: 'h2',
       createdAt: '2026-09-16T10:12:00+09:00',
-      anchorNames: ['신도림역', '구로디지털단지'],
+      anchorNames: ['신도림역'],
       deposit: [5000, 10000],
       rent: [0, 40],
       transport: 'transit',
@@ -32,7 +32,7 @@ export async function getMockSearchHistory(): Promise<SearchHistoryEntry[]> {
     {
       id: 'h1',
       createdAt: '2026-08-21T19:40:00+09:00',
-      anchorNames: ['신도림역', '구로디지털단지'],
+      anchorNames: ['구로디지털단지'],
       deposit: [5000, 10000],
       rent: [0, 40],
       transport: 'transit',

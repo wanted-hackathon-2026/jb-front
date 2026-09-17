@@ -25,11 +25,15 @@ const rentText = computed(() => `${props.entry.rent[0]}원 ~ ${props.entry.rent[
   <article class="py-5">
     <h3 class="font-bold text-slate-900">{{ date }}</h3>
 
-    <!-- 거점: 몇 번째 거점이었는지가 순위라서 번호를 함께 보여준다. -->
+    <!--
+      거점: 여럿이면 몇 번째였는지가 순위라서 번호를 붙인다. 지금은 거점이 하나뿐이라
+      (stores/anchors.ts 의 MAX_ANCHORS) 번호가 붙을 일이 없지만, 한도가 1 이 되기 전에
+      남은 기록은 여전히 여럿을 들고 있어서 분기를 남겨 둔다. MapView 의 이름표와 같은 규칙.
+    -->
     <ul class="mt-3 flex flex-col gap-1.5">
       <li v-for="(name, i) in entry.anchorNames" :key="name" class="flex items-center gap-2">
         <span class="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">
-          거점 {{ i + 1 }}
+          거점<template v-if="entry.anchorNames.length > 1"> {{ i + 1 }}</template>
         </span>
         <span class="min-w-0 truncate text-sm font-semibold text-slate-900">{{ name }}</span>
       </li>

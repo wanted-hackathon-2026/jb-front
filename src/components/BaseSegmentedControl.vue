@@ -1,4 +1,8 @@
 <script setup lang="ts" generic="T extends string">
+/**
+ * 라벨은 13px 이다. 상속되는 16px 을 그대로 두면 알약 안 글자가 시안보다 4px 커서
+ * 컨트롤이 화면을 압도한다(시안 실측 12px 에서 한 눈금 올린 값).
+ */
 defineProps<{ modelValue: T; options: { value: T; label: string }[] }>()
 defineEmits<{ 'update:modelValue': [T] }>()
 </script>
@@ -11,7 +15,7 @@ defineEmits<{ 'update:modelValue': [T] }>()
       type="button"
       role="tab"
       :aria-selected="modelValue === opt.value"
-      class="flex h-10 items-center gap-1 rounded-full px-5 font-bold transition-colors"
+      class="flex h-10 items-center gap-1 rounded-full px-5 text-[13px] font-bold transition-colors"
       :class="modelValue === opt.value ? 'bg-brand-500 text-white' : 'text-slate-500'"
       @click="$emit('update:modelValue', opt.value)"
     >

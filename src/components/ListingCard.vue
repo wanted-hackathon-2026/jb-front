@@ -86,11 +86,15 @@ const detailRoute = computed(() =>
       <p class="truncate font-bold text-slate-900">
         {{ formatPrice(listing.dealType, listing.deposit, listing.rent) }}
       </p>
-      <p class="truncate text-sm text-slate-600">
+      <!--
+        부제·주소·노선은 12px 다. 시안 실측은 11px 인데 한글 가독성 하한(12px) 아래라
+        한 단계만 올려 맞췄다 — 가격(16px)과의 위계는 시안과 같은 폭으로 벌어진다.
+      -->
+      <p class="truncate text-xs text-slate-600">
         {{ listing.roomType }} · {{ listing.areaPyeong }}평 · {{ listing.floor }}층
       </p>
-      <p class="truncate text-sm text-slate-500">{{ listing.address }}</p>
-      <p v-if="listing.commutes.length" class="truncate text-sm font-medium text-brand-500">
+      <p class="truncate text-xs text-slate-500">{{ listing.address }}</p>
+      <p v-if="listing.commutes.length" class="truncate text-xs font-medium text-brand-500">
         {{
           formatCommute(
             listing.commutes[0].minutes,
@@ -99,7 +103,7 @@ const detailRoute = computed(() =>
           )
         }}
       </p>
-      <p v-else class="truncate text-sm font-medium text-brand-500">
+      <p v-else class="truncate text-xs font-medium text-brand-500">
         {{ listing.lines.join(' · ') }}
       </p>
     </div>

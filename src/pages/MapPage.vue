@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
@@ -39,6 +39,8 @@ const sheet = useSheetStore()
 const onboarded = useStorage('jb:onboarded:v1', false)
 const listings = ref<Listing[]>([])
 const loading = ref(true)
+/** 줌 버튼이 지도 인스턴스를 직접 잡지 않고 MapView 가 노출한 조작만 부른다. */
+const mapView = useTemplateRef('mapView')
 
 const TABS = [
   // 지금 보이는 지도의 매물이 먼저고, 조건을 걸어 AI 에게 맡기는 쪽이 그 다음이다.
@@ -165,6 +167,7 @@ function addPickedAnchor() {
     <!-- 키가 없으면 자리표시자로 돈다. 키를 넣는 순간 실제 지도로 바뀐다. -->
     <MapView
       v-if="hasKakaoKey"
+      ref="mapView"
       :listings="listings"
       :anchors="anchors.anchors"
       :max-minutes="filters.maxMinutes"
@@ -240,6 +243,55 @@ function addPickedAnchor() {
     -->
     <div class="absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 flex flex-col gap-3">
       <div class="flex flex-col items-end gap-3">
+        <!--
+          줌은 마이·관심매물과 성격이 달라(시점 조작 vs 화면 이동) 따로 떨어진 원이 아니라
+          한 덩어리 알약으로 묶는다. 지도 컨트롤의 관례이기도 하고, 아래 두 FAB 과 섞여
+          '원이 네 개' 로 보이는 것도 막는다. 자리표시자 지도에는 줌이 없으므로 같이 감춘다.
+        -->
+        <div
+          v-if="hasKakaoKey"
+          class="flex flex-col overflow-hidden rounded-full bg-white text-neutral-500 shadow-md"
+        >
+          <button
+            type="button"
+            class="grid size-12 place-items-center disabled:opacity-40"
+            aria-label="지도 확대"
+            :disabled="!mapView?.canZoomIn"
+            @click="mapView?.zoomIn()"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="size-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 6v12M6 12h12" />
+            </svg>
+          </button>
+          <span class="mx-3 h-px bg-slate-200" aria-hidden="true" />
+          <button
+            type="button"
+            class="grid size-12 place-items-center disabled:opacity-40"
+            aria-label="지도 축소"
+            :disabled="!mapView?.canZoomOut"
+            @click="mapView?.zoomOut()"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="size-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 12h12" />
+            </svg>
+          </button>
+        </div>
         <button
           type="button"
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
