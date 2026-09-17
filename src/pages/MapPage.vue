@@ -200,14 +200,18 @@ function addPickedAnchor() {
               + 거점 추가
             </button>
           </template>
-          <!-- 거점이 없으면 바 전체가 검색으로 들어가는 버튼이다(돋보기만으로는 표적이 너무 작다). -->
+          <!--
+            거점이 없으면 바 전체가 검색으로 들어가는 버튼이다(돋보기만으로는 표적이 너무 작다).
+            입력창이 아니라 버튼이라 '검색'이 아니라 하려는 일을 적는다 — 이 화면에서
+            검색은 수단이고, 사용자가 얻는 건 등록된 거점이다.
+          -->
           <button
             v-else
             type="button"
             class="min-h-11 flex-1 truncate text-left text-slate-400"
             @click="openAnchorPicker"
           >
-            직장, 학교, 자주 가는 곳 검색
+            자주 가는 곳을 거점으로 등록
           </button>
         </div>
         <button

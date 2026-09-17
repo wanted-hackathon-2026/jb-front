@@ -71,37 +71,52 @@ function split(name: string) {
 
 <template>
   <main class="flex min-h-0 flex-1 flex-col bg-slate-50">
-    <div class="safe-top flex items-center gap-1 bg-white px-2 py-3">
-      <button
-        type="button"
-        class="grid size-10 shrink-0 place-items-center text-slate-700"
-        aria-label="뒤로"
-        @click="router.back()"
-      >
-        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </button>
-      <div class="flex flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
-        <input
-          v-model="keyword"
-          type="search"
-          class="h-11 flex-1 bg-transparent outline-none placeholder:text-slate-400"
-          placeholder="직장, 학교 등 자주가는 곳 검색"
-          autofocus
-        />
-        <svg
-          viewBox="0 0 24 24"
-          class="size-5 shrink-0 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
+    <div class="safe-top bg-white px-2 pt-3 pb-2">
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="grid size-10 shrink-0 place-items-center text-slate-700"
+          aria-label="뒤로"
+          @click="router.back()"
         >
-          <circle cx="11" cy="11" r="6.5" />
-          <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-        </svg>
+          <svg
+            viewBox="0 0 24 24"
+            class="size-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <div class="flex flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
+          <input
+            v-model="keyword"
+            type="search"
+            class="h-11 flex-1 bg-transparent outline-none placeholder:text-slate-400"
+            placeholder="직장·학교 이름이나 주소"
+            autofocus
+          />
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5 shrink-0 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="M16 16l4.5 4.5" stroke-linecap="round" />
+          </svg>
+        </div>
       </div>
+
+      <!--
+        누르면 무슨 일이 생기는지는 고정으로 둔다. 플레이스홀더에 넣으면 타이핑하는
+        순간 사라지는데, 정작 결과를 보며 '이걸 누르면?' 이 궁금해지는 건 그 다음이다.
+        '거점'은 서비스 용어라 여기서 한 번 풀어 쓴다.
+      -->
+      <p class="mt-1.5 pl-11 text-xs text-slate-500">누르면 자주 가는 곳(거점)으로 등록돼요</p>
     </div>
 
     <!--
@@ -112,7 +127,8 @@ function split(name: string) {
       v-if="anchors.hasAnchors && (keyword.trim() || !anchors.canAddMore)"
       class="bg-white px-5 pb-3"
     >
-      <p class="mb-2 flex items-center gap-1.5 font-bold text-slate-900">
+      <!-- 320px 에서는 제목과 안내가 한 줄에 못 들어간다 — 안내를 아래 줄로 내린다. -->
+      <p class="mb-2 flex flex-wrap items-center gap-x-1.5 font-bold text-slate-900">
         <svg
           viewBox="0 0 24 24"
           class="size-5 text-brand-500"
@@ -126,7 +142,7 @@ function split(name: string) {
           <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
         </svg>
         등록한 거점
-        <span class="text-sm font-normal text-slate-500">
+        <span class="basis-full pl-6.5 text-sm font-normal text-slate-500">
           {{ anchors.canAddMore ? `최대 ${MAX_ANCHORS}곳` : '바꾸려면 지우고 다시 등록하세요' }}
         </span>
       </p>
