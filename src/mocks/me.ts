@@ -1,14 +1,15 @@
-/** ⚠️ 가짜 마이페이지 데이터. 백엔드 연동 시 이 파일을 통째로 삭제한다. */
+/**
+ * ⚠️ 가짜 마이페이지 데이터.
+ *
+ * **관심 매물은 여기서 빠졌다** — `/api/me/favorites` 가 실재해서 실제 API 로 갈아탔다
+ * (`lib/api/me.ts`). 남은 둘은 대응 엔드포인트가 없어서 아직 목이다:
+ * '최근 본 매물'은 조회 이력을 서버가 쌓을지부터 정해야 하고, '이전 기록'은
+ * 추천 API 자체가 없다. 각각 엔드포인트가 생기면 하나씩 지운다.
+ */
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
 import { getNearbyListings } from './listings'
 
-/** 관심 매물 — 목록 앞쪽 몇 건을 찜해둔 것으로 둔다. */
-export async function getMockFavorites(): Promise<Listing[]> {
-  const all = await getNearbyListings()
-  return all.slice(0, 6)
-}
-
-/** 최근 본 매물 — 관심 매물과 겹치되 순서가 다르다(본 순서). */
+/** 최근 본 매물 — 본 순서대로 섞어 둔다. */
 export async function getMockRecentlyViewed(): Promise<Listing[]> {
   const all = await getNearbyListings()
   return [all[3], all[0], all[7], all[1], all[9], all[4]].filter(Boolean)
