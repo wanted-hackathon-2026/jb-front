@@ -16,8 +16,6 @@ import { useAuthStore } from '@/stores/auth'
  * 막히게 되어 있다(google-oauth-login.md §3).
  */
 const props = defineProps<{
-  /** 무엇이 막혔는지 한 줄로. "관심 매물은" 처럼 조사까지 붙여 넘긴다. */
-  what: string
   /** 로그인·닉네임 설정이 끝난 뒤 돌아올 경로. 닉네임 화면에 그대로 넘긴다. */
   redirect?: string
 }>()
@@ -76,11 +74,15 @@ onMounted(async () => {
         -->
         <img :src="'/logo.svg'" width="207" height="41" alt="자취방정식" class="mx-auto w-44" />
 
-        <p id="login-prompt-title" class="mt-7 leading-normal font-bold text-slate-900">
-          로그인하시고<br />나한테 딱 맞는 자취방정식을 완성해보세요!
+        <!--
+          팝업이 왜 떴는지부터 말한다 — 사용자는 저장을 누르려다 막힌 참이라, 권유보다
+          '막힌 이유'가 먼저 궁금하다. 어느 자리에서 떴든 같은 문장이라 한 줄로 둔다.
+        -->
+        <p id="login-prompt-title" class="mt-7 text-sm text-slate-500">
+          로그인이 필요한 기능이에요
         </p>
-        <p class="mt-2 text-sm leading-normal text-slate-500">
-          {{ what }} 로그인한 계정에 저장돼요.
+        <p class="mt-1 leading-normal font-bold text-slate-900">
+          로그인하시고<br />나한테 딱 맞는 자취방정식을 완성해보세요!
         </p>
 
         <!--
