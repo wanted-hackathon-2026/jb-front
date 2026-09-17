@@ -68,6 +68,17 @@ export interface RouteLeg {
   stop?: string
 }
 
+/** 상세 화면의 축별 평가 한 칸 */
+export interface LifestyleInsight {
+  key: keyof LifestyleWeights
+  /** 0~100. 매칭 점수와 같은 색 구간을 쓴다(lib/score.ts) */
+  score: number
+  /** 굵게 나가는 한 줄 */
+  title: string
+  /** 그 아래 설명 */
+  body: string
+}
+
 export interface Listing {
   id: string
   dealType: DealType
@@ -103,10 +114,18 @@ export interface Listing {
   bathrooms: number
   /** 사진 장수 — 시안의 "4 / 13" 인디케이터 */
   photoCount: number
-  /** AI 추천 요약 한 줄 */
-  aiSummary: string
+  /**
+   * AI 추천 요약 한 줄. 추천 맥락이 있을 때만 있다 — 어떤 조건으로 추천됐는지가 있어야
+   * 나오는 문장이라, 주변 매물에서 들어온 상세에는 null 이다(score·rank·route 와 같은 부류).
+   */
+  aiSummary: string | null
   /** 이 추천 안에서의 순위. 1~3 위만 배지로 보여준다. */
   rank: number | null
+  /**
+   * 라이프스타일 네 축의 평가. aiSummary 와 같은 부류라 추천 맥락이 없으면 빈 배열이다.
+   * 순서·이름은 lib/lifestyle.ts 의 축 테이블을 따른다.
+   */
+  lifestyleInsights: LifestyleInsight[]
   /** 거점까지의 이동 동선 */
   route: RouteLeg[]
 }

@@ -2,6 +2,7 @@
 import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
 import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
 import { formatMoney } from '@/lib/format'
+import { LIFESTYLE_AXES } from '@/lib/lifestyle'
 import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
 import type { DealType, TransportMode } from '@/types/domain'
 
@@ -20,27 +21,6 @@ const TRANSPORTS: { value: TransportMode; label: string }[] = [
   { value: 'car', label: '자가용' },
   { value: 'walk', label: '도보' },
 ]
-const LIFESTYLE = [
-  {
-    key: 'sunlight',
-    icon: '🌤',
-    label: '채광',
-    hint: '방향·동간거리·주변 고층건물 유무 기반 일조량',
-  },
-  { key: 'safety', icon: '🚓', label: '치안', hint: 'CCTV 밀도·가로등·안심귀가길·경찰서 접근성' },
-  {
-    key: 'quietness',
-    icon: '🔇',
-    label: '조용함',
-    hint: '대로변·철도·유흥가와의 이격거리, 주변 상권 밀집도',
-  },
-  {
-    key: 'infrastructure',
-    icon: '🏪',
-    label: '편의',
-    hint: '편의점·마트·병원·약국·공원 도보 접근성',
-  },
-] as const
 </script>
 
 <template>
@@ -125,7 +105,7 @@ const LIFESTYLE = [
       </div>
       <div class="flex flex-col gap-4">
         <BaseWeightSlider
-          v-for="item in LIFESTYLE"
+          v-for="item in LIFESTYLE_AXES"
           :key="item.key"
           v-model="filters.lifestyle[item.key]"
           :icon="item.icon"

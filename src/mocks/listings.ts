@@ -1,5 +1,6 @@
 /** ⚠️ 가짜 매물 데이터. 백엔드 연동 시 이 파일을 통째로 삭제한다. */
-import type { Listing, RouteLeg } from '@/types/domain'
+import { LIFESTYLE_AXES } from '@/lib/lifestyle'
+import type { LifestyleInsight, Listing, RouteLeg } from '@/types/domain'
 
 const ROOM_TYPES = ['분리형 원룸', '오픈형 원룸', '복층 원룸', '1.5룸', '투룸']
 const ADDRESSES = ['역삼동', '도곡동', '대치동', '삼성동', '논현동', '구로동']
@@ -19,6 +20,59 @@ const SUMMARIES = [
   '채광이 좋고 같은 가격대에서 면적이 넓은 편이에요',
   '치안 지표가 높은 동네에 있는 매물이에요',
 ]
+
+/** 축별 평가 문안. 축마다 점수 높은 순으로 한 벌씩 돌려 쓴다. */
+const INSIGHTS: Record<string, { title: string; body: string }[]> = {
+  sunlight: [
+    {
+      title: '남향으로 햇빛이 잘 들어요',
+      body: '창이 남향으로 뚫려 있고 건물 간 거리가 넓어 한낮에도 조명을 안 켜도 됩니다.',
+    },
+    {
+      title: '오후에 볕이 드는 편이에요',
+      body: '앞 건물과의 거리가 보통이라 아침보다 오후에 볕이 더 들어옵니다.',
+    },
+  ],
+  safety: [
+    {
+      title: 'CCTV가 촘촘한 골목이에요',
+      body: '가로등과 CCTV가 많고 파출소가 도보 거리라 늦은 귀가도 무리가 없습니다.',
+    },
+    {
+      title: '무난한 편이에요',
+      body: '큰길과 가까워 인적이 있는 편이지만, 안쪽 골목은 밤에 조금 어둡습니다.',
+    },
+  ],
+  quietness: [
+    {
+      title: '대로변에서 떨어져 조용해요',
+      body: '큰길·철길과 거리가 있어 창을 열어둬도 소음이 적습니다.',
+    },
+    {
+      title: '유흥가가 가까워 밤에 소리가 있어요',
+      body: '역세권이라 이동은 편하지만 주말 밤에는 바깥 소리가 들어옵니다.',
+    },
+  ],
+  infrastructure: [
+    {
+      title: '편의점이 걸어서 3분이에요',
+      body: '약국과 병원도 가깝습니다. 다만 대형마트는 없어 장은 배송을 쓰게 됩니다.',
+    },
+    {
+      title: '기본 시설은 갖춰져 있어요',
+      body: '편의점·약국은 가깝고, 마트와 공원은 한 정거장 거리입니다.',
+    },
+  ],
+}
+
+/** 매칭 점수 언저리에서 축마다 조금씩 흩어 놓는다 — 네 칸이 다 같은 숫자면 확인이 안 된다. */
+function buildInsights(i: number, score: number): LifestyleInsight[] {
+  return LIFESTYLE_AXES.map((axis, a) => {
+    const s = Math.max(40, Math.min(99, score + [0, -7, -24, -17][a] + (i % 5)))
+    const pool = INSIGHTS[axis.key]
+    return { key: axis.key, score: s, ...pool[s >= 80 ? 0 : 1] }
+  })
+}
 
 /**
  * 이동 동선. 첫 노선으로 타고 → (환승) → 두 번째 노선 → 도보 로 만든다.
@@ -74,6 +128,7 @@ function build(i: number): Listing {
     photoCount: 8 + (i % 8),
     aiSummary: SUMMARIES[i % SUMMARIES.length],
     rank: null,
+    lifestyleInsights: buildInsights(i, score),
     route: buildRoute(i, lines, walkMinutes),
   }
 }
@@ -104,7 +159,17 @@ export async function getNearbyListings(): Promise<Listing[]> {
 export async function getMockListing(id: string): Promise<Listing | null> {
   await new Promise((r) => setTimeout(r, 180))
   const found = ALL.find((l) => l.id === id)
-  return found ? { ...found, score: null, rank: null, commutes: [], route: [] } : null
+  return found
+    ? {
+        ...found,
+        score: null,
+        rank: null,
+        aiSummary: null,
+        lifestyleInsights: [],
+        commutes: [],
+        route: [],
+      }
+    : null
 }
 
 /**

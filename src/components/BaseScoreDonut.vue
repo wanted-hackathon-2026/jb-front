@@ -2,7 +2,15 @@
 import { computed } from 'vue'
 import { scoreColor } from '@/lib/score'
 
-const props = withDefaults(defineProps<{ score: number; size?: number }>(), { size: 72 })
+const props = withDefaults(
+  defineProps<{
+    score: number
+    size?: number
+    /** 링 안 숫자 위에 얹는 이름. 상세의 축별 평가처럼 무슨 점수인지 밝혀야 할 때 쓴다. */
+    label?: string
+  }>(),
+  { size: 72 },
+)
 
 const R = 26
 const CIRC = 2 * Math.PI * R
@@ -25,7 +33,7 @@ const offset = computed(() => arc.value - CIRC)
     class="relative shrink-0"
     :style="{ width: `${size}px`, height: `${size}px` }"
     role="img"
-    :aria-label="`매칭 점수 ${score}점`"
+    :aria-label="label ? `${label} ${score}점` : `매칭 점수 ${score}점`"
   >
     <svg viewBox="0 0 60 60" class="size-full -rotate-90">
       <circle cx="30" cy="30" :r="R" fill="none" stroke="var(--color-slate-200)" stroke-width="5" />
@@ -41,8 +49,12 @@ const offset = computed(() => arc.value - CIRC)
         :stroke-dashoffset="offset"
       />
     </svg>
-    <span class="absolute inset-0 grid place-items-center text-lg font-bold" :style="{ color }">
-      {{ score }}
+    <span class="absolute inset-0 flex flex-col items-center justify-center leading-none">
+      <span v-if="label" class="mb-0.5 text-[11px] font-medium text-slate-400">{{ label }}</span>
+      <!-- 라벨이 있으면 숫자가 주인공이라 키운다. 없을 때는 기존 크기를 유지한다. -->
+      <span class="font-bold" :class="label ? 'text-2xl' : 'text-lg'" :style="{ color }">
+        {{ score }}
+      </span>
     </span>
   </div>
 </template>
