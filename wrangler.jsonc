@@ -16,15 +16,23 @@
   },
 
   "vars": {
-    // 백엔드. 주소가 바뀌면 여기만 고친다.
-    //
-    // ⚠️ IP 가 아니라 **호스트명**이어야 한다. Workers 의 fetch() 는 목적지가 IP 리터럴이면
-    //    요청을 보내지 않고 Cloudflare 에러 페이지(error code: 1003, "Direct IP access not
-    //    allowed")를 돌려준다. worker/index.js 는 그걸 그대로 흘려보내므로 /api/* 가 전부
-    //    403 이 된다. 실측(2026-09-17): 이 값이 http://43.203.149.41 일 때
-    //    https://jb-front.kaameo12.workers.dev/api/health → 403 "error code: 1003",
-    //    같은 순간 http://43.203.149.41/api/health → 백엔드의 401 JSON.
-    //    아래 주소는 AWS 가 공짜로 주는 퍼블릭 DNS 라 같은 서버로 resolve 된다.
+    /*
+     * 백엔드. **IP 가 아니라 호스트명이어야 한다.**
+     *
+     * Workers 의 fetch 는 목적지가 IP 리터럴이면 요청을 보내지 않고 Cloudflare 에러
+     * 페이지(error code: 1003, "Direct IP access not allowed")를 돌려준다.
+     * worker/index.js 는 응답을 그대로 흘려보내므로 /api/* 가 전부 403 이 된다.
+     *
+     * 실측(2026-09-17): 이 값이 http://43.203.149.41 일 때
+     *   https://jb-front.kaameo12.workers.dev/api/me → 403 "error code: 1003"
+     *   같은 순간 http://43.203.149.41/api/me       → 백엔드의 401 JSON
+     *
+     * ⚠️ 로컬 `wrangler dev` 는 일반 네트워크라 IP 로도 통과한다. 그래서 이 차이는
+     *    **배포한 뒤에야 드러난다** — 로컬 통과만으로 안심하면 안 된다.
+     *
+     * 아래는 AWS 가 인스턴스마다 공짜로 주는 퍼블릭 DNS 라 같은 서버로 resolve 된다.
+     * 도메인 구매가 필요 없고 제3자 DNS 에 기대지도 않는다.
+     */
     "API_ORIGIN": "http://ec2-43-203-149-41.ap-northeast-2.compute.amazonaws.com"
   }
 }

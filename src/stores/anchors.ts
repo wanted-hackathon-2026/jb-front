@@ -3,8 +3,8 @@ import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import type { Anchor, PlaceSuggestion } from '@/types/domain'
 import { localId } from '@/lib/id'
-import { createWorkplace, listWorkplaces } from '@/lib/api/workplaces'
-import { ApiError } from '@/lib/api/http'
+import { createWorkplace, deleteWorkplace, listWorkplaces } from '@/lib/api/workplaces'
+import { ApiError, NotFoundError } from '@/lib/api/http'
 import { ERROR_CODE } from '@/types/backend'
 import { useAuthStore } from './auth'
 import { useNoticeStore } from './notice'
@@ -31,6 +31,12 @@ function reasonOf(e: unknown, fallback: string): string {
 
 /** 시안의 칩 영역이 감당하는 개수. 서버에는 개수 제한이 없다 — 이건 화면 사정이다. */
 export const MAX_ANCHORS = 3
+
+/**
+ * 서버에 올라가기 전(또는 올라가지 못한) 거점의 id 접두사. 서버 id 는 UUID 라
+ * 섞이지 않는다(lib/id.ts). 삭제할 때 서버를 부를지 가르는 기준이 된다.
+ */
+const LOCAL_PREFIX = 'anchor'
 
 /**
  * 거점 스토어. 로그인 여부에 따라 두 가지 모드로 돈다:
@@ -83,7 +89,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     if (!canAddMore.value) return
     if (anchors.value.some((a) => a.name === place.name)) return
 
-    const optimisticId = localId('anchor')
+    const optimisticId = localId(LOCAL_PREFIX)
     anchors.value.push({
       id: optimisticId,
       name: place.name,
@@ -133,12 +139,35 @@ export const useAnchorsStore = defineStore('anchors', () => {
   }
 
   /**
-   * ⚠️ 로컬에서만 지워진다. `/api/workplaces` 에 삭제 엔드포인트가 없어서
-   * (WorkplaceController 는 POST·GET 뿐) 서버에는 남고, 다음 로그인 때
-   * syncFromServer 로 되살아난다. DELETE 가 생기면 여기서 같이 부른다.
+   * 거점 삭제. `add()` 를 뒤집은 모양이라 성질도 같다 — **낙관적이고, 절대 reject 하지
+   * 않는다.** 호출부(SearchPage·MapPage)가 await 하지 않으므로 던지면 unhandled
+   * rejection 이 된다.
+   *
+   * 서버까지 지우는 게 핵심이다. 예전에는 로컬에서만 지워져서 다음 로그인 때
+   * syncFromServer 가 서버 목록으로 덮으며 **지운 거점이 되살아났다.**
+   *
+   * 404 는 성공으로 친다. 이미 서버에 없다면 목적은 달성된 것이고, 되돌려 놓으면
+   * 영영 지울 수 없는 거점이 된다. 백엔드에 DELETE 가 구현되기 전인 지금은 미매핑
+   * 경로라 항상 여기로 떨어진다 — 즉 구현 전까지는 예전과 똑같이 로컬 삭제로 끝나고,
+   * 구현되는 순간 조용히 진짜 삭제가 된다(lib/api/workplaces.ts).
    */
-  const remove = (id: string) => {
-    anchors.value = anchors.value.filter((a) => a.id !== id)
+  async function remove(id: string) {
+    const at = anchors.value.findIndex((a) => a.id === id)
+    if (at === -1) return
+    const [removed] = anchors.value.splice(at, 1)
+
+    // 서버에 없는 거점이다 — 비로그인으로 넣었거나 add() 의 등록이 실패한 것.
+    if (!auth.isAuthenticated || id.startsWith(`${LOCAL_PREFIX}_`)) return
+
+    try {
+      await deleteWorkplace(id)
+    } catch (e) {
+      if (e instanceof NotFoundError) return
+      // 실패를 삼키면 화면에서만 사라졌다가 다음 로그인에 되살아난다 — 고치려던 바로
+      // 그 증상이다. 지운 자리에 되돌려 놓고 실패를 말한다.
+      anchors.value.splice(Math.min(at, anchors.value.length), 0, removed)
+      notice.error(reasonOf(e, '거점을 삭제하지 못했어요'))
+    }
   }
 
   function rememberSearch(keyword: string) {

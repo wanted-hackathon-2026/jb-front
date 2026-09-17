@@ -671,11 +671,15 @@ onBeforeUnmount(() => {
       <!--
         딤을 통째로 칠하고 mask 로 구멍을 뚫는다. 구멍마다 box-shadow 를 주는 흔한 방법은
         그림자가 겹치는 자리가 두 배로 어두워져서, 구멍이 둘 이상이면 쓸 수 없다.
+
+        딤의 크기는 잰 값(size)이 아니라 100% 다. 구멍은 좌표를 재야 하지만 딤은 잴 이유가
+        없고, 재면 측정이 한 프레임이라도 늦은 순간 — 창 크기를 바꾸는 중이거나 그 직후 —
+        모자란 만큼 안 칠해진 띠가 남는다. 0,0 에 붙어 있으니 남는 쪽은 늘 오른쪽과 아래다.
       -->
       <svg class="absolute inset-0 size-full" aria-hidden="true">
         <defs>
           <mask id="jb-tour-mask" maskUnits="userSpaceOnUse">
-            <rect :width="size.w" :height="size.h" fill="white" />
+            <rect width="100%" height="100%" fill="white" />
             <rect
               v-for="(ring, i) in rings"
               :key="i"
@@ -689,8 +693,8 @@ onBeforeUnmount(() => {
           </mask>
         </defs>
         <rect
-          :width="size.w"
-          :height="size.h"
+          width="100%"
+          height="100%"
           fill="#0f172a"
           fill-opacity="0.8"
           mask="url(#jb-tour-mask)"
