@@ -18,6 +18,8 @@ const failed = ref(false)
 let map: kakao.maps.Map | null = null
 let clusterer: kakao.maps.MarkerClusterer | null = null
 let circles: kakao.maps.Circle[] = []
+/** 거점 이름표(시안의 '주요 거점 1' 말풍선). 원과 함께 다시 그린다. */
+let anchorLabels: kakao.maps.CustomOverlay[] = []
 let pinMarker: kakao.maps.Marker | null = null
 
 /** 지도에서 찍은 위치를 표시한다. 매물 마커와 달리 클러스터에 넣지 않는다. */
@@ -56,7 +58,27 @@ function drawListings() {
 function drawAnchors(fit = false) {
   if (!map) return
   circles.forEach((c) => c.setMap(null))
+  anchorLabels.forEach((o) => o.setMap(null))
   const color = brandColor()
+
+  anchorLabels = props.anchors.map((a, i) => {
+    // SDK 가 문자열로 붙이는 DOM 이라 Tailwind 클래스가 아니라 인라인 스타일을 쓴다.
+    const el = document.createElement('div')
+    el.textContent = `주요 거점 ${i + 1}`
+    el.style.cssText =
+      'padding:3px 10px;border-radius:9999px;background:#fff;color:#0f172a;' +
+      'font-size:12px;font-weight:700;white-space:nowrap;' +
+      'box-shadow:0 1px 4px rgb(15 23 42 / .2)'
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(a.y, a.x),
+      content: el,
+      yAnchor: 1.6,
+      zIndex: 2,
+    })
+    overlay.setMap(map)
+    return overlay
+  })
+
   circles = props.anchors.map((a) => {
     const circle = new kakao.maps.Circle({
       center: new kakao.maps.LatLng(a.y, a.x),
@@ -105,7 +127,11 @@ onMounted(async () => {
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,
-    minLevel: 4,
+    // 시안(2-2 / 39-2481)에는 기본 물방울 핀이 하나도 없고 전부 민트 숫자 배지다.
+    // minLevel 0 · minClusterSize 1 이라야 한 건짜리도 배지로 그려진다 — 기본값으로 두면
+    // 매물이 흩어져 있을 때 클러스터가 1건씩 만들어지며 기본 핀으로 떨어진다.
+    minLevel: 0,
+    minClusterSize: 1,
     disableClickZoom: false,
     styles: CLUSTER_STYLES,
   })
@@ -133,6 +159,7 @@ watch(
 
 onBeforeUnmount(() => {
   circles.forEach((c) => c.setMap(null))
+  anchorLabels.forEach((o) => o.setMap(null))
   pinMarker?.setMap(null)
   clusterer?.clear()
 })

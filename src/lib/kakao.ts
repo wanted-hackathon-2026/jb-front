@@ -36,7 +36,9 @@ export const CLUSTER_STYLES = [
   {
     width: '44px',
     height: '44px',
-    background: 'var(--color-brand-400)',
+    // 클러스터 배지는 SDK 가 지도 오버레이 레이어에 직접 만든다. 여기에 CSS 변수를 쓰면
+    // 해석되는 맥락이 우리 컴포넌트 트리 밖이라 조용히 실패할 수 있어 값을 그대로 적는다.
+    background: '#3bd5c4',
     borderRadius: '22px',
     color: '#fff',
     textAlign: 'center',
