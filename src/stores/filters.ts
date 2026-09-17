@@ -9,15 +9,16 @@ export const RENT_RANGE = { min: 0, max: 200, step: 5 }
 export const MINUTES_RANGE = { min: 0, max: 60, step: 5 }
 
 /**
- * 첫 진입 기본값 — 시안의 예시 숫자(채광 45·치안 73)를 그대로 쓴다.
- * 초기화가 돌아갈 곳은 이 값이 아니라 아래 NEUTRAL_* 다.
+ * 첫 진입 기본값 — 모든 축을 가운데에서 시작한다.
+ *
+ * 범위형(보증금·월세)은 **최소부터 중간까지**다. 한 점으로 두면 폭이 0 이라 결과가 비고,
+ * 전체로 두면 거르지 않는 것이라 슬라이더가 있는 이유가 없어진다.
+ * 가중치형은 중앙값 하나(50)가 곧 '선호 없음'이라 NEUTRAL 과 같은 값이 된다.
  */
-const DEFAULT_LIFESTYLE: LifestyleWeights = {
-  sunlight: 45,
-  quietness: 50,
-  safety: 73,
-  infrastructure: 50,
-}
+const toMid = ({ min, max }: { min: number; max: number }): [number, number] => [
+  min,
+  (min + max) / 2,
+]
 
 /**
  * 초기화가 돌아갈 '조건 없음' 상태.
@@ -37,11 +38,12 @@ const NEUTRAL_LIFESTYLE: LifestyleWeights = {
 export const useFiltersStore = defineStore('filters', () => {
   // 거래유형은 중복 선택이다(시안: "중복선택 가능").
   const dealTypes = useStorage<DealType[]>('jb:deal-types:v1', ['monthly', 'jeonse'])
-  const deposit = useStorage<[number, number]>('jb:deposit:v1', [5000, 10000])
-  const rent = useStorage<[number, number]>('jb:rent:v1', [0, 40])
+  // 키의 버전을 올린 이유: 기본값만 바꾸면 이미 저장된 브라우저는 옛 값을 계속 쓴다.
+  const deposit = useStorage<[number, number]>('jb:deposit:v2', toMid(DEPOSIT_RANGE))
+  const rent = useStorage<[number, number]>('jb:rent:v2', toMid(RENT_RANGE))
   const transport = useStorage<TransportMode>('jb:transport:v1', 'transit')
-  const maxMinutes = useStorage('jb:max-minutes:v1', 30)
-  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v2', { ...DEFAULT_LIFESTYLE })
+  const maxMinutes = useStorage('jb:max-minutes:v2', (MINUTES_RANGE.min + MINUTES_RANGE.max) / 2)
+  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v3', { ...NEUTRAL_LIFESTYLE })
 
   const hasRent = computed(() => dealTypes.value.includes('monthly'))
 
