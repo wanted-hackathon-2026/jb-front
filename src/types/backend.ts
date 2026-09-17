@@ -113,10 +113,17 @@ export interface FavoritePropertySummary {
   roadAddress: string
   propertyType: string
   leaseType: LeaseType
-  /** 보증금(원 단위인지 만원 단위인지는 property 적재 정책에 달렸다 — 표시 전 확인할 것) */
+  /**
+   * 보증금(**만원**). 전세는 monthlyRent 가 0, 월세는 0보다 크다.
+   * 출처: docs/specs/my-account-and-favorites.md, property-registration.md
+   * → 프론트의 `Listing.deposit`·`rent` 와 단위가 같아서 환산이 필요 없다.
+   */
   deposit: number
   monthlyRent: number
-  /** 전용면적(㎡). BigDecimal 이 문자열이 아닌 number 로 직렬화된다. */
+  /**
+   * 전용면적(**㎡**). BigDecimal 이 문자열이 아닌 number 로 직렬화된다.
+   * 프론트는 평으로 표시하므로 `lib/format.ts` 의 변환을 거친다.
+   */
   exclusiveArea: number | null
   floor: number | null
   buildYear: number | null
@@ -186,3 +193,41 @@ export interface ProblemDetail {
   detail?: string
   timestamp?: string
 }
+
+/**
+ * 분기해도 되는 오류 코드. 명세가 "클라이언트가 분기 처리하는 **안정적인 식별자**"라고
+ * 정의한 값이다(docs/specs/google-oauth-login.md §6). 반대로 `detail` 은 개발·운영
+ * 확인용이라 화면에 그대로 띄우면 안 된다.
+ *
+ * 출처: docs/specs 의 세 명세 + 실제 구현(FavoriteServiceImpl·AccountServiceImpl 등).
+ * 여기 없는 코드도 서버는 보낼 수 있다 — 분기하는 것만 적는다.
+ */
+export const ERROR_CODE = {
+  /** 401. 액세스 토큰이 없거나 만료·변조됐다. 재발급 후 한 번 재시도한다. */
+  INVALID_ACCESS_TOKEN: 'INVALID_ACCESS_TOKEN',
+  /** 401. refresh 쿠키가 없거나 죽었다. 실패 사유를 구분해 주지 않는다(의도된 설계). */
+  INVALID_REFRESH_TOKEN: 'INVALID_REFRESH_TOKEN',
+  /** 401. 구글 ID 토큰 검증 실패 — audience 불일치가 가장 흔하다. */
+  INVALID_GOOGLE_TOKEN: 'INVALID_GOOGLE_TOKEN',
+  /** 502. 구글 공개 키 조회 실패 등. 사용자 잘못이 아니므로 재시도를 권한다. */
+  GOOGLE_AUTH_UNAVAILABLE: 'GOOGLE_AUTH_UNAVAILABLE',
+  /**
+   * 403. 닉네임 설정 전에 다른 API 를 불렀다.
+   * ⚠️ a2ee567 기준 **아직 구현돼 있지 않다**(lib/api/http.ts 의 PROFILE_INCOMPLETE 참고).
+   */
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  /** 409. 다른 사용자가 쓰는 닉네임. 자기 닉네임을 다시 저장하는 건 성공한다. */
+  NICKNAME_ALREADY_EXISTS: 'NICKNAME_ALREADY_EXISTS',
+  /** 404. 찜하려는 매물이 없다. */
+  PROPERTY_NOT_FOUND: 'PROPERTY_NOT_FOUND',
+  /** 404. 내가 찜한 적 없는 매물이다. */
+  FAVORITE_NOT_FOUND: 'FAVORITE_NOT_FOUND',
+  /** 409. 이미 찜했다. 동시 요청도 한 건만 저장되고 나머지가 이걸 받는다. */
+  FAVORITE_ALREADY_EXISTS: 'FAVORITE_ALREADY_EXISTS',
+  /** 400. 도로명주소의 좌표를 못 찾았다. 주소를 다시 고르게 해야 한다. */
+  ADDRESS_NOT_GEOCODABLE: 'ADDRESS_NOT_GEOCODABLE',
+  /** 502. VWorld 가 죽었다. 사용자 잘못이 아니다. */
+  GEOCODING_UNAVAILABLE: 'GEOCODING_UNAVAILABLE',
+  /** 400. 요청 JSON·필드 검증 실패. */
+  INVALID_REQUEST: 'INVALID_REQUEST',
+} as const

@@ -28,19 +28,10 @@ const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
  */
 export const hasListingApi: boolean = false
 
-/** 서버가 더는 모르는 작업(404/410). 폴링을 멈출 근거가 된다. */
-export class NotFoundError extends Error {
-  readonly status: number
-
-  constructor(status: number) {
-    super(`요청한 리소스를 찾을 수 없다 (${status})`)
-    this.status = status
-  }
-}
-
 /**
- * problem+json 을 실어 나르는 오류. 분기는 `code` 로만 한다 — `detail` 문구는
- * 언제든 바뀐다(예: ADDRESS_NOT_GEOCODABLE, INVALID_ACCESS_TOKEN).
+ * problem+json 을 실어 나르는 오류. 분기는 **`code` 로만** 한다 — `detail` 은
+ * 명세가 "사용자 화면에 그대로 노출하는 문구가 아니라 개발·운영 확인용 설명"이라고
+ * 못박은 값이라 언제든 바뀐다(docs/specs/google-oauth-login.md §6).
  */
 export class ApiError extends Error {
   readonly status: number
@@ -54,6 +45,29 @@ export class ApiError extends Error {
     this.problem = problem
   }
 }
+
+/**
+ * 서버가 더는 모르는 리소스(404/410). 폴링을 멈출 근거가 된다.
+ *
+ * ApiError 를 물려받으므로 **`code` 가 살아 있다.** 404 가 한 종류가 아니라서 그렇다 —
+ * 찜 등록의 `PROPERTY_NOT_FOUND`(매물이 없다)와 찜 조회의 `FAVORITE_NOT_FOUND`
+ * (내가 찜한 적이 없다)는 사용자에게 할 말이 서로 다르다.
+ */
+export class NotFoundError extends ApiError {
+  constructor(status: number, problem: ProblemDetail | null = null) {
+    super(status, problem, `요청한 리소스를 찾을 수 없다 (${status})`)
+  }
+}
+
+/**
+ * 닉네임 설정 전에는 인증·닉네임 설정 API 만 부를 수 있고, 나머지는 이 코드로 막힌다
+ * (docs/specs/google-oauth-login.md §3).
+ *
+ * ⚠️ **a2ee567 시점 백엔드에는 아직 구현돼 있지 않다.** 명세는 '확정'인데 이를 강제하는
+ *    필터가 없어서 지금은 닉네임 없이도 거점·찜이 호출된다. 구현되는 순간 신규 가입자의
+ *    첫 동기화가 전부 403 으로 바뀌므로, 그때 조용히 깨지지 않도록 미리 분기해 둔다.
+ */
+export const PROFILE_INCOMPLETE = 'PROFILE_INCOMPLETE'
 
 /* ── access token ─────────────────────────────────────────────────────── */
 
@@ -88,8 +102,15 @@ function send(path: string, init?: RequestInit): Promise<Response> {
 }
 
 /**
- * 재발급은 **동시에 한 번만** 돈다. 화면 진입 때 여러 요청이 한꺼번에 401 을 맞는데,
- * 각자 재발급을 쏘면 서버가 refresh token 을 회전시키는 사이 서로의 토큰을 무효화한다.
+ * 재발급은 **동시에 한 번만** 돈다. 이게 선택이 아니라 필수인 이유가 명세에 있다
+ * (docs/specs/google-oauth-login.md §4.2):
+ *
+ * - 재발급이 성공할 때마다 refresh token 을 **회전**하고 이전 것을 즉시 폐기한다
+ * - **폐기된 토큰의 재사용이 감지되면 그 로그인 세션 자체를 폐기한다**
+ *
+ * 즉 화면 진입 때 여러 요청이 한꺼번에 401 을 맞고 각자 재발급을 쏘면, 두 번째 요청이
+ * 방금 폐기된 토큰을 들고 가서 **세션 전체가 날아간다.** 사용자는 이유 없이 로그아웃된다.
+ * single-flight 로 묶어서 회전이 한 번만 일어나게 한다.
  */
 let inFlightReissue: Promise<boolean> | null = null
 
@@ -140,14 +161,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     res = await send(path, init)
   }
 
-  // 410 Gone 도 같은 취급이다 — 만료든 미존재든 프론트가 할 일은 같다.
-  if (res.status === 404 || res.status === 410) throw new NotFoundError(res.status)
   if (!res.ok) {
-    throw new ApiError(
-      res.status,
-      await problemOf(res),
-      `${init?.method ?? 'GET'} ${path} 실패: ${res.status}`,
-    )
+    // 본문을 **먼저** 읽는다. 404 도 code 로 종류가 갈리므로 여기서 버리면 안 된다.
+    const problem = await problemOf(res)
+    // 410 Gone 은 404 와 같은 취급이다 — 만료든 미존재든 프론트가 할 일은 같다.
+    if (res.status === 404 || res.status === 410) throw new NotFoundError(res.status, problem)
+    throw new ApiError(res.status, problem, `${init?.method ?? 'GET'} ${path} 실패: ${res.status}`)
   }
 
   // 204 No Content(로그아웃·찜 삭제)와 빈 본문은 파싱하지 않는다.

@@ -38,7 +38,16 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => status.value === 'authenticated')
-  /** 로그인은 됐지만 닉네임이 없는 상태. 온보딩을 띄울 근거다. */
+  /**
+   * 로그인은 됐지만 닉네임이 없는 상태. 온보딩(닉네임 설정)을 띄울 근거다.
+   *
+   * 신규 가입자는 **항상** 이 상태로 시작한다 — 구글이 주는 이름을 닉네임으로 쓰지 않고
+   * `nickname: null` 로 저장하기 때문이다(docs/specs/google-oauth-login.md §3).
+   *
+   * 명세상 이 상태에서는 인증·닉네임 설정 외의 API 가 403 `PROFILE_INCOMPLETE` 로
+   * 막히게 되어 있다. a2ee567 기준 아직 구현되지 않았지만, 구현되는 순간 신규 가입자의
+   * 거점·찜 호출이 전부 막히므로 **닉네임 설정 UI 가 로그인 UI 와 같이 와야 한다.**
+   */
   const needsProfile = computed(() => isAuthenticated.value && !user.value?.profileCompleted)
   /** 구글 클라이언트 ID 가 없으면 로그인 버튼 자체를 비활성으로 둔다. */
   const canLogin = hasGoogleClientId

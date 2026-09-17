@@ -4,7 +4,29 @@ import { useStorage } from '@vueuse/core'
 import type { Anchor, PlaceSuggestion } from '@/types/domain'
 import { localId } from '@/lib/id'
 import { createWorkplace, listWorkplaces } from '@/lib/api/workplaces'
+import { ApiError } from '@/lib/api/http'
+import { ERROR_CODE } from '@/types/backend'
 import { useAuthStore } from './auth'
+
+/**
+ * 서버가 거절한 이유를 사용자 말로 옮긴다. `detail` 을 그대로 쓰지 않는 건 명세가
+ * 그걸 "개발·운영 확인용"이라고 못박았기 때문이다(google-oauth-login.md §6).
+ */
+function reasonOf(e: unknown, fallback: string): string {
+  if (!(e instanceof ApiError)) return fallback
+  switch (e.code) {
+    case ERROR_CODE.ADDRESS_NOT_GEOCODABLE:
+      // 지오코딩은 도로명 주소를 기대한다. 지도 핀으로 잡은 지번 주소가 여기 걸린다.
+      return '이 주소로는 위치를 찾을 수 없어요. 도로명 주소로 다시 선택해 주세요'
+    case ERROR_CODE.GEOCODING_UNAVAILABLE:
+      return '주소 변환 서비스가 잠시 불안정해요. 잠시 후 다시 시도해 주세요'
+    case ERROR_CODE.PROFILE_INCOMPLETE:
+      // 닉네임을 정해야 나머지 API 가 열린다(stores/auth.ts 의 needsProfile).
+      return '닉네임을 먼저 설정해 주세요'
+    default:
+      return fallback
+  }
+}
 
 /** 시안의 칩 영역이 감당하는 개수. 서버에는 개수 제한이 없다 — 이건 화면 사정이다. */
 export const MAX_ANCHORS = 3
@@ -47,7 +69,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
       anchors.value = await listWorkplaces()
       syncError.value = null
     } catch (e) {
-      syncError.value = e instanceof Error ? e.message : '거점을 불러오지 못했어요'
+      syncError.value = reasonOf(e, '거점을 불러오지 못했어요')
     } finally {
       syncing.value = false
     }
@@ -88,7 +110,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     } catch (e) {
       // 로컬에는 남겨 둔다. 지오코딩 실패(지번 주소 등)로 서버가 거절해도
       // 사용자가 방금 고른 거점이 화면에서 사라지면 더 혼란스럽다.
-      syncError.value = e instanceof Error ? e.message : '거점을 저장하지 못했어요'
+      syncError.value = reasonOf(e, '거점을 저장하지 못했어요')
     }
   }
 
