@@ -10,8 +10,8 @@ import { defineStore } from 'pinia'
  */
 export const useSheetStore = defineStore('sheet', () => {
   const state = ref<'peek' | 'full'>('peek')
-  /** 시트 안에서 어느 탭을 보고 있는지. 첫 진입 안내가 '검색 필터'를 펼쳐 보여준다. */
-  const tab = ref<'listings' | 'filters'>('listings')
+  /** 시트 안에서 어느 탭을 보고 있는지. 조건을 먼저 정하는 순서라 '검색 필터'로 연다. */
+  const tab = ref<'listings' | 'filters'>('filters')
   /**
    * 첫 진입 안내가 '추천을 받은 뒤'를 설명하는 동안만 참.
    *

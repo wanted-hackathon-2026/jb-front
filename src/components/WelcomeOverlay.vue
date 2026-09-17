@@ -492,7 +492,9 @@ function labelAlign(hole: Hole) {
 function close() {
   // 안내 때문에 펼친 시트는 되돌린다 — 지도가 먼저 보이는 게 이 화면의 기본이다.
   sheet.state = STEPS[0].sheet
-  sheet.tab = STEPS[0].tab
+  // 탭은 단계가 아니라 화면의 기본값('검색 필터')으로 되돌린다 — 안내가 마지막에
+  // 들른 탭에 사용자를 버려두면 안내 전과 후의 첫 화면이 달라진다.
+  sheet.tab = 'filters'
   sheet.previewScored = false
   sheet.previewProgress = false
   emit('close')
