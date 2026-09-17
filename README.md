@@ -31,7 +31,46 @@ npm run dev   # http://localhost:5173
 | `npm run type-check` | 타입 체크만 (`vue-tsc --build`) |
 | `npm run format`     | Prettier 포매팅                 |
 
-환경 변수는 사용하지 않는다.
+### 환경 변수
+
+**커밋되는 env 파일은 없다.** 키는 두 군데서 온다:
+
+- **배포** — 호스팅(Cloudflare) **빌드** 환경변수. 런타임 변수 쪽에 넣으면 빌드 때 안 읽혀
+  빈 값으로 굳는다
+- **로컬** — 직접 만드는 `.env.local` (gitignore 대상)
+
+`VITE_` 값은 **어디에 넣든 빌드 결과에 평문으로 박힌다** — 대시보드에 넣어도 마찬가지다.
+그래서 여기 있는 건 전부 공개를 전제로 한 식별자고, 방어는 값을 숨기는 게 아니라
+**각 콘솔의 도메인 제한**이 한다. 판단 기준은 `docs/env-and-secrets.md`.
+
+로컬 개발용 `.env.local` 템플릿:
+
+```bash
+# 카카오 JavaScript 키 (REST·Admin 키 아님)
+VITE_KAKAO_MAP_KEY=
+
+# 구글 웹 클라이언트 ID. 백엔드 GOOGLE_CLIENT_ID 와 **같은 값**이어야 한다
+VITE_GOOGLE_CLIENT_ID=
+
+# 로컬 백엔드로 붙일 때만. 기본은 배포 백엔드(vite.config.ts)
+# API_PROXY_TARGET=http://localhost:8080
+# API_PROXY_ORIGIN=http://localhost:5173   # 백엔드 AUTH_ALLOWED_ORIGINS 에도 추가
+```
+
+| 키 | 없으면 |
+| --- | --- |
+| `VITE_KAKAO_MAP_KEY` | 지도가 자리표시자로 동작 |
+| `VITE_GOOGLE_CLIENT_ID` | 비로그인으로 동작 (로그인 팝업이 막힘) |
+| `VITE_API_BASE_URL` | 같은 오리진 — 개발에선 Vite 프록시가 받는다 |
+| `API_PROXY_TARGET` · `API_PROXY_ORIGIN` | 배포 백엔드로 붙는다 |
+
+**키가 하나도 없어도 앱은 돌아간다** — 지도와 로그인만 자리표시자가 된다.
+그래서 클론 직후 `npm install && npm run dev` 가 바로 된다.
+
+> `API_` 로 시작하는 둘은 `VITE_` 가 없어서 **번들에 안 들어간다** — 개발 서버만 본다.
+>
+> ⚠️ **백엔드 env 를 여기 두지 않는다.** DB 암호·JWT 서명키·외부 API 키는 프론트가
+> 가질 값이 아니다(`docs/env-and-secrets.md` 3단계).
 
 ## 디렉터리 구조
 
