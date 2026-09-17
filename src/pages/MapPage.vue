@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
+import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseBottomSheet from '@/components/BaseBottomSheet.vue'
 import BaseSegmentedControl from '@/components/BaseSegmentedControl.vue'
@@ -40,9 +41,9 @@ const listings = ref<Listing[]>([])
 const loading = ref(true)
 
 const TABS = [
-  // 검색 필터가 먼저다 — 조건을 정하고 결과를 보는 순서가 화면에도 드러나게 한다.
-  { value: 'filters' as const, label: '검색 필터' },
+  // 지금 보이는 지도의 매물이 먼저고, 조건을 걸어 AI 에게 맡기는 쪽이 그 다음이다.
   { value: 'listings' as const, label: '주변 매물' },
+  { value: 'filters' as const, label: 'AI 추천' },
 ]
 
 /**
@@ -343,7 +344,21 @@ function addPickedAnchor() {
         그때는 값이 안 바뀌어 update 가 오지 않는다.
       -->
       <div class="flex shrink-0 justify-center pb-3" @click="sheet.state = 'full'">
-        <BaseSegmentedControl v-model="sheet.tab" :options="TABS" data-tour="tabs" />
+        <BaseSegmentedControl v-model="sheet.tab" :options="TABS" data-tour="tabs">
+          <template #default="{ option }">
+            <!--
+              AI 가 하는 일이라는 표시. 글자 옆에 붙는 자리라 배지(원) 없이 반짝임만.
+              선택되면 브랜드색 위에 올라가 그라디언트가 묻히므로 흰색으로 칠한다.
+            -->
+            <BaseAiIcon
+              v-if="option.value === 'filters'"
+              :size="20"
+              :badge="false"
+              :color="sheet.tab === option.value ? '#fff' : undefined"
+            />
+            {{ option.label }}
+          </template>
+        </BaseSegmentedControl>
       </div>
 
       <div v-if="sheet.tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">

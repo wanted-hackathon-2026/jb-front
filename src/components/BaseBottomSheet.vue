@@ -69,7 +69,7 @@ function onClick() {
       @pointercancel="onPointerUp"
       @click="onClick"
     >
-      <span class="h-1 w-10 rounded-full bg-slate-300" />
+      <span class="h-1 w-18 rounded-full bg-slate-200" />
     </button>
 
     <slot />

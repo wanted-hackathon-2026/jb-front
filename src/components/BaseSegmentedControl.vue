@@ -11,11 +11,13 @@ defineEmits<{ 'update:modelValue': [T] }>()
       type="button"
       role="tab"
       :aria-selected="modelValue === opt.value"
-      class="h-9 rounded-full px-4 text-sm font-semibold transition-colors"
+      class="flex h-10 items-center gap-1 rounded-full px-5 font-bold transition-colors"
       :class="modelValue === opt.value ? 'bg-brand-500 text-white' : 'text-slate-500'"
       @click="$emit('update:modelValue', opt.value)"
     >
-      {{ opt.label }}
+      <!-- 라벨 앞에 아이콘을 붙이는 쪽이 있다(지도의 'AI 추천'). 이 컴포넌트는 그게
+           무엇인지 모른 채 자리만 내준다. -->
+      <slot :option="opt">{{ opt.label }}</slot>
     </button>
   </div>
 </template>

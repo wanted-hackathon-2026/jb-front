@@ -10,7 +10,22 @@
  * 512×512 PNG 가 박힌 형태라 16px 로 쓰기엔 무겁고 색도 고정된다 — 원본이 필요하면
  * 이 path 만 갈아끼우면 된다.
  */
-withDefaults(defineProps<{ size?: number }>(), { size: 28 })
+const props = withDefaults(
+  defineProps<{
+    size?: number
+    /**
+     * 동그란 배지로 그릴지. 끄면 반짝임만 남고, 흰색 대신 그라디언트로 칠한다 —
+     * 지도 시트의 'AI 추천' 탭처럼 글자 옆에 붙을 때 쓴다.
+     */
+    badge?: boolean
+    /**
+     * 반짝임을 단색으로 칠한다. 브랜드색 위에 얹히면 그라디언트가 배경에 묻히므로
+     * (선택된 'AI 추천' 탭) 그때만 흰색을 넘긴다. 비워두면 그라디언트다.
+     */
+    color?: string
+  }>(),
+  { size: 28, badge: true, color: undefined },
+)
 
 /** 그라디언트 id 는 문서 전역이라, 한 화면에 둘 이상 놓여도 안 겹치게 만든다. */
 const gradientId = `ai-icon-${Math.random().toString(36).slice(2, 9)}`
@@ -20,7 +35,7 @@ const gradientId = `ai-icon-${Math.random().toString(36).slice(2, 9)}`
   <svg
     :width="size"
     :height="size"
-    viewBox="0 0 28 28"
+    :viewBox="badge ? '0 0 28 28' : '5 5 18 18'"
     fill="none"
     class="shrink-0"
     aria-hidden="true"
@@ -39,9 +54,9 @@ const gradientId = `ai-icon-${Math.random().toString(36).slice(2, 9)}`
       </linearGradient>
     </defs>
 
-    <circle cx="14" cy="14" r="14" :fill="`url(#${gradientId})`" />
+    <circle v-if="badge" cx="14" cy="14" r="14" :fill="`url(#${gradientId})`" />
 
-    <g fill="#fff">
+    <g :fill="props.badge ? '#fff' : (props.color ?? `url(#${gradientId})`)">
       <path
         d="M12.2 6.8c.62 3.9 2.18 5.46 6.08 6.08-3.9.62-5.46 2.18-6.08 6.08-.62-3.9-2.18-5.46-6.08-6.08 3.9-.62 5.46-2.18 6.08-6.08z"
       />
