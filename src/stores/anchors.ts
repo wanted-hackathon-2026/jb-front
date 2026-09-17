@@ -29,8 +29,14 @@ function reasonOf(e: unknown, fallback: string): string {
   }
 }
 
-/** 시안의 칩 영역이 감당하는 개수. 서버에는 개수 제한이 없다 — 이건 화면 사정이다. */
-export const MAX_ANCHORS = 3
+/**
+ * 등록할 수 있는 거점 수. 서버에는 개수 제한이 없다 — 이건 제품 결정이다.
+ *
+ * 이 값을 줄여도 이미 등록된 거점은 지우지 않는다. 사용자가 넣어둔 것을 말없이
+ * 버리는 쪽이 더 나쁘다 — 한도를 넘긴 상태면 추가만 막히고(canAddMore), 하나씩
+ * 지우면 자연히 한도 안으로 들어온다.
+ */
+export const MAX_ANCHORS = 1
 
 /**
  * 서버에 올라가기 전(또는 올라가지 못한) 거점의 id 접두사. 서버 id 는 UUID 라

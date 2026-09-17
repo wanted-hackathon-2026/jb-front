@@ -73,7 +73,8 @@ function drawAnchors(fit = false) {
   anchorLabels = props.anchors.map((a, i) => {
     // SDK 가 문자열로 붙이는 DOM 이라 Tailwind 클래스가 아니라 인라인 스타일을 쓴다.
     const el = document.createElement('div')
-    el.textContent = `주요 거점 ${i + 1}`
+    // 번호는 여럿일 때만 뜻이 있다 — 하나뿐인데 '1'이 붙으면 더 있을 것처럼 보인다.
+    el.textContent = props.anchors.length > 1 ? `주요 거점 ${i + 1}` : '주요 거점'
     el.style.cssText =
       'padding:3px 10px;border-radius:9999px;background:#fff;color:#0f172a;' +
       'font-size:12px;font-weight:700;white-space:nowrap;' +

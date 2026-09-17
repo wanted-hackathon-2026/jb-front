@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
 import { searchPlaces } from '@/lib/api/places'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
+import { useNoticeStore } from '@/stores/notice'
 import type { PlaceSuggestion } from '@/types/domain'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
+const notice = useNoticeStore()
 
 const keyword = ref('')
 const results = ref<PlaceSuggestion[]>([])
@@ -18,6 +20,15 @@ watch(keyword, async (q) => {
 })
 
 function pick(place: PlaceSuggestion) {
+  /*
+   * 가득 찼으면 add() 가 조용히 아무것도 하지 않는다(stores/anchors.ts). 그대로 두면
+   * 눌러도 아무 일이 없는 화면이 되므로 여기서 이유를 말한다 — 지도에서 돋보기로
+   * 언제든 이 화면에 올 수 있어서, 한도에 걸린 사용자가 실제로 여기까지 온다.
+   */
+  if (!anchors.canAddMore) {
+    notice.error(`거점은 최대 ${MAX_ANCHORS}곳이에요. 등록된 거점을 지우고 다시 골라 주세요`)
+    return
+  }
   anchors.add(place)
   anchors.rememberSearch(place.name)
   keyword.value = ''
@@ -104,7 +115,10 @@ function split(name: string) {
       시안 프레임 5: 등록한 거점 칩은 '검색어 입력 중' 화면에만 있다.
       비어 있을 때는 최근 목록 두 섹션이 그 자리를 대신한다.
     -->
-    <div v-if="keyword.trim() && anchors.hasAnchors" class="bg-white px-5 pb-3">
+    <div
+      v-if="anchors.hasAnchors && (keyword.trim() || !anchors.canAddMore)"
+      class="bg-white px-5 pb-3"
+    >
       <p class="mb-2 flex items-center gap-1.5 font-bold text-slate-900">
         <svg
           viewBox="0 0 24 24"
@@ -120,7 +134,7 @@ function split(name: string) {
         </svg>
         등록한 거점
         <span class="text-sm font-normal text-slate-500">
-          주요 거점 순으로 정렬하세요 · 최대 {{ MAX_ANCHORS }}곳
+          {{ anchors.canAddMore ? `최대 ${MAX_ANCHORS}곳` : '바꾸려면 지우고 다시 등록하세요' }}
         </span>
       </p>
       <div class="flex flex-wrap gap-2">

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { MAX_ANCHORS } from '@/stores/anchors'
 import { SCORE_BANDS } from '@/lib/score'
 import { useSheetStore } from '@/stores/sheet'
 
@@ -60,7 +59,7 @@ const STEPS: Step[] = [
       {
         key: 'anchors',
         title: '1. 거점을 등록하세요',
-        body: `직장·학교처럼 자주 가는 곳을 최대 ${MAX_ANCHORS}곳까지. 여기서부터 걸리는 시간이 점수의 1순위예요.`,
+        body: '직장·학교처럼 자주 가는 곳을 등록하세요. 여기서부터 걸리는 시간이 점수의 1순위예요.',
         place: 'below',
       },
     ],
