@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { CLUSTER_STYLES, LISTING_MARKER, loadKakaoMaps } from '@/lib/kakao'
+import {
+  CLUSTER_MIN_LEVEL,
+  CLUSTER_STEPS,
+  CLUSTER_STYLES,
+  LISTING_MARKER,
+  loadKakaoMaps,
+} from '@/lib/kakao'
 import type { Anchor, Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -137,14 +143,14 @@ onMounted(async () => {
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,
-    // 시안(2-2 / 39-2481)에는 기본 물방울 핀이 하나도 없고 전부 민트 숫자 배지다.
-    // minLevel 0 · minClusterSize 1 이라야 한 건짜리도 배지로 그려진다 — 기본값으로 두면
-    // 매물이 흩어져 있을 때 클러스터가 1건씩 만들어지며 기본 핀으로 떨어진다.
-    minLevel: 0,
+    // 축소된 상태에서는 숫자 배지로 묶고, 확대하면 낱개 점으로 푼다(lib/kakao.ts).
+    // 0 으로 두면 끝까지 확대해도 배지가 남아 어느 건물에 있는 매물인지 알 수 없다.
+    minLevel: CLUSTER_MIN_LEVEL,
     // 2건 이상만 배지로 묶는다. 1 로 두면 '1' 만 적힌 배지가 지도를 덮는다 —
     // 시안의 8·10·35 는 여러 건이 뭉친 숫자지 낱개가 아니다.
     minClusterSize: 2,
     disableClickZoom: false,
+    calculator: CLUSTER_STEPS,
     styles: CLUSTER_STYLES,
   })
   drawListings()

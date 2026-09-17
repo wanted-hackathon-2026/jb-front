@@ -47,19 +47,36 @@ export const LISTING_MARKER = {
   size: 18,
 }
 
-export const CLUSTER_STYLES = [
-  {
-    width: '44px',
-    height: '44px',
-    // 클러스터 배지는 SDK 가 지도 오버레이 레이어에 직접 만든다. 여기에 CSS 변수를 쓰면
-    // 해석되는 맥락이 우리 컴포넌트 트리 밖이라 조용히 실패할 수 있어 값을 그대로 적는다.
-    background: '#00c8b3',
-    borderRadius: '22px',
-    color: '#fff',
-    textAlign: 'center',
-    lineHeight: '44px',
-    fontSize: '14px',
-    fontWeight: '700',
-    boxShadow: '0 2px 6px rgb(15 23 42 / 0.2)',
-  },
-]
+/**
+ * 클러스터로 묶기 시작하는 지도 레벨. 카카오의 레벨은 **클수록 멀리 본다** —
+ * 이 값 이상(=더 축소된 상태)에서만 숫자 배지가 되고, 더 확대하면 낱개 점으로 풀린다.
+ *
+ * 기본 레벨이 5 라 첫 화면은 배지로 시작하고, 한두 번 확대하면 점이 드러난다.
+ * 점이 되는 순간의 밀도가 화면에서 읽히는지가 이 숫자의 기준이다.
+ */
+export const CLUSTER_MIN_LEVEL = 4
+
+/**
+ * 배지가 커지는 구간. 묶인 개수가 10 미만 / 10~29 / 30 이상 순으로 아래 styles 와
+ * 짝을 이룬다 — 시안에서 35 가 12 보다 확연히 큰 것이 이 규칙이다.
+ */
+export const CLUSTER_STEPS = [10, 30]
+
+/**
+ * 클러스터 배지는 SDK 가 지도 오버레이 레이어에 직접 만든다. 여기에 CSS 변수를 쓰면
+ * 해석되는 맥락이 우리 컴포넌트 트리 밖이라 조용히 실패할 수 있어 값을 그대로 적는다.
+ */
+const badge = (size: number, fontSize: number) => ({
+  width: `${size}px`,
+  height: `${size}px`,
+  background: '#00c8b3',
+  borderRadius: `${size / 2}px`,
+  color: '#fff',
+  textAlign: 'center',
+  lineHeight: `${size}px`,
+  fontSize: `${fontSize}px`,
+  fontWeight: '700',
+  boxShadow: '0 2px 6px rgb(15 23 42 / 0.2)',
+})
+
+export const CLUSTER_STYLES = [badge(44, 14), badge(52, 16), badge(60, 18)]
