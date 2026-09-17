@@ -12,14 +12,14 @@ defineEmits<{ remove: [] }>()
 
 <template>
   <span
-    class="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-brand-500 bg-white pl-3 text-sm font-medium text-brand-700"
+    class="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-brand-500 bg-white pl-3 text-sm font-medium text-brand-500"
     :class="removable ? 'pr-1' : 'pr-3'"
   >
     {{ label }}
     <button
       v-if="removable"
       type="button"
-      class="grid size-7 place-items-center rounded-full text-brand-600"
+      class="grid size-7 place-items-center rounded-full text-brand-500"
       :aria-label="`${label} ${removeLabel}`"
       @click="$emit('remove')"
     >

@@ -46,7 +46,7 @@ const clusters = [
     <span
       v-for="c in clusters"
       :key="c.n"
-      class="absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-brand-400 text-sm font-bold text-white shadow"
+      class="absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-brand-500 text-sm font-bold text-white shadow"
       :style="{ top: c.top, left: c.left }"
     >
       {{ c.n }}

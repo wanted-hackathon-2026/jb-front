@@ -378,9 +378,9 @@ function messageOf(e: unknown): string {
       <p v-if="error" class="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
         {{ error }}
       </p>
-      <p v-if="saved" class="mt-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700">
+      <p v-if="saved" class="mt-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-500">
         등록됐어요 · 좌표 {{ saved.latitude.toFixed(5) }}, {{ saved.longitude.toFixed(5) }}
-        <span class="block text-xs text-brand-600/70">{{ saved.id }}</span>
+        <span class="block text-xs text-brand-500/70">{{ saved.id }}</span>
       </p>
 
       <button

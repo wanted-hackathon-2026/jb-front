@@ -71,7 +71,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
         :key="key"
         type="button"
         class="flex min-h-14 w-full items-center justify-between px-5 text-left"
-        :class="key === active ? 'font-bold text-brand-700' : 'text-slate-700'"
+        :class="key === active ? 'font-bold text-brand-500' : 'text-slate-700'"
         :aria-pressed="key === active"
         @click="dismiss(() => emit('choose', key))"
       >

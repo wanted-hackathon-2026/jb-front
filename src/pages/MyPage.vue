@@ -227,7 +227,7 @@ watch(
         <p class="text-sm text-slate-400">{{ error }}</p>
         <button
           type="button"
-          class="mt-3 min-h-11 px-4 text-sm font-semibold text-brand-600"
+          class="mt-3 min-h-11 px-4 text-sm font-semibold text-brand-500"
           @click="load(tab)"
         >
           다시 시도

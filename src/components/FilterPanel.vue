@@ -47,7 +47,7 @@ const DEALS: { value: DealType; label: string }[] = [
     <section>
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">보증금</h3>
-        <span class="text-sm font-semibold text-brand-600">
+        <span class="text-sm font-semibold text-brand-500">
           {{ formatMoney(filters.deposit[0]) }} ~ {{ formatMoney(filters.deposit[1]) }}
         </span>
       </div>
@@ -57,7 +57,7 @@ const DEALS: { value: DealType; label: string }[] = [
     <section data-tour="conditions" v-if="filters.hasRent">
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">월세</h3>
-        <span class="text-sm font-semibold text-brand-600">
+        <span class="text-sm font-semibold text-brand-500">
           {{ filters.rent[0] }}만원 ~ {{ filters.rent[1] }}만원
         </span>
       </div>
@@ -83,7 +83,7 @@ const DEALS: { value: DealType; label: string }[] = [
         >
           {{ t.label }}
         </button>
-        <span class="ml-auto shrink-0 text-sm font-semibold text-brand-600">
+        <span class="ml-auto shrink-0 text-sm font-semibold text-brand-500">
           최대 {{ filters.maxMinutes }}분
         </span>
       </div>

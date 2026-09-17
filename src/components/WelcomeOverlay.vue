@@ -721,7 +721,7 @@ onBeforeUnmount(() => {
         :class="[labelAlign(h), swapping ? 'opacity-0' : 'opacity-100']"
         :style="labelStyle(h)"
       >
-        <span class="block font-bold text-brand-300">{{ h.title }}</span>
+        <span class="block font-bold text-brand-500">{{ h.title }}</span>
         <span class="mt-1 block text-sm leading-normal text-white/85">{{ h.body }}</span>
         <!-- 점수대별 색 범례. 도넛과 같은 표(lib/score.ts)를 본다. -->
         <span
@@ -757,7 +757,7 @@ onBeforeUnmount(() => {
             v-for="(_, i) in STEPS"
             :key="i"
             class="size-1.5 rounded-full transition-colors"
-            :class="i === step ? 'bg-brand-400' : 'bg-white/30'"
+            :class="i === step ? 'bg-brand-500' : 'bg-white/30'"
           />
         </div>
 

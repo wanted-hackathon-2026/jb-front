@@ -183,7 +183,7 @@ const logout = () => auth.logout()
 
         <button
           type="submit"
-          class="mt-1 h-14 w-full rounded-full bg-brand-500 text-lg font-semibold text-white transition-colors active:bg-brand-600 disabled:opacity-40"
+          class="mt-1 h-14 w-full rounded-full bg-brand-500 text-lg font-semibold text-white transition-opacity active:opacity-90 disabled:opacity-40"
           :disabled="!valid || saving"
         >
           {{ saving ? '저장 중…' : isFirstTime ? '시작하기' : '적용' }}

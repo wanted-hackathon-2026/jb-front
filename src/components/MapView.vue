@@ -45,7 +45,7 @@ const radiusOf = (minutes: number) => Math.max(MIN_RADIUS, minutes * METERS_PER_
 /** 원 색은 브랜드 토큰을 그대로 읽는다 — 색을 여기 박아두면 팔레트가 바뀔 때 혼자 남는다. */
 const brandColor = () =>
   getComputedStyle(document.documentElement).getPropertyValue('--color-brand-500').trim() ||
-  '#5ac5b3'
+  '#00c8b3'
 
 function drawListings() {
   if (!map || !clusterer) return

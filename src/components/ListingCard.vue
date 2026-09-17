@@ -68,7 +68,7 @@ const detailRoute = computed(() =>
         {{ listing.roomType }} · {{ listing.areaPyeong }}평 · {{ listing.floor }}층
       </p>
       <p class="truncate text-sm text-slate-500">{{ listing.address }}</p>
-      <p v-if="listing.commutes.length" class="truncate text-sm font-medium text-brand-600">
+      <p v-if="listing.commutes.length" class="truncate text-sm font-medium text-brand-500">
         {{
           formatCommute(
             listing.commutes[0].minutes,
@@ -77,7 +77,7 @@ const detailRoute = computed(() =>
           )
         }}
       </p>
-      <p v-else class="truncate text-sm font-medium text-brand-600">
+      <p v-else class="truncate text-sm font-medium text-brand-500">
         {{ listing.lines.join(' · ') }}
       </p>
     </div>
