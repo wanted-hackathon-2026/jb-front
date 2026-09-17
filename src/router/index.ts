@@ -40,6 +40,16 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '마이' },
   },
   {
+    /**
+     * 닉네임 설정. 가입 직후 반드시 거치는 화면이라 마이페이지 하위가 아니라
+     * 최상위에 둔다 — 로그인 팝업이 어느 화면에서 떴든 여기로 보낸다.
+     */
+    path: '/nickname',
+    name: 'nickname',
+    component: () => import('@/pages/NicknamePage.vue'),
+    meta: { title: '닉네임 설정' },
+  },
+  {
     path: '/search',
     name: 'search',
     component: () => import('@/pages/SearchPage.vue'),

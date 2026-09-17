@@ -41,43 +41,49 @@ export function loadGoogleIdentity(): Promise<void> {
   return promise
 }
 
-/** 사용자가 로그인을 그만뒀을 때. 오류 화면을 띄울 일이 아니라 조용히 넘어갈 일이다. */
-export class GoogleSignInCancelled extends Error {
-  constructor(reason: string) {
-    super(`구글 로그인이 완료되지 않았다: ${reason}`)
-  }
+/**
+ * 구글 버튼을 그린다. 여기서 받은 ID 토큰을 백엔드에 넘기면 우리 토큰이 된다.
+ *
+ * **왜 One Tap 이 아니라 버튼인가** — One Tap(`prompt()`)은 서드파티 쿠키가 막힌
+ * 브라우저에서 아예 뜨지 않는다. 그러면 사용자는 로그인을 눌렀는데 아무 일도 일어나지
+ * 않는 걸 겪고, 코드에는 '취소'로 기록된다. 구글이 직접 그리는 버튼은 그런 조건에
+ * 영향받지 않아서, 로그인 경로는 이쪽 하나로 둔다.
+ *
+ * 그 대신 **프로그램이 임의로 로그인 창을 열 수는 없다** — 구글이 그린 버튼을 사용자가
+ * 직접 눌러야 한다. 그래서 로그인은 항상 '버튼이 있는 화면'을 거친다(LoginPrompt).
+ */
+export async function renderGoogleButton(
+  el: HTMLElement,
+  onToken: (idToken: string) => void,
+): Promise<void> {
+  if (!CLIENT_ID) throw new Error('VITE_GOOGLE_CLIENT_ID 가 없다')
+  await loadGoogleIdentity()
+
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: (response) => {
+      if (response.credential) onToken(response.credential)
+    },
+    // 저장된 계정으로 말없이 로그인되면 사용자가 자기가 누른 적 없는 로그인을 당한다.
+    auto_select: false,
+  })
+
+  // 구글은 너비를 px 숫자로만 받고 200~400 을 벗어나면 무시한다. 320px 기기에서도
+  // 넘치지 않게 실제 자리 너비에 맞춰 잘라 넣는다.
+  const width = Math.max(200, Math.min(400, el.clientWidth || 280))
+  google.accounts.id.renderButton(el, {
+    type: 'standard',
+    theme: 'outline',
+    size: 'large',
+    shape: 'pill',
+    text: 'signin_with',
+    logo_alignment: 'center',
+    locale: 'ko',
+    width,
+  })
 }
 
-/**
- * One Tap 으로 ID 토큰을 받는다.
- *
- * ⚠️ One Tap 은 브라우저·쿠키 설정에 따라 **뜨지 않을 수 있다**(서드파티 쿠키 차단 등).
- *    그때는 GoogleSignInCancelled 로 떨어진다. 로그인 화면이 생기면 이 함수 대신
- *    `google.accounts.id.renderButton` 으로 실제 버튼을 그리는 쪽이 정석이고,
- *    이건 UI 가 없는 지금 스토어가 호출할 수 있게 둔 진입점이다.
- */
-export function promptGoogleIdToken(): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    loadGoogleIdentity()
-      .then(() => {
-        google.accounts.id.initialize({
-          client_id: CLIENT_ID as string,
-          callback: (response) => {
-            if (response.credential) resolve(response.credential)
-            else reject(new GoogleSignInCancelled('credential 이 비어 있다'))
-          },
-        })
-        google.accounts.id.prompt((notification) => {
-          // 성공은 위 callback 으로만 온다. 여기서는 '안 떴다/건너뛰었다'만 처리한다.
-          if (notification.isNotDisplayed()) {
-            reject(
-              new GoogleSignInCancelled(notification.getNotDisplayedReason?.() ?? '표시되지 않음'),
-            )
-          } else if (notification.isSkippedMoment()) {
-            reject(new GoogleSignInCancelled(notification.getSkippedReason?.() ?? '건너뜀'))
-          }
-        })
-      })
-      .catch(reject)
-  })
+/** 저장된 계정으로 자동 로그인되지 않게 한다. 로그아웃할 때 같이 부른다. */
+export function forgetGoogleSession(): void {
+  if (window.google) google.accounts.id.disableAutoSelect()
 }

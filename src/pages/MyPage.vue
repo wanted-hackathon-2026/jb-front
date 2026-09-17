@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
+import LoginPrompt from '@/components/LoginPrompt.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
@@ -33,6 +34,15 @@ const tab = ref<Tab>(initialTab)
 
 /** 빈 화면의 다음 행동은 셋 다 지도다 — 매물도 추천도 거기서 시작한다. */
 const goMap = () => router.push({ name: 'map' })
+
+/** 로그인 팝업. 관심 매물 탭의 안내에서 연다. */
+const loginPromptOpen = ref(false)
+
+async function logout() {
+  await auth.logout()
+  // 마이페이지는 로그인한 사람의 화면이다. 나가면 지도로 돌려보낸다.
+  goMap()
+}
 const loading = ref(true)
 /** 실패 사유. 비어 있는 것과 못 불러온 것은 사용자에게 전혀 다른 상황이다. */
 const error = ref<string | null>(null)
@@ -108,7 +118,13 @@ watch(
           아직 없다. 없는 라우트로 보내면 빈 화면이 뜨므로 지금은 표시만 한다 —
           계정 화면이 생기면 이 p 를 button 으로 바꾸고 라우트를 연결한다.
         -->
-        <p class="mt-3 flex items-center gap-1 font-bold text-slate-900">
+        <!-- 로그인했을 때만 닉네임 변경으로 이어진다. 비로그인이면 누를 것이 없다. -->
+        <button
+          v-if="auth.isAuthenticated"
+          type="button"
+          class="mt-3 flex min-h-11 items-center gap-1 font-bold text-slate-900"
+          @click="router.push({ name: 'nickname' })"
+        >
           <!-- 닉네임이 없을 수 있다(가입 직후). 그때도 자리가 무너지지 않게 대체 문구를 둔다. -->
           <span
             >{{ auth.user?.nickname ?? '내 정보' }}<span v-if="auth.user?.nickname">님</span></span
@@ -123,7 +139,17 @@ watch(
           >
             <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-        </p>
+        </button>
+        <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
+
+        <button
+          v-if="auth.isAuthenticated"
+          type="button"
+          class="mt-1 min-h-11 px-3 text-sm font-medium text-slate-500"
+          @click="logout"
+        >
+          로그아웃
+        </button>
       </div>
     </header>
 
@@ -153,8 +179,8 @@ watch(
         v-else-if="needsLogin"
         title="로그인하면 관심 매물을 볼 수 있어요"
         hint="저장한 매물은 계정에 남아 다른 기기에서도 보여요"
-        :action-label="auth.canLogin ? '로그인' : undefined"
-        @action="auth.login()"
+        action-label="로그인"
+        @action="loginPromptOpen = true"
       />
 
       <!-- 실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다. -->
@@ -223,5 +249,13 @@ watch(
         </ul>
       </template>
     </div>
+
+    <LoginPrompt
+      v-if="loginPromptOpen"
+      what="관심 매물은"
+      redirect="/my?tab=favorites"
+      @close="loginPromptOpen = false"
+      @done="loginPromptOpen = false"
+    />
   </main>
 </template>

@@ -1,8 +1,8 @@
 /**
  * 로그인 상태.
  *
- * ⚠️ 아직 화면이 없다. 로그인 UI 는 나중에 붙이기로 했고, 지금은 이 스토어까지가
- *    전부다. 붙일 때 `login()` 을 버튼에 걸면 된다.
+ * 로그인 자체를 시작하지는 않는다 — 구글이 그린 버튼을 사용자가 눌러야 ID 토큰이
+ * 나오기 때문이다(lib/google.ts). 화면(`LoginPrompt`)이 토큰을 받아 `login()` 에 넘긴다.
  *
  * 토큰은 여기 두지 않는다 — 전송 계층(lib/api/http.ts)이 메모리에 들고 있고,
  * 이 스토어는 '누가 로그인했나'만 안다. 새로고침 복원은 `restore()` 다.
@@ -13,7 +13,7 @@ import { useStorage } from '@vueuse/core'
 import type { AccountResponse } from '@/types/backend'
 import { getAccount, updateNickname as patchNickname } from '@/lib/api/account'
 import { loginWithGoogle, logout as apiLogout, reissue } from '@/lib/api/auth'
-import { GoogleSignInCancelled, hasGoogleClientId, promptGoogleIdToken } from '@/lib/google'
+import { forgetGoogleSession, hasGoogleClientId } from '@/lib/google'
 import { useNoticeStore } from './notice'
 
 /**
@@ -78,34 +78,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** 구글 로그인. 사용자가 One Tap 을 닫으면 조용히 원래 상태로 돌아간다. */
-  async function login(): Promise<void> {
-    // 클라이언트 ID 가 없으면 구글 SDK 를 띄울 수조차 없다. 일반 실패 문구로 뭉개면
-    // 사용자가 계정 문제로 오해하므로, 설정이 없다는 사실을 그대로 말한다.
-    if (!canLogin) {
-      notice.error('지금은 로그인을 사용할 수 없어요')
-      return
-    }
+  /**
+   * 구글이 준 ID 토큰으로 로그인을 끝낸다.
+   *
+   * 토큰을 **받아오는 일은 여기서 하지 않는다** — 구글이 그린 버튼을 사용자가 눌러야만
+   * 나오는 값이라, 화면(LoginPrompt)이 받아서 넘겨준다(lib/google.ts 의 설명).
+   *
+   * 성공/실패를 boolean 으로 돌려준다. 호출부가 "로그인된 다음"으로 이어가야 하는데,
+   * 예외로 알리면 화면마다 try 를 두르게 되기 때문이다.
+   */
+  async function login(idToken: string): Promise<boolean> {
     try {
-      const idToken = await promptGoogleIdToken()
-      // 응답의 isNewUser 는 쓰지 않는다 — 신규 가입자는 닉네임이 null 이라
-      // `needsProfile` 이 같은 것을 더 정확히 말해준다(재로그인한 미완성 계정도 잡는다).
       await loginWithGoogle(idToken)
       // 로그인 응답의 user 는 AccountResponse 보다 좁다(provider·role·createdAt 이 없다).
       // 화면이 기대하는 건 넓은 쪽이므로 곧바로 /api/me 로 채운다.
       user.value = await getAccount()
       status.value = 'authenticated'
       hadSession.value = true
-    } catch (e) {
-      // 사용자가 One Tap 을 닫은 건 실패가 아니다. 조용히 원래 상태로 돌아간다.
-      if (e instanceof GoogleSignInCancelled) return
+      return true
+    } catch {
       notice.error('로그인에 실패했어요')
       status.value = 'anonymous'
+      return false
     }
   }
 
   async function logout(): Promise<void> {
     await apiLogout()
+    // 이걸 빼면 다음 로그인 때 구글이 같은 계정으로 말없이 다시 들여보낸다 —
+    // 계정을 바꾸려고 로그아웃한 사용자가 갇힌다.
+    forgetGoogleSession()
     user.value = null
     hadSession.value = false
     status.value = 'anonymous'

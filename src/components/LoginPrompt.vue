@@ -1,35 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { renderGoogleButton } from '@/lib/google'
 import { useAuthStore } from '@/stores/auth'
 
 /**
- * 로그인해야 쓸 수 있는 기능을 눌렀을 때 뜨는 유도 팝업.
+ * 로그인해야 쓸 수 있는 기능을 눌렀을 때 뜨는 팝업.
  *
- * 로그인 자체를 여기서 끝낸다(`auth.login()`). 부르는 쪽은 "무엇을 하려다 막혔는지"만
- * 넘기고, 성공하면 `done` 을 받아 원래 가려던 곳으로 보내면 된다.
+ * **로그인의 유일한 입구다.** 구글이 그린 버튼을 사용자가 직접 눌러야 ID 토큰이 나와서,
+ * 코드가 임의로 로그인 창을 열 수 없다(lib/google.ts). 그래서 어느 경로로 왔든 이 팝업을
+ * 거친다.
  *
- * 모달 생김새는 MapPage 의 추천 완료 모달과 같은 규격이다(시안 39-2267).
+ * 로그인이 끝나면 `done` 을 낸다. 단, **닉네임이 없는 계정은 여기서 닉네임 화면으로
+ * 보낸다** — 신규 가입자는 항상 그 상태이고, 닉네임을 정하기 전에는 다른 API 가
+ * 막히게 되어 있다(google-oauth-login.md §3).
  */
-defineProps<{
-  /** 무엇이 막혔는지. "관심 매물은" 처럼 조사까지 붙여 넘긴다. */
+const props = defineProps<{
+  /** 무엇이 막혔는지 한 줄로. "관심 매물은" 처럼 조사까지 붙여 넘긴다. */
   what: string
+  /** 로그인·닉네임 설정이 끝난 뒤 돌아올 경로. 닉네임 화면에 그대로 넘긴다. */
+  redirect?: string
 }>()
 
 const emit = defineEmits<{ close: []; done: [] }>()
 
 const auth = useAuthStore()
-const busy = ref(false)
+const router = useRouter()
 
-async function login() {
+const buttonEl = ref<HTMLElement>()
+const busy = ref(false)
+/** 구글 SDK 를 못 불러왔다. 네트워크·차단기 등 우리가 어쩔 수 없는 사유다. */
+const sdkFailed = ref(false)
+
+async function onToken(idToken: string) {
   busy.value = true
   try {
-    await auth.login()
-    // 실패·취소면 status 가 그대로라 팝업을 닫지 않는다 — 사유는 토스트로 나간다.
-    if (auth.isAuthenticated) emit('done')
+    if (!(await auth.login(idToken))) return // 사유는 토스트로 나갔다
+    if (auth.needsProfile) {
+      emit('close')
+      router.push({ name: 'nickname', query: props.redirect ? { redirect: props.redirect } : {} })
+      return
+    }
+    emit('done')
   } finally {
     busy.value = false
   }
 }
+
+onMounted(async () => {
+  if (!auth.canLogin || !buttonEl.value) return
+  try {
+    await renderGoogleButton(buttonEl.value, onToken)
+  } catch {
+    sdkFailed.value = true
+  }
+})
 </script>
 
 <template>
@@ -50,21 +75,20 @@ async function login() {
         </p>
 
         <!--
-          구글 클라이언트 ID 가 없으면 로그인 자체가 불가능하다. 눌러도 아무 일이 없는
-          버튼을 두느니 이유를 밝히고 막는다.
+          구글이 직접 그리는 버튼이라 우리 스타일을 입히지 않는다. 비어 있는 동안 자리가
+          무너지지 않게 최소 높이를 준다.
         -->
-        <p v-if="!auth.canLogin" class="mt-4 text-sm text-slate-400">
-          지금은 로그인을 사용할 수 없어요
+        <div v-if="auth.canLogin && !sdkFailed" class="mt-5 flex min-h-11 justify-center">
+          <div ref="buttonEl" class="w-full max-w-[400px]" />
+        </div>
+
+        <!-- 눌러도 아무 일이 없는 버튼을 두느니 이유를 밝힌다. -->
+        <p v-else class="mt-5 text-sm text-slate-400">
+          {{ sdkFailed ? '구글 로그인을 불러오지 못했어요' : '지금은 로그인을 사용할 수 없어요' }}
         </p>
 
-        <button
-          type="button"
-          class="mt-5 h-15 w-full rounded-full bg-brand-500 text-lg font-semibold text-white disabled:opacity-40"
-          :disabled="busy || !auth.canLogin"
-          @click="login"
-        >
-          {{ busy ? '로그인 중…' : '로그인' }}
-        </button>
+        <p v-if="busy" class="mt-3 text-sm text-slate-400">로그인 중…</p>
+
         <button
           type="button"
           class="mt-2 h-12 w-full text-sm font-semibold text-slate-500"

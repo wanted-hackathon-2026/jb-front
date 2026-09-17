@@ -44,37 +44,34 @@ const TABS = [
   { value: 'filters' as const, label: '검색 필터' },
 ]
 
-/** 로그인 유도 팝업이 떠 있나. 하트를 비로그인으로 눌렀을 때만 뜬다. */
-const loginPromptOpen = ref(false)
+/**
+ * 로그인 팝업이 떠 있나. 떠 있으면 로그인 후 어디로 보낼지도 같이 들고 있는다.
+ *
+ * 프로필 FAB 도 팝업을 거친다. 구글이 그린 버튼을 사용자가 직접 눌러야 하므로
+ * **코드가 로그인 창을 바로 열 수 없기 때문**이다(lib/google.ts).
+ */
+const loginPrompt = ref<{ what: string; go: () => void } | null>(null)
 
 const goMyPage = () => router.push({ name: 'my' })
 const goFavorites = () => router.push({ name: 'my', query: { tab: 'favorites' } })
 
-/**
- * 프로필 FAB. 로그인했으면 마이페이지로, 아니면 바로 로그인을 띄운다.
- * 하트와 달리 팝업을 거치지 않는 이유는 **버튼 자체가 이미 '내 정보'라는 뜻**이라
- * 한 단계 더 묻는 게 군더더기이기 때문이다.
- */
-async function openProfile() {
+/** 프로필 FAB — 로그인했으면 마이페이지로, 아니면 로그인부터. */
+function openProfile() {
   if (auth.isAuthenticated) return goMyPage()
-  await auth.login()
-  // 취소했으면 status 가 그대로다 — 아무 데도 보내지 않는다.
-  if (auth.isAuthenticated) goMyPage()
+  loginPrompt.value = { what: '내 정보와 저장한 매물은', go: goMyPage }
 }
 
-/**
- * 관심 매물 FAB. 찜은 로그인 전용이라(`user_id NOT NULL`) 비로그인이면 팝업으로
- * 먼저 이유를 알린다 — 누른 순간 구글 창이 뜨면 왜 뜨는지 알 수 없다.
- */
+/** 관심 매물 FAB — 찜은 로그인 전용이다(`user_id NOT NULL`). */
 function openFavorites() {
   if (auth.isAuthenticated) return goFavorites()
-  loginPromptOpen.value = true
+  loginPrompt.value = { what: '관심 매물은', go: goFavorites }
 }
 
 /** 팝업에서 로그인이 끝났을 때. 원래 가려던 곳으로 마저 보낸다. */
 function afterLogin() {
-  loginPromptOpen.value = false
-  goFavorites()
+  const go = loginPrompt.value?.go
+  loginPrompt.value = null
+  go?.()
 }
 
 async function load() {
@@ -333,9 +330,9 @@ function addPickedAnchor() {
     <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
 
     <LoginPrompt
-      v-if="loginPromptOpen"
-      what="관심 매물은"
-      @close="loginPromptOpen = false"
+      v-if="loginPrompt"
+      :what="loginPrompt.what"
+      @close="loginPrompt = null"
       @done="afterLogin"
     />
 
