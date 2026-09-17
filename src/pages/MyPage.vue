@@ -174,7 +174,7 @@ watch(
         >
           <!-- 닉네임이 없을 수 있다(가입 직후). 그때도 자리가 무너지지 않게 대체 문구를 둔다. -->
           <span
-            ><span class="text-brand-600">{{ auth.user?.nickname ?? '내 정보' }}</span
+            ><span class="text-brand-500">{{ auth.user?.nickname ?? '내 정보' }}</span
             ><span v-if="auth.user?.nickname">님</span></span
           >
           <svg
