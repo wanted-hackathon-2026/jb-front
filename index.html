@@ -16,9 +16,32 @@
       content="통근 효율성과 생활 환경 가중치를 결합해 나만의 매칭 점수로 주거 매물을 추천합니다."
     />
     <title>자취방정식 · 라이프스타일 기반 주거 추천</title>
+
+    <!--
+      스플래쉬. 번들이 내려오기 전에 보여야 해서 Vue 컴포넌트가 아니라 여기 둔다 —
+      컴포넌트로 만들면 JS 가 실행된 다음에야 뜨고, 그 전까지는 흰 화면이다.
+      Vue 가 #app 에 마운트하면서 이 안을 비우므로 따로 지울 필요가 없다.
+    -->
+    <style>
+      .splash {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #00c8b3;
+      }
+      .splash img {
+        width: 60%;
+        max-width: 17rem;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="splash">
+        <img src="/logo-white.svg" width="229" height="45" alt="자취방정식" />
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
