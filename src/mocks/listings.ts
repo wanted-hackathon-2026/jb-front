@@ -3,7 +3,25 @@ import { LIFESTYLE_AXES } from '@/lib/lifestyle'
 import type { LifestyleInsight, Listing, RouteLeg } from '@/types/domain'
 
 const ROOM_TYPES = ['분리형 원룸', '오픈형 원룸', '복층 원룸', '1.5룸', '투룸']
-const ADDRESSES = ['역삼동', '도곡동', '대치동', '삼성동', '논현동', '구로동']
+
+/**
+ * 매물이 몰려 있는 지점.
+ *
+ * 고르게 흩어 놓으면 지도에서 클러스터가 뭉쳤다 풀리는 걸 확인할 수 없다 — 몇 군데에
+ * 몰아 두고 **개수도 일부러 다르게** 잡는다. 10건짜리는 배지가 한 단계 커지므로
+ * (lib/kakao.ts 의 CLUSTER_STEPS) 구간이 나뉘는 것도 같이 보인다.
+ *
+ * count 의 합은 아래 ALL 의 개수와 같아야 한다.
+ */
+const HOTSPOTS = [
+  { dong: '역삼동', count: 10, x: 127.0364, y: 37.5008 },
+  { dong: '논현동', count: 6, x: 127.0214, y: 37.5109 },
+  { dong: '삼성동', count: 5, x: 127.0632, y: 37.5088 },
+  { dong: '대치동', count: 3, x: 127.0567, y: 37.4946 },
+]
+
+/** i 번째 매물이 속한 지점. 앞에서부터 count 만큼 채운다. */
+const SPOT_OF = HOTSPOTS.flatMap((s, si) => Array.from({ length: s.count }, () => si))
 const LINE_SETS = [
   ['2호선', '1호선'],
   ['3호선', '1호선'],
@@ -102,6 +120,7 @@ function buildRoute(i: number, lines: string[], walkMinutes: number): RouteLeg[]
 
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
+  const spot = HOTSPOTS[SPOT_OF[i]]
   const score = [92, 68, 82, 74, 86, 61, 95, 78][i % 8]
   const deposit = [2000, 3000, 5000, 8000, 10000][i % 5]
   const rent = [35, 45, 55, 0, 40][i % 5]
@@ -116,10 +135,11 @@ function build(i: number): Listing {
     roomType: ROOM_TYPES[i % ROOM_TYPES.length],
     areaPyeong,
     floor: 1 + (i % 5),
-    address: `서울 강남구 ${ADDRESSES[i % ADDRESSES.length]}`,
-    // 강남 일대에 흩어놓는다. 실제 좌표가 아니라 지도 렌더 확인용이다.
-    x: 127.02 + ((i % 7) - 3) * 0.012,
-    y: 37.5 + ((i % 5) - 2) * 0.009,
+    address: `서울 강남구 ${spot.dong}`,
+    // 지점 둘레 150m 안에 흩뜨린다. 실제 좌표가 아니라 지도 렌더 확인용이다 —
+    // 끝까지 확대하면 낱개 점으로 갈라져야 하므로 완전히 겹치게 두지는 않는다.
+    x: spot.x + (((i * 7) % 5) - 2) * 0.0007,
+    y: spot.y + (((i * 3) % 5) - 2) * 0.0005,
     score,
     commutes: [{ anchorId: 'a1', minutes: 20 + (i % 5) * 4, transfers: i % 3, walkMinutes }],
     lines,
@@ -133,7 +153,7 @@ function build(i: number): Listing {
   }
 }
 
-const ALL = Array.from({ length: 24 }, (_, i) => build(i))
+const ALL = Array.from({ length: SPOT_OF.length }, (_, i) => build(i))
 
 /** 거점이 등록된 상태 — 매칭 점수 내림차순 */
 export async function getScoredListings(): Promise<Listing[]> {
