@@ -1,6 +1,6 @@
 import { getMockListing, getMockRecommendedListing } from '@/mocks/listings'
 import type { Listing } from '@/types/domain'
-import { hasApiBase, NotFoundError, request } from './http'
+import { hasListingApi, NotFoundError, request } from './http'
 
 /**
  * 매물 단건 조회 — 추천 맥락 없음.
@@ -9,7 +9,7 @@ import { hasApiBase, NotFoundError, request } from './http'
  * 지도의 '주변 매물' 목록에서 들어오는 경로가 이쪽이다.
  */
 export async function getListing(id: string): Promise<Listing> {
-  if (!hasApiBase) {
+  if (!hasListingApi) {
     const found = await getMockListing(id)
     if (!found) throw new NotFoundError(404)
     return found
@@ -27,7 +27,7 @@ export async function getRecommendedListing(
   recommendationId: string,
   id: string,
 ): Promise<Listing> {
-  if (!hasApiBase) {
+  if (!hasListingApi) {
     const found = await getMockRecommendedListing(id)
     if (!found) throw new NotFoundError(404)
     return found
