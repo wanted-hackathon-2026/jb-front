@@ -40,8 +40,9 @@ const listings = ref<Listing[]>([])
 const loading = ref(true)
 
 const TABS = [
-  { value: 'listings' as const, label: '주변 매물' },
+  // 검색 필터가 먼저다 — 조건을 정하고 결과를 보는 순서가 화면에도 드러나게 한다.
   { value: 'filters' as const, label: '검색 필터' },
+  { value: 'listings' as const, label: '주변 매물' },
 ]
 
 /**
