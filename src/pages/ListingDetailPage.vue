@@ -7,8 +7,10 @@ import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
 import { lifestyleLabel } from '@/lib/lifestyle'
 import { formatCommute, formatPrice } from '@/lib/format'
+import { shareLink } from '@/lib/share'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginPromptStore } from '@/stores/login-prompt'
+import { useNoticeStore } from '@/stores/notice'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -21,6 +23,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const loginPrompt = useLoginPromptStore()
+const notice = useNoticeStore()
 
 const listing = ref<Listing | null>(null)
 const failed = ref(false)
@@ -43,6 +46,35 @@ function toggleSave() {
     return
   }
   saved.value = !saved.value
+}
+
+/**
+ * 공유하는 주소는 **지금 보고 있는 주소가 아니라** 맥락 없는 /listings/:id 다.
+ * 추천 맥락 주소(/recommendations/:recId/...)는 내 조건으로 만든 내 추천이라,
+ * 남이 열면 볼 수 없거나(백엔드가 추천을 사용자별로 가진다) 내 거점·가중치가 묻어난다.
+ * 매물의 항구적인 주소는 이쪽 하나뿐이다.
+ */
+const shareUrl = computed(
+  () =>
+    new URL(
+      router.resolve({ name: 'listing-detail', params: { id: props.id } }).href,
+      location.origin,
+    ).href,
+)
+
+/**
+ * OS 공유 시트로 넘긴다 — 카카오톡·메시지가 그 안에 있어서 채널을 따로 붙이지 않는다.
+ * 시트가 없는 환경에서만 링크 복사로 떨어지고, 그때는 화면이 안 바뀌므로 토스트로 알린다.
+ * 시트를 그냥 닫은 경우는 아무 말도 하지 않는다 — 사용자가 취소한 것이다.
+ */
+async function share() {
+  const result = await shareLink({
+    url: shareUrl.value,
+    title: listing.value ? `${price.value} · ${listing.value.address}` : '자취방정식',
+    text: listing.value ? `${price.value} · ${listing.value.address}` : undefined,
+  })
+  if (result === 'copied') notice.success('링크를 복사했어요')
+  if (result === 'failed') notice.error('공유하지 못했어요. 주소창의 링크를 복사해 주세요')
 }
 
 /** 사진이 아직 없어 첫 장에 고정한다. 슬라이더가 붙으면 이 값이 움직인다. */
@@ -107,27 +139,18 @@ watch(
           </svg>
         </button>
 
+        <!--
+          공유. 시안 에셋(public/share.svg)을 그대로 쓴다. 색이 흰색으로 박혀 있는데
+          여기선 항상 사진 위 흰 아이콘이라 상관없다 — 그림자는 버튼 쪽 drop-shadow 가 준다.
+          저장(찜)은 하단 고정 바에 있다.
+        -->
         <button
           type="button"
           class="safe-top absolute right-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
-          :aria-label="saved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
-          :aria-pressed="saved"
-          @click="toggleSave"
+          aria-label="이 매물 공유하기"
+          @click="share"
         >
-          <svg
-            viewBox="0 0 19 17"
-            class="size-5"
-            :fill="saved ? 'currentColor' : 'none'"
-            aria-hidden="true"
-          >
-            <path
-              d="M16.2374 8.69124L9.15777 15.65L2.0781 8.69124C1.61113 8.24026 1.24331 7.69821 0.997792 7.09922C0.752274 6.50023 0.634382 5.85727 0.651539 5.21084C0.668696 4.56441 0.820531 3.92851 1.09748 3.34318C1.37443 2.75784 1.7705 2.23576 2.26075 1.80981C2.75099 1.38386 3.32479 1.06326 3.94601 0.868202C4.56724 0.673146 5.22242 0.607859 5.87032 0.676451C6.51821 0.745044 7.14478 0.94603 7.71057 1.26675C8.27635 1.58748 8.76909 2.02099 9.15777 2.54C9.54813 2.02476 10.0414 1.59503 10.6068 1.27771C11.1722 0.960393 11.7975 0.76231 12.4436 0.695861C13.0897 0.629412 13.7426 0.696028 14.3616 0.891539C14.9805 1.08705 15.5521 1.40725 16.0407 1.83209C16.5292 2.25694 16.9241 2.77728 17.2007 3.36056C17.4772 3.94384 17.6295 4.5775 17.648 5.22187C17.6665 5.86625 17.5507 6.50747 17.308 7.10541C17.0653 7.70335 16.7008 8.24514 16.2374 8.69686"
-              stroke="currentColor"
-              stroke-width="1.3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <img src="/share.svg" width="25" height="25" alt="" aria-hidden="true" />
         </button>
 
         <span

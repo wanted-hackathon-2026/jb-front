@@ -70,6 +70,7 @@ function open(id: string) {
       :key="n.id"
       class="pointer-events-auto"
       :message="n.message"
+      :tone="n.tone"
       @dismiss="notice.dismiss(n.id)"
     />
   </div>

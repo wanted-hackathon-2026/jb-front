@@ -2,8 +2,11 @@
 /**
  * 잠깐 떴다 사라지는 알림 한 장. 무엇에 대한 알림인지는 모른다 — 문구를 받아 그릴 뿐이다.
  * 띄울 자리와 사라지는 시점은 부르는 쪽이 정한다(App.vue · stores/notice.ts).
+ *
+ * tone 은 아이콘만 바꾼다. 배경까지 초록·빨강으로 가르지 않는 건, 색만으로 성패를
+ * 구분하면 색각 이상에서 같은 카드가 되기 때문이다 — 모양이 다른 아이콘이 그 몫을 한다.
  */
-defineProps<{ message: string }>()
+withDefaults(defineProps<{ message: string; tone?: 'error' | 'success' }>(), { tone: 'error' })
 defineEmits<{ dismiss: [] }>()
 </script>
 
@@ -25,8 +28,13 @@ defineEmits<{ dismiss: [] }>()
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="9" />
-      <path d="M12 7.5v5" stroke-linecap="round" />
-      <circle cx="12" cy="16" r="0.75" fill="currentColor" stroke="none" />
+      <template v-if="tone === 'success'">
+        <path d="M8 12.2l2.8 2.8L16 9.8" stroke-linecap="round" stroke-linejoin="round" />
+      </template>
+      <template v-else>
+        <path d="M12 7.5v5" stroke-linecap="round" />
+        <circle cx="12" cy="16" r="0.75" fill="currentColor" stroke="none" />
+      </template>
     </svg>
 
     <p class="min-w-0 flex-1 text-sm">{{ message }}</p>
