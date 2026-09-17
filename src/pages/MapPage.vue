@@ -114,17 +114,23 @@ function openAnchorPicker() {
   else router.push({ name: 'search' })
 }
 
-/** 지도에서 찍은 지점 — 주소를 확인한 뒤 거점으로 등록할지 고른다. */
-const picked = ref<{ x: number; y: number; address: string } | null>(null)
+/**
+ * 지도에서 찍은 지점 — 주소를 확인한 뒤 거점으로 등록할지 고른다.
+ *
+ * `isRoad` 를 같이 들고 있는다. 도로명이 없는 좌표(공터·산·도로 한복판)는 지번으로
+ * 떨어지는데, 서버는 도로명으로만 좌표를 찾으므로 그런 지점은 애초에 등록할 수 없다.
+ * 누른 뒤에 실패를 보여주는 대신 **버튼을 잠그고 이유를 먼저 말한다.**
+ */
+const picked = ref<{ x: number; y: number; address: string; isRoad: boolean } | null>(null)
 const picking = ref(false)
 
 async function onPick(coord: { x: number; y: number }) {
   picking.value = true
-  picked.value = { ...coord, address: '' }
-  const address = await coordToAddress(coord.x, coord.y)
+  picked.value = { ...coord, address: '', isRoad: false }
+  const found = await coordToAddress(coord.x, coord.y)
   // 주소를 기다리는 동안 다른 지점을 찍었으면 늦게 온 응답은 버린다.
   if (picked.value?.x === coord.x && picked.value?.y === coord.y) {
-    picked.value = { ...coord, address }
+    picked.value = { ...coord, ...found }
   }
   picking.value = false
 }
@@ -152,7 +158,7 @@ async function requestRecommendation() {
 }
 
 function addPickedAnchor() {
-  if (!picked.value) return
+  if (!picked.value || !picked.value.isRoad) return
   const { x, y, address } = picked.value
   anchors.add({ id: `pin_${x}_${y}`, name: address, address, x, y })
   picked.value = null
@@ -278,6 +284,9 @@ function addPickedAnchor() {
         <p class="mt-0.5 font-semibold text-slate-900">
           {{ picking ? '주소를 확인하는 중…' : picked.address }}
         </p>
+        <p v-if="!picking && !picked.isRoad" class="mt-1 text-sm text-red-500">
+          도로명 주소가 없는 위치예요. 건물 쪽을 찍거나 검색으로 골라 주세요
+        </p>
         <div class="mt-3 flex gap-2">
           <button
             type="button"
@@ -289,7 +298,7 @@ function addPickedAnchor() {
           <button
             type="button"
             class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
-            :disabled="picking || !anchors.canAddMore"
+            :disabled="picking || !picked.isRoad || !anchors.canAddMore"
             @click="addPickedAnchor"
           >
             {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}

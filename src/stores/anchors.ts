@@ -106,10 +106,21 @@ export const useAnchorsStore = defineStore('anchors', () => {
       const at = anchors.value.findIndex((a) => a.id === optimisticId)
       if (at !== -1) anchors.value[at] = saved
     } catch (e) {
-      // 로컬에는 남겨 둔다. 지오코딩 실패(지번 주소 등)로 서버가 거절해도
-      // 사용자가 방금 고른 거점이 화면에서 사라지면 더 혼란스럽다.
-      // 다만 **말은 해야 한다** — 화면엔 추가됐는데 서버엔 없는 상태라, 아무 표시가
-      // 없으면 다음 로그인 때 조용히 사라진 것처럼 보인다.
+      /*
+       * 실패를 두 가지로 가른다.
+       *
+       * - **영구 실패**(ADDRESS_NOT_GEOCODABLE): 주소가 도로명이 아니라서 나는 거라
+       *   재시도해도 결과가 같다. 화면에만 남겨두면 사용자는 등록된 줄 알고 있다가
+       *   다음 로그인 때 syncFromServer 가 서버 목록으로 덮으면서 **조용히 사라지는
+       *   것**을 보게 된다. 사라질 거면 지금 사라져야 원인과 결과가 붙는다.
+       * - **일시적 실패**(네트워크·502): 로컬에 남긴다. 다음에 다시 시도하면 되고,
+       *   방금 고른 거점이 눈앞에서 사라지는 쪽이 더 혼란스럽다.
+       */
+      const permanent = e instanceof ApiError && e.code === ERROR_CODE.ADDRESS_NOT_GEOCODABLE
+      if (permanent) {
+        const at = anchors.value.findIndex((a) => a.id === optimisticId)
+        if (at !== -1) anchors.value.splice(at, 1)
+      }
       notice.error(reasonOf(e, '거점을 저장하지 못했어요'))
     }
   }

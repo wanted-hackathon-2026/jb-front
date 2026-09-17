@@ -1,5 +1,6 @@
 /** ⚠️ 가짜 장소 검색. 키가 있으면 `@/lib/api/places` 가 카카오 Places 로 붙는다. */
 import type { PlaceSuggestion } from '@/types/domain'
+import type { ReverseGeocoded } from '@/lib/api/places'
 
 const PLACES: PlaceSuggestion[] = [
   {
@@ -61,16 +62,20 @@ export async function searchPlaces(keyword: string): Promise<PlaceSuggestion[]> 
   return PLACES.filter((p) => p.name.includes(q) || p.address.includes(q))
 }
 
-/** ⚠️ 가짜 역지오코딩. 좌표를 격자로 나눠 고정된 주소를 돌려준다. */
-const MOCK_ADDRESSES = [
-  '서울 강남구 테헤란로 152',
-  '서울 강남구 역삼동 736-17',
-  '서울 서초구 서초대로 411',
-  '서울 마포구 양화로 45',
-  '서울 성동구 왕십리로 222',
+/**
+ * ⚠️ 가짜 역지오코딩. 좌표를 격자로 나눠 고정된 주소를 돌려준다.
+ * 지번만 있는 지점(도로명 없음)도 한 칸 섞어 둔다 — 실제 지도에도 그런 좌표가 있고,
+ * 거점 등록이 그때 막혀야 하므로 목에서도 재현돼야 한다.
+ */
+const MOCK_ADDRESSES: ReverseGeocoded[] = [
+  { address: '서울 강남구 테헤란로 152', isRoad: true },
+  { address: '서울 강남구 역삼동 736-17', isRoad: false },
+  { address: '서울 서초구 서초대로 411', isRoad: true },
+  { address: '서울 마포구 양화로 45', isRoad: true },
+  { address: '서울 성동구 왕십리로 222', isRoad: true },
 ]
 
-export async function coordToAddress(x: number, y: number): Promise<string> {
+export async function coordToAddress(x: number, y: number): Promise<ReverseGeocoded> {
   await new Promise((r) => setTimeout(r, 150))
   const i = Math.abs(Math.round(x * 100) + Math.round(y * 100)) % MOCK_ADDRESSES.length
   return MOCK_ADDRESSES[i]
