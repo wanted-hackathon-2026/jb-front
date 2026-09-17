@@ -80,6 +80,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 구글 로그인. 사용자가 One Tap 을 닫으면 조용히 원래 상태로 돌아간다. */
   async function login(): Promise<void> {
+    // 클라이언트 ID 가 없으면 구글 SDK 를 띄울 수조차 없다. 일반 실패 문구로 뭉개면
+    // 사용자가 계정 문제로 오해하므로, 설정이 없다는 사실을 그대로 말한다.
+    if (!canLogin) {
+      notice.error('지금은 로그인을 사용할 수 없어요')
+      return
+    }
     try {
       const idToken = await promptGoogleIdToken()
       // 응답의 isNewUser 는 쓰지 않는다 — 신규 가입자는 닉네임이 null 이라

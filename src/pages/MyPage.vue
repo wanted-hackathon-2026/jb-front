@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
@@ -17,9 +18,21 @@ const TABS: { value: Tab; label: string }[] = [
 ]
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
-const tab = ref<Tab>('history')
+/**
+ * 진입할 때 열 탭. 지도의 하트 FAB 가 `?tab=favorites` 로 바로 보낸다.
+ * 모르는 값이 오면 기본 탭으로 떨어뜨린다 — 주소창은 사용자가 고칠 수 있다.
+ */
+const initialTab = TABS.some((t) => t.value === route.query.tab)
+  ? (route.query.tab as Tab)
+  : 'history'
+
+const tab = ref<Tab>(initialTab)
+
+/** 빈 화면의 다음 행동은 셋 다 지도다 — 매물도 추천도 거기서 시작한다. */
+const goMap = () => router.push({ name: 'map' })
 const loading = ref(true)
 /** 실패 사유. 비어 있는 것과 못 불러온 것은 사용자에게 전혀 다른 상황이다. */
 const error = ref<string | null>(null)
@@ -136,9 +149,13 @@ watch(
       <p v-if="loading" class="px-5 py-16 text-center text-sm text-slate-400">불러오는 중…</p>
 
       <!-- 로그인해야 볼 수 있는 탭. 호출도 하지 않고 여기서 멈춘다. -->
-      <p v-else-if="needsLogin" class="px-5 py-16 text-center text-sm text-slate-400">
-        로그인하면 관심 매물을 볼 수 있어요
-      </p>
+      <BaseEmptyState
+        v-else-if="needsLogin"
+        title="로그인하면 관심 매물을 볼 수 있어요"
+        hint="저장한 매물은 계정에 남아 다른 기기에서도 보여요"
+        :action-label="auth.canLogin ? '로그인' : undefined"
+        @action="auth.login()"
+      />
 
       <!-- 실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다. -->
       <div v-else-if="error" class="px-5 py-16 text-center">
@@ -153,9 +170,13 @@ watch(
       </div>
 
       <template v-else-if="tab === 'history'">
-        <p v-if="!history.length" class="px-5 py-16 text-center text-sm text-slate-400">
-          아직 추천받은 기록이 없어요
-        </p>
+        <BaseEmptyState
+          v-if="!history.length"
+          title="아직 추천받은 기록이 없어요"
+          hint="거점과 조건을 정하면 AI가 맞는 매물을 찾아드려요"
+          action-label="방정식 풀러 가기"
+          @action="goMap"
+        />
         <ul v-else class="divide-y divide-slate-100 px-5">
           <li v-for="h in history" :key="h.id">
             <SearchHistoryCard :entry="h" />
@@ -164,9 +185,21 @@ watch(
       </template>
 
       <template v-else-if="tab === 'favorites'">
-        <p v-if="!favorites.length" class="px-5 py-16 text-center text-sm text-slate-400">
-          관심 매물이 없어요<br />마음에 드는 매물에 하트를 눌러보세요
-        </p>
+        <BaseEmptyState
+          v-if="!favorites.length"
+          title="관심 매물이 없어요"
+          hint="마음에 드는 매물에 하트를 눌러 저장해 보세요"
+          action-label="매물 보러 가기"
+          @action="goMap"
+        >
+          <template #icon>
+            <svg viewBox="0 0 17 15" class="size-7 text-slate-300" fill="currentColor">
+              <path
+                d="M7.89484 14.7579C8.0653 14.9249 8.27839 15 8.5 15C8.72161 15 8.9347 14.9165 9.10516 14.7579L15.4977 8.4962C17.5008 6.53421 17.5008 3.44511 15.4977 1.47477C13.5374 -0.428777 10.5115 -0.487219 8.5 1.3078C6.48847 -0.487219 3.46265 -0.437126 1.50226 1.47477C-0.500752 3.44511 -0.500752 6.53421 1.50226 8.4962L7.89484 14.7579Z"
+              />
+            </svg>
+          </template>
+        </BaseEmptyState>
         <ul v-else class="divide-y divide-slate-100 px-5">
           <li v-for="l in favorites" :key="l.id">
             <!-- 이 탭의 매물은 정의상 전부 찜한 것이라 하트가 채워져 있다. -->
@@ -176,9 +209,13 @@ watch(
       </template>
 
       <template v-else>
-        <p v-if="!recent.length" class="px-5 py-16 text-center text-sm text-slate-400">
-          최근 본 매물이 없어요
-        </p>
+        <BaseEmptyState
+          v-if="!recent.length"
+          title="최근 본 매물이 없어요"
+          hint="매물을 둘러보면 여기에 쌓여요"
+          action-label="매물 보러 가기"
+          @action="goMap"
+        />
         <ul v-else class="divide-y divide-slate-100 px-5">
           <li v-for="l in recent" :key="l.id">
             <ListingCard :listing="l" />

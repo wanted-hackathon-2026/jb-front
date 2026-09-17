@@ -10,6 +10,7 @@ import ListingList from '@/components/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import WelcomeOverlay from '@/components/WelcomeOverlay.vue'
 import AnchorPickerLayer from '@/components/AnchorPickerLayer.vue'
+import LoginPrompt from '@/components/LoginPrompt.vue'
 import { ANCHOR_PICKER } from '@/lib/picker'
 import MapPlaceholder from '@/components/MapPlaceholder.vue'
 import MapView from '@/components/MapView.vue'
@@ -20,10 +21,12 @@ import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
 import { getNearbyListings, getScoredListings } from '@/mocks/listings'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
+import { useAuthStore } from '@/stores/auth'
 import type { Listing } from '@/types/domain'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
+const auth = useAuthStore()
 const filters = useFiltersStore()
 const reco = useRecommendationStore()
 const sheet = useSheetStore()
@@ -40,6 +43,39 @@ const TABS = [
   { value: 'listings' as const, label: '주변 매물' },
   { value: 'filters' as const, label: '검색 필터' },
 ]
+
+/** 로그인 유도 팝업이 떠 있나. 하트를 비로그인으로 눌렀을 때만 뜬다. */
+const loginPromptOpen = ref(false)
+
+const goMyPage = () => router.push({ name: 'my' })
+const goFavorites = () => router.push({ name: 'my', query: { tab: 'favorites' } })
+
+/**
+ * 프로필 FAB. 로그인했으면 마이페이지로, 아니면 바로 로그인을 띄운다.
+ * 하트와 달리 팝업을 거치지 않는 이유는 **버튼 자체가 이미 '내 정보'라는 뜻**이라
+ * 한 단계 더 묻는 게 군더더기이기 때문이다.
+ */
+async function openProfile() {
+  if (auth.isAuthenticated) return goMyPage()
+  await auth.login()
+  // 취소했으면 status 가 그대로다 — 아무 데도 보내지 않는다.
+  if (auth.isAuthenticated) goMyPage()
+}
+
+/**
+ * 관심 매물 FAB. 찜은 로그인 전용이라(`user_id NOT NULL`) 비로그인이면 팝업으로
+ * 먼저 이유를 알린다 — 누른 순간 구글 창이 뜨면 왜 뜨는지 알 수 없다.
+ */
+function openFavorites() {
+  if (auth.isAuthenticated) return goFavorites()
+  loginPromptOpen.value = true
+}
+
+/** 팝업에서 로그인이 끝났을 때. 원래 가려던 곳으로 마저 보낸다. */
+function afterLogin() {
+  loginPromptOpen.value = false
+  goFavorites()
+}
 
 async function load() {
   loading.value = true
@@ -206,7 +242,7 @@ function addPickedAnchor() {
           type="button"
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="마이"
-          @click="router.push({ name: 'my' })"
+          @click="openProfile"
         >
           <!-- 시안 export. width/height 는 떼고 viewBox 만 남겨 size-6 로 제어한다. -->
           <svg viewBox="0 0 20 19" class="size-6" fill="none" aria-hidden="true">
@@ -223,6 +259,7 @@ function addPickedAnchor() {
           data-tour="saved"
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="관심 매물"
+          @click="openFavorites"
         >
           <svg viewBox="0 0 17 15" class="size-6" fill="none" aria-hidden="true">
             <path
@@ -294,6 +331,13 @@ function addPickedAnchor() {
     </div>
 
     <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
+
+    <LoginPrompt
+      v-if="loginPromptOpen"
+      what="관심 매물은"
+      @close="loginPromptOpen = false"
+      @done="afterLogin"
+    />
 
     <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
     <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
