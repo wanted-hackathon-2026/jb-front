@@ -66,12 +66,21 @@ onMounted(async () => {
   >
     <!-- fixed 라 뷰포트 기준이다. max-w-shell 로 묶어야 데스크톱에서 안 퍼진다. -->
     <div class="w-full max-w-shell p-6">
-      <div class="rounded-card bg-white p-5 text-center">
-        <p id="login-prompt-title" class="text-lg font-bold text-slate-900">
-          로그인 후 이용할 수 있어요
+      <div class="rounded-card bg-white px-5 pt-8 pb-5 text-center">
+        <!--
+          로고는 public/ 에 둔다 — 스플래쉬(index.html)가 번들보다 먼저 같은 파일을
+          쓰기 때문이다. 비율이 고정이라 width/height 를 박아 로딩 중 밀림을 막는다.
+
+          src 를 바인딩으로 쓰는 이유: 정적 속성으로 두면 vue 플러그인이 이를 import 로
+          바꿔 번들에 넣으려 들고, public/ 파일은 번들 대상이 아니라 빌드가 깨진다.
+        -->
+        <img :src="'/logo.svg'" width="207" height="41" alt="자취방정식" class="mx-auto w-44" />
+
+        <p id="login-prompt-title" class="mt-7 leading-normal font-bold text-slate-900">
+          로그인하시고<br />나한테 딱 맞는 자취방정식을 완성해보세요!
         </p>
-        <p class="mt-4 leading-normal text-slate-500">
-          {{ what }} 로그인한 계정에 저장돼요.<br />간편하게 시작해 보세요 :)
+        <p class="mt-2 text-sm leading-normal text-slate-500">
+          {{ what }} 로그인한 계정에 저장돼요.
         </p>
 
         <!--
