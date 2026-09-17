@@ -116,7 +116,7 @@ function split(name: string) {
         순간 사라지는데, 정작 결과를 보며 '이걸 누르면?' 이 궁금해지는 건 그 다음이다.
         '거점'은 서비스 용어라 여기서 한 번 풀어 쓴다.
       -->
-      <p class="mt-1.5 pl-11 text-xs text-slate-500">누르면 자주 가는 곳(거점)으로 등록돼요</p>
+      <p class="mt-2 pl-15 text-xs text-slate-500">누르면 자주 가는 곳(거점)으로 등록돼요</p>
     </div>
 
     <!--
