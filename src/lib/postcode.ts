@@ -24,3 +24,22 @@ export function loadPostcode(): Promise<void> {
   })
   return promise
 }
+
+/**
+ * 위젯 결과에서 **저장에 쓸 주소**를 뽑는다.
+ *
+ * `roadAddress`·`jibunAddress` 는 사용자가 무엇을 골랐느냐에 따라 한쪽이 빈 문자열로
+ * 온다(공식 가이드 — '선택 안함'이거나 한쪽만 있는 주소). 그때 서비스가 매칭해 주는
+ * 값이 `auto*` 에 담겨 오므로 그걸로 메운다.
+ *
+ * 이게 중요한 이유: 백엔드는 **도로명주소로만** 좌표를 찾는다(VWorld `type=road`).
+ * 빈 값이나 지번을 보내면 저장 자체가 거절된다(ADDRESS_NOT_GEOCODABLE).
+ */
+export function resolveAddress(data: PostcodeResult) {
+  return {
+    roadAddress: data.roadAddress || data.autoRoadAddress || '',
+    jibunAddress: data.jibunAddress || data.autoJibunAddress || '',
+    /** 읍/면 아래 '리'까지 있는 주소는 둘을 붙여야 어느 동네인지 드러난다. */
+    umdName: [data.bname1, data.bname].filter(Boolean).join(' '),
+  }
+}

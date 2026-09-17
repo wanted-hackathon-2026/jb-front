@@ -105,6 +105,62 @@ export interface WorkplaceCreateRequest {
 /** 출처: LeaseType.java (jb-backend a2ee567). domain.ts 의 DealType 과 다르다 — 매매가 없다. */
 export type LeaseType = 'JEONSE' | 'MONTHLY'
 
+/* ── 매물 등록(관리자) ─────────────────────────────────────────────────── */
+
+/**
+ * 출처: PropertyCreateRequest.java (jb-backend a2ee567)
+ *
+ * 주소 네 칸은 **좌표의 근거**다. 서버가 `roadAddress` 를 VWorld 에 넘겨 좌표를 직접
+ * 찾고(PropertyService.create), 못 찾으면 저장하지 않고 ADDRESS_NOT_GEOCODABLE 로
+ * 거절한다. 그래서 요청에 좌표 필드가 아예 없다 — 클라이언트 좌표는 받지 않는다.
+ */
+export interface PropertyCreateRequest {
+  /** 최대 100자 */
+  name: string
+  /** 지번 주소. 최대 255자 */
+  address: string
+  /** 도로명 주소. 최대 255자. 이 값으로만 좌표를 찾는다 */
+  roadAddress: string
+  /** 시군구 코드 — **숫자 5자리**(우편번호가 아니다). 우편번호 위젯의 sigunguCode */
+  sggCode: string
+  /** 법정동명. 최대 50자. 우편번호 위젯의 bname */
+  umdName: string
+  /** 자유 문자열, 최대 20자 ("분리형 원룸" 등) */
+  propertyType: string
+  leaseType: LeaseType
+  /** 보증금(**만원**), 0 이상 */
+  deposit: number
+  /**
+   * 월세(**만원**), 0 이상. leaseType 과 교차 검증된다 —
+   * JEONSE 는 반드시 0, MONTHLY 는 반드시 0보다 커야 한다(@AssertTrue + DB CHECK).
+   */
+  monthlyRent: number
+  /** 전용면적(**㎡**), 0보다 큼. 정수 6자리·소수 2자리까지 */
+  exclusiveArea?: number | null
+  floor?: number | null
+  /** 0보다 큼 */
+  totalFloors?: number | null
+  /** 0보다 큼 */
+  buildYear?: number | null
+  /** 최대 10자. 공백만 있는 값은 거절된다 */
+  direction?: string | null
+  /** 최대 16383자 */
+  description?: string | null
+}
+
+/**
+ * 출처: PropertyResponse.java (jb-backend a2ee567). 201 로 내려온다.
+ * 요청과 달리 **좌표가 채워져 있다** — 서버가 찾아 넣은 값이다.
+ */
+export interface PropertyResponse extends Omit<PropertyCreateRequest, 'exclusiveArea'> {
+  id: string
+  latitude: number
+  longitude: number
+  exclusiveArea: number | null
+  createdAt: LocalDateTime
+  updatedAt: LocalDateTime
+}
+
 /** 출처: FavoriteDtos.java:18 Summary (jb-backend a2ee567) */
 export interface FavoritePropertySummary {
   id: string
