@@ -1,5 +1,12 @@
 <script setup lang="ts">
-defineProps<{ label: string; removable?: boolean }>()
+/**
+ * `removeLabel` 은 × 버튼의 스크린리더 이름이다 — 기본값이 '거점 삭제'인 이유는
+ * 이 칩이 거의 거점 목록에 쓰이기 때문이고, 검색 조건처럼 지우는 대상이 다르면
+ * 부르는 쪽이 바로잡는다("… 거점 삭제"는 실제로 거점을 지운다는 뜻이 되어 버린다).
+ */
+withDefaults(defineProps<{ label: string; removable?: boolean; removeLabel?: string }>(), {
+  removeLabel: '거점 삭제',
+})
 defineEmits<{ remove: [] }>()
 </script>
 
@@ -13,7 +20,7 @@ defineEmits<{ remove: [] }>()
       v-if="removable"
       type="button"
       class="grid size-7 place-items-center rounded-full text-brand-600"
-      :aria-label="`${label} 거점 삭제`"
+      :aria-label="`${label} ${removeLabel}`"
       @click="$emit('remove')"
     >
       <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true">

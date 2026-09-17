@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import BaseChip from '@/components/BaseChip.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import LoginPrompt from '@/components/LoginPrompt.vue'
 import ListingCard from '@/components/ListingCard.vue'
@@ -77,6 +78,47 @@ async function load(which: Tab) {
   } finally {
     loading.value = false
   }
+}
+
+/* ── 이전 기록 검색 ───────────────────────────────────────────────────────
+ * 거점 이름으로 거른다. 기록은 아직 목이라 서버에 검색을 넘길 곳이 없어서
+ * 받아온 목록을 화면에서 거른다 — 기록 API 가 생기면 질의를 서버로 넘긴다.
+ */
+/** 확정된 조건. 칩 하나가 거점 이름 하나고, 여러 개면 전부 만족해야 한다(AND). */
+const keywords = ref<string[]>([])
+/** 아직 엔터를 누르지 않은 입력. 이것도 조건으로 같이 센다 — 치는 즉시 좁혀진다. */
+const draft = ref('')
+
+const matches = (entry: SearchHistoryEntry, word: string) =>
+  entry.anchorNames.some((name) => name.toLowerCase().includes(word.toLowerCase()))
+
+const filteredHistory = computed(() => {
+  const words = [...keywords.value, draft.value.trim()].filter(Boolean)
+  return words.length
+    ? history.value.filter((h) => words.every((w) => matches(h, w)))
+    : history.value
+})
+
+/** 같은 말을 두 번 담지 않는다 — 칩이 늘어도 결과가 그대로라 사용자만 헷갈린다. */
+function commitDraft() {
+  const word = draft.value.trim()
+  if (word && !keywords.value.includes(word)) keywords.value.push(word)
+  draft.value = ''
+}
+
+function clearSearch() {
+  keywords.value = []
+  draft.value = ''
+}
+
+/** v-model 을 쓰지 않는 이유는 NicknamePage 와 같다 — 한글 조합 중에는 갱신되지 않는다. */
+function onSearchInput(e: Event) {
+  draft.value = (e.target as HTMLInputElement).value
+}
+
+/** 빈 입력에서 지우면 마지막 칩을 뗀다 — 칩의 × 를 정확히 누르지 않아도 된다. */
+function backspace() {
+  if (!draft.value) keywords.value.pop()
 }
 
 onMounted(() => load(tab.value))
@@ -200,11 +242,63 @@ watch(
           action-label="방정식 풀러 가기"
           @action="goMap"
         />
-        <ul v-else class="divide-y divide-slate-100 px-5">
-          <li v-for="h in history" :key="h.id">
-            <SearchHistoryCard :entry="h" />
-          </li>
-        </ul>
+        <template v-else>
+          <!--
+            거점 이름으로 거른다. 칩 하나가 조건 하나고, 엔터로 확정한다 —
+            여러 거점으로 돌린 기록을 찾으려면 조건도 여러 개여야 하기 때문이다.
+            입력창이 아니라 상자 전체가 클릭 대상이라 label 로 감싼다.
+          -->
+          <label
+            class="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
+            for="history-search"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="size-6 shrink-0 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4.5 4.5" stroke-linecap="round" />
+            </svg>
+            <BaseChip
+              v-for="k in keywords"
+              :key="k"
+              :label="k"
+              removable
+              remove-label="검색 조건에서 제외"
+              @remove="keywords = keywords.filter((x) => x !== k)"
+            />
+            <input
+              id="history-search"
+              :value="draft"
+              type="search"
+              class="h-9 min-w-16 flex-1 bg-transparent outline-none placeholder:text-slate-400"
+              :placeholder="keywords.length ? '' : '거점 이름으로 검색'"
+              enterkeyhint="search"
+              aria-label="거점 이름으로 기록 검색"
+              @input="onSearchInput"
+              @keydown.enter.prevent="commitDraft"
+              @keydown.backspace="backspace"
+            />
+          </label>
+
+          <!-- 거르고 나서 하나도 안 남는 건 '기록이 없는' 것과 다르다. 되돌릴 길을 준다. -->
+          <BaseEmptyState
+            v-if="!filteredHistory.length"
+            title="조건에 맞는 기록이 없어요"
+            hint="거점 이름의 일부만 넣어도 찾아드려요"
+            action-label="검색 조건 지우기"
+            @action="clearSearch"
+          />
+          <ul v-else class="divide-y divide-slate-100 px-5">
+            <li v-for="h in filteredHistory" :key="h.id">
+              <SearchHistoryCard :entry="h" />
+            </li>
+          </ul>
+        </template>
       </template>
 
       <template v-else-if="tab === 'favorites'">
