@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
 import BaseToast from '@/components/BaseToast.vue'
+import LoginPrompt from '@/components/LoginPrompt.vue'
 import RecommendationToast from '@/components/RecommendationToast.vue'
+import { useLoginPromptStore } from '@/stores/login-prompt'
 import { useNoticeStore } from '@/stores/notice'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { useSheetStore } from '@/stores/sheet'
@@ -14,6 +16,9 @@ const router = useRouter()
 const route = useRoute()
 const sheet = useSheetStore()
 const notice = useNoticeStore()
+// 로그인 유도 팝업은 여기 한 벌만 둔다 — 띄우는 곳(지도 FAB·매물 카드·매물 상세)이
+// 여럿이라 화면마다 두면 같은 마크업이 계속 는다.
+const loginPrompt = useLoginPromptStore()
 
 /**
  * 완료 배너가 앉을 자리.
@@ -44,6 +49,13 @@ function open(id: string) {
   >
     <RouterView />
   </div>
+
+  <LoginPrompt
+    v-if="loginPrompt.open"
+    :redirect="loginPrompt.redirect"
+    @close="loginPrompt.close"
+    @done="loginPrompt.done"
+  />
 
   <!--
     실패 알림. **화면 위쪽**에 둔다 — 아래는 시트·완료 배너·FAB 가 이미 쓰는 자리라

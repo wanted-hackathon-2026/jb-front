@@ -10,7 +10,6 @@ import ListingList from '@/components/ListingList.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import WelcomeOverlay from '@/components/WelcomeOverlay.vue'
 import AnchorPickerLayer from '@/components/AnchorPickerLayer.vue'
-import LoginPrompt from '@/components/LoginPrompt.vue'
 import { ANCHOR_PICKER } from '@/lib/picker'
 import MapPlaceholder from '@/components/MapPlaceholder.vue'
 import MapView from '@/components/MapView.vue'
@@ -22,6 +21,7 @@ import { coordToAddress } from '@/lib/api/places'
 import { getNearbyListings, getScoredListings } from '@/mocks/listings'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing } from '@/types/domain'
 
 const router = useRouter()
@@ -51,7 +51,7 @@ const TABS = [
  * 프로필 FAB 도 팝업을 거친다. 구글이 그린 버튼을 사용자가 직접 눌러야 하므로
  * **코드가 로그인 창을 바로 열 수 없기 때문**이다(lib/google.ts).
  */
-const loginPrompt = ref<{ what: string; go: () => void } | null>(null)
+const loginPrompt = useLoginPromptStore()
 
 const goMyPage = () => router.push({ name: 'my' })
 const goFavorites = () => router.push({ name: 'my', query: { tab: 'favorites' } })
@@ -59,20 +59,13 @@ const goFavorites = () => router.push({ name: 'my', query: { tab: 'favorites' } 
 /** 프로필 FAB — 로그인했으면 마이페이지로, 아니면 로그인부터. */
 function openProfile() {
   if (auth.isAuthenticated) return goMyPage()
-  loginPrompt.value = { what: '내 정보와 저장한 매물은', go: goMyPage }
+  loginPrompt.require({ redirect: '/my', then: goMyPage })
 }
 
 /** 관심 매물 FAB — 찜은 로그인 전용이다(`user_id NOT NULL`). */
 function openFavorites() {
   if (auth.isAuthenticated) return goFavorites()
-  loginPrompt.value = { what: '관심 매물은', go: goFavorites }
-}
-
-/** 팝업에서 로그인이 끝났을 때. 원래 가려던 곳으로 마저 보낸다. */
-function afterLogin() {
-  const go = loginPrompt.value?.go
-  loginPrompt.value = null
-  go?.()
+  loginPrompt.require({ redirect: '/my?tab=favorites', then: goFavorites })
 }
 
 async function load() {
@@ -338,13 +331,6 @@ function addPickedAnchor() {
     </div>
 
     <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
-
-    <LoginPrompt
-      v-if="loginPrompt"
-      :what="loginPrompt.what"
-      @close="loginPrompt = null"
-      @done="afterLogin"
-    />
 
     <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
     <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />

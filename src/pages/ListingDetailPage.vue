@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
 import { lifestyleLabel } from '@/lib/lifestyle'
 import { formatCommute, formatPrice } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth'
+import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -16,9 +18,32 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const route = useRoute()
+const auth = useAuthStore()
+const loginPrompt = useLoginPromptStore()
+
 const listing = ref<Listing | null>(null)
 const failed = ref(false)
 const saved = ref(false)
+
+/**
+ * 저장(찜)은 **로그인 전용이다** — 서버의 favorite 에는 비로그인 개념이 없다
+ * (user_id NOT NULL, lib/api/favorites.ts). 비로그인으로 누르면 눌린 것처럼 보였다가
+ * 서버에 아무것도 남지 않으므로, 상태를 바꾸기 전에 로그인부터 받는다.
+ *
+ * 로그인이 끝나면 사용자가 원래 누른 대로 저장까지 이어간다 — 팝업을 닫고 다시
+ * 누르게 하면 같은 동작을 두 번 시키는 것이다.
+ *
+ * ⚠️ 아직 서버에 보내지 않는다. 화면 상태만 바뀐다(찜 API 는 만들어져 있지만
+ * 매물 id 가 목이라 붙일 수 없다 — 매물 API 가 실제 백엔드로 바뀔 때 연결한다).
+ */
+function toggleSave() {
+  if (!auth.isAuthenticated) {
+    loginPrompt.require({ redirect: route.fullPath, then: () => (saved.value = true) })
+    return
+  }
+  saved.value = !saved.value
+}
 
 /** 사진이 아직 없어 첫 장에 고정한다. 슬라이더가 붙으면 이 값이 움직인다. */
 const photoIndex = ref(1)
@@ -87,7 +112,7 @@ watch(
           class="safe-top absolute right-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
           :aria-label="saved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
           :aria-pressed="saved"
-          @click="saved = !saved"
+          @click="toggleSave"
         >
           <svg
             viewBox="0 0 19 17"
@@ -210,9 +235,9 @@ watch(
       <button
         type="button"
         class="h-11 shrink-0 rounded-md px-8 font-semibold transition-colors"
-        :class="saved ? 'bg-brand-50 text-brand-700' : 'bg-brand-500 text-white'"
+        :class="saved ? 'bg-brand-50 text-brand-500' : 'bg-brand-500 text-white'"
         :aria-pressed="saved"
-        @click="saved = !saved"
+        @click="toggleSave"
       >
         {{ saved ? '저장됨' : '매물 저장하기' }}
       </button>

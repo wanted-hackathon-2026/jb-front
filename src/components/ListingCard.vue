@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import { formatCommute, formatPrice } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth'
+import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -12,6 +14,25 @@ const props = defineProps<{
   /** 찜한 매물인지. 마이페이지 '관심 매물' 탭은 전부 채워진 하트로 나온다. */
   saved?: boolean
 }>()
+
+const route = useRoute()
+const auth = useAuthStore()
+const loginPrompt = useLoginPromptStore()
+
+/**
+ * 찜 상태. 프롭은 '들어올 때 이랬다'는 초깃값이고, 이후는 카드가 들고 있는다.
+ * 매물 상세의 하트와 같은 규칙이다 — 저장은 로그인 전용이라 먼저 로그인을 받는다
+ * (⚠️ 아직 서버에 보내지 않는다. ListingDetailPage 의 toggleSave 주석 참고).
+ */
+const isSaved = ref(props.saved ?? false)
+
+function toggleSave() {
+  if (!auth.isAuthenticated) {
+    loginPrompt.require({ redirect: route.fullPath, then: () => (isSaved.value = true) })
+    return
+  }
+  isSaved.value = !isSaved.value
+}
 
 /** 맥락이 있으면 추천 상세로, 없으면 매물 상세로 보낸다. */
 const detailRoute = computed(() =>
@@ -40,18 +61,19 @@ const detailRoute = computed(() =>
       <button
         type="button"
         class="absolute bottom-1 left-1 z-20 grid size-7 place-items-center text-white/90"
-        :aria-label="saved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
-        :aria-pressed="saved"
+        :aria-label="isSaved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
+        :aria-pressed="isSaved"
+        @click="toggleSave"
       >
         <svg
           viewBox="0 0 19 17"
           class="size-5"
-          :fill="saved ? 'var(--color-brand-500)' : 'none'"
+          :fill="isSaved ? 'var(--color-brand-500)' : 'none'"
           aria-hidden="true"
         >
           <path
             d="M16.2376 8.69124L9.15789 15.65L2.07823 8.69124C1.61126 8.24026 1.24343 7.69821 0.997914 7.09922C0.752396 6.50023 0.634504 5.85727 0.651661 5.21084C0.668818 4.56441 0.820653 3.92851 1.0976 3.34318C1.37456 2.75784 1.77062 2.23576 2.26087 1.80981C2.75111 1.38386 3.32491 1.06326 3.94613 0.868202C4.56736 0.673146 5.22255 0.607859 5.87044 0.676451C6.51834 0.745044 7.1449 0.94603 7.71069 1.26675C8.27647 1.58748 8.76921 2.02099 9.15789 2.54C9.54825 2.02476 10.0416 1.59503 10.607 1.27771C11.1724 0.960393 11.7977 0.76231 12.4437 0.695861C13.0898 0.629412 13.7428 0.696028 14.3617 0.891539C14.9806 1.08705 15.5523 1.40725 16.0408 1.83209C16.5293 2.25694 16.9242 2.77728 17.2008 3.36056C17.4774 3.94384 17.6296 4.5775 17.6481 5.22187C17.6666 5.86625 17.5508 6.50747 17.3081 7.10541C17.0654 7.70335 16.701 8.24514 16.2376 8.69686"
-            :stroke="saved ? 'var(--color-brand-500)' : '#99A1AF'"
+            :stroke="isSaved ? 'var(--color-brand-500)' : '#99A1AF'"
             stroke-width="1.3"
             stroke-linecap="round"
             stroke-linejoin="round"
