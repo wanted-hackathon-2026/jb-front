@@ -56,6 +56,16 @@ watch(
 /** 처음 정하는 사람과 바꾸러 온 사람에게 할 말이 다르다. */
 const isFirstTime = computed(() => !auth.user?.profileCompleted)
 
+/**
+ * `v-model` 을 쓰지 않는 이유는 한글이다 — v-model 은 IME 조합이 끝날 때까지
+ * (compositionstart~compositionend) 모델을 갱신하지 않아서, 조합 중인 마지막 글자가
+ * 글자 수와 버튼 활성화에서 한 박자 늦게 빠진다. "묘내" 를 쳤는데 `1 / 15` 로 보이는 게 그것.
+ */
+function onInput(e: Event) {
+  nickname.value = (e.target as HTMLInputElement).value
+  error.value = null
+}
+
 async function submit() {
   if (!valid.value || saving.value) return
   saving.value = true
@@ -109,7 +119,7 @@ async function submit() {
         <label class="sr-only" for="nickname">닉네임</label>
         <input
           id="nickname"
-          v-model="nickname"
+          :value="nickname"
           type="text"
           class="h-13 w-full rounded-xl border border-slate-200 px-4 text-base outline-none focus:border-brand-500"
           :class="error && 'border-red-400'"
@@ -119,7 +129,7 @@ async function submit() {
           enterkeyhint="done"
           :aria-invalid="Boolean(error)"
           aria-describedby="nickname-help"
-          @input="error = null"
+          @input="onInput"
         />
 
         <p id="nickname-help" class="mt-2 min-h-5 text-sm">
