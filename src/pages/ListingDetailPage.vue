@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
+import { lifestyleLabel } from '@/lib/lifestyle'
 import { formatCommute, formatPrice } from '@/lib/format'
 import type { Listing } from '@/types/domain'
 
@@ -59,10 +61,13 @@ watch(
     <div class="min-h-0 flex-1 overflow-y-auto">
       <!-- 히어로. 이미지가 아직 없어 회색 자리표시자로 둔다. -->
       <div class="relative aspect-[4/3] shrink-0 bg-[#c7c7c7]">
-        <!-- 사진 위에 얹히는 버튼이라 어떤 사진이 와도 보이도록 반투명 판을 깐다. -->
+        <!--
+          시안에는 받침판이 없다 — 아이콘만 사진 위에 얹힌다(측정: 아이콘 주변이 전부
+          사진색). 밝은 사진에서 흰 아이콘이 묻힐 수 있어 그림자로만 버틴다.
+        -->
         <button
           type="button"
-          class="safe-top absolute left-3 top-3 grid size-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm"
+          class="safe-top absolute left-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
           aria-label="뒤로"
           @click="router.back()"
         >
@@ -79,7 +84,7 @@ watch(
 
         <button
           type="button"
-          class="safe-top absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm"
+          class="safe-top absolute right-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
           :aria-label="saved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
           :aria-pressed="saved"
           @click="saved = !saved"
@@ -132,17 +137,22 @@ watch(
 
         <hr class="mx-5 border-slate-100" />
 
-        <!-- AI 요약. 테두리·아이콘 모두 브랜드→강조색 그라디언트다(완료 배너와 같은 축). -->
-        <section class="px-5 pt-5">
+        <!--
+          AI 요약. 추천 결과에서 들어왔을 때만 있다 — 주변 매물 상세에는 요약을 만들
+          근거(어떤 조건으로 추천됐는지)가 없다.
+          테두리는 아이콘과 같은 그라디언트를 쓴다 — 시안 에셋 값(#00C8B3 → #019DFD)이고,
+          점수 구간의 파랑(--color-accent-500)과는 다른 색이다.
+        -->
+        <section v-if="listing.aiSummary" class="px-5 pt-5">
           <div
-            class="rounded-full bg-linear-to-r/srgb from-brand-500 to-accent-500 p-px shadow-[0_1px_3px_rgba(15,23,42,0.08)]"
+            class="rounded-lg bg-linear-to-r/srgb from-[#00C8B3] to-[#019DFD] p-px shadow-[0_1px_3px_rgba(15,23,42,0.08)]"
           >
-            <div class="flex items-center gap-2.5 rounded-full bg-white py-1.5 pl-1.5 pr-4">
-              <span
-                class="size-8 shrink-0 rounded-full bg-linear-to-r/srgb from-accent-500 to-brand-500"
-                aria-hidden="true"
-              />
-              <p class="min-w-0 flex-1 truncate text-sm text-slate-800">{{ listing.aiSummary }}</p>
+            <!-- 안쪽은 흰색이 아니라 옅은 민트다(시안 실측 #f2fffe). -->
+            <div class="flex items-start gap-2.5 rounded-[7px] bg-[#f2fffe] p-2.5">
+              <BaseAiIcon :size="28" />
+              <p class="min-w-0 flex-1 text-sm leading-relaxed text-slate-800">
+                {{ listing.aiSummary }}
+              </p>
             </div>
           </div>
         </section>
@@ -162,13 +172,30 @@ watch(
           </div>
         </section>
 
-        <section v-if="listing.route.length" class="px-5 pb-8 pt-7">
+        <section v-if="listing.route.length" class="px-5 pt-7">
           <h2 class="font-bold text-slate-900">
             이동 동선
             <span class="ml-1 text-sm font-normal text-slate-400">최적 경로 기준</span>
           </h2>
           <p v-if="commute" class="mb-4 mt-1 font-bold text-brand-500">{{ commute }}</p>
           <RouteTimeline :legs="listing.route" />
+        </section>
+
+        <!--
+          축별 평가. aiSummary 와 같이 추천 맥락에서만 오는 값이라, 주변 매물 상세에서는
+          배열이 비어 절이 통째로 빠진다.
+        -->
+        <section v-if="listing.lifestyleInsights.length" class="px-5 pb-8 pt-7">
+          <h2 class="font-bold text-slate-900">라이프스타일</h2>
+          <ul class="mt-4 flex flex-col gap-6">
+            <li v-for="item in listing.lifestyleInsights" :key="item.key" class="flex gap-4">
+              <BaseScoreDonut :score="item.score" :label="lifestyleLabel(item.key)" :size="76" />
+              <div class="min-w-0 flex-1 pt-1.5">
+                <p class="font-bold text-slate-900">{{ item.title }}</p>
+                <p class="mt-1 text-sm leading-relaxed text-slate-500">{{ item.body }}</p>
+              </div>
+            </li>
+          </ul>
         </section>
       </template>
     </div>
@@ -179,9 +206,10 @@ watch(
       class="safe-bottom flex shrink-0 items-center gap-4 border-t border-slate-100 px-5 py-3"
     >
       <p class="min-w-0 flex-1 truncate font-bold text-slate-900">{{ price }}</p>
+      <!-- 반경은 시안 실측 5px. 높이는 44 로 둔다 — 시안은 38 이지만 터치 타깃 최소치다. -->
       <button
         type="button"
-        class="h-11 shrink-0 rounded-xl px-8 font-semibold transition-colors"
+        class="h-11 shrink-0 rounded-md px-8 font-semibold transition-colors"
         :class="saved ? 'bg-brand-50 text-brand-700' : 'bg-brand-500 text-white'"
         :aria-pressed="saved"
         @click="saved = !saved"
