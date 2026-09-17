@@ -38,11 +38,11 @@ const goMap = () => router.push({ name: 'map' })
 /** 로그인 팝업. 관심 매물 탭의 안내에서 연다. */
 const loginPromptOpen = ref(false)
 
-async function logout() {
-  await auth.logout()
-  // 마이페이지는 로그인한 사람의 화면이다. 나가면 지도로 돌려보낸다.
-  goMap()
-}
+/** 프로필 사진이 없어서 첫 글자로 대신한다 — 프로필 화면의 동그라미와 같은 규칙이다. */
+const initial = computed(
+  () => auth.user?.nickname?.[0] ?? auth.user?.email?.[0]?.toUpperCase() ?? '',
+)
+
 const loading = ref(true)
 /** 실패 사유. 비어 있는 것과 못 불러온 것은 사용자에게 전혀 다른 상황이다. */
 const error = ref<string | null>(null)
@@ -112,7 +112,12 @@ watch(
       </button>
 
       <div class="flex flex-col items-center">
-        <span class="size-20 rounded-full bg-slate-300" aria-hidden="true" />
+        <p
+          class="grid size-20 place-items-center rounded-full bg-slate-300 text-2xl font-bold text-slate-600"
+          aria-hidden="true"
+        >
+          {{ initial }}
+        </p>
         <!--
           시안에는 이름 옆에 '›' 가 있어 계정 화면으로 가는 길처럼 보이지만, 그 화면이
           아직 없다. 없는 라우트로 보내면 빈 화면이 뜨므로 지금은 표시만 한다 —
@@ -123,11 +128,12 @@ watch(
           v-if="auth.isAuthenticated"
           type="button"
           class="mt-3 flex min-h-11 items-center gap-1 font-bold text-slate-900"
-          @click="router.push({ name: 'nickname' })"
+          @click="router.push({ name: 'nickname', query: { redirect: '/my' } })"
         >
           <!-- 닉네임이 없을 수 있다(가입 직후). 그때도 자리가 무너지지 않게 대체 문구를 둔다. -->
           <span
-            >{{ auth.user?.nickname ?? '내 정보' }}<span v-if="auth.user?.nickname">님</span></span
+            ><span class="text-brand-600">{{ auth.user?.nickname ?? '내 정보' }}</span
+            ><span v-if="auth.user?.nickname">님</span></span
           >
           <svg
             viewBox="0 0 24 24"
@@ -141,15 +147,6 @@ watch(
           </svg>
         </button>
         <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
-
-        <button
-          v-if="auth.isAuthenticated"
-          type="button"
-          class="mt-1 min-h-11 px-3 text-sm font-medium text-slate-500"
-          @click="logout"
-        >
-          로그아웃
-        </button>
       </div>
     </header>
 
