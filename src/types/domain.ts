@@ -9,6 +9,11 @@
  * 거기에 맞춘다(CLAUDE.md '백엔드 참조').
  */
 
+/**
+ * ⚠️ `sale`(매매) 은 **백엔드에 대응이 없다.** 서버의 LeaseType 은 JEONSE·MONTHLY 뿐이고
+ * 명세가 "매매 유형은 지원하지 않는다"고 명시한다(property-registration.md).
+ * 목에만 존재하는 값이라, 실제 매물 API 가 붙으면 이 축을 지우거나 백엔드에 요청해야 한다.
+ */
 export type DealType = 'monthly' | 'jeonse' | 'sale'
 export type TransportMode = 'transit' | 'car' | 'walk'
 
@@ -128,6 +133,28 @@ export interface Listing {
   lifestyleInsights: LifestyleInsight[]
   /** 거점까지의 이동 동선 */
   route: RouteLeg[]
+}
+
+/**
+ * 마이페이지 '이전 기록' 한 장 — 그때 어떤 조건으로 추천을 돌렸는지.
+ *
+ * 추천 요청(POST /api/recommendations)의 입력값을 되읽는 화면이라, 필드가
+ * RecommendRequest 와 겹친다. 백엔드의 recommendation_criteria 가 출처가 된다.
+ */
+export interface SearchHistoryEntry {
+  id: string
+  /** 추천을 돌린 시각(ISO). 카드 제목의 날짜가 여기서 나온다. */
+  createdAt: string
+  /** 그때 등록돼 있던 거점 이름 — 좌표는 이 화면에 필요 없다. */
+  anchorNames: string[]
+  /** 보증금·월세 범위(만원) */
+  deposit: [number, number]
+  rent: [number, number]
+  transport: TransportMode
+  maxMinutes: number
+  lifestyle: LifestyleWeights
+  /** 이 기록으로 만들어진 추천의 id. 결과로 되돌아갈 때 쓴다. */
+  recommendationId: string | null
 }
 
 /** 검색 자동완성 결과 */

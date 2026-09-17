@@ -206,6 +206,7 @@ function addPickedAnchor() {
           type="button"
           class="grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="마이"
+          @click="router.push({ name: 'my' })"
         >
           <!-- 시안 export. width/height 는 떼고 viewBox 만 남겨 size-6 로 제어한다. -->
           <svg viewBox="0 0 20 19" class="size-6" fill="none" aria-hidden="true">

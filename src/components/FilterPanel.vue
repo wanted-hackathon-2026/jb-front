@@ -3,8 +3,9 @@ import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
 import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
 import { formatMoney } from '@/lib/format'
 import { LIFESTYLE_AXES } from '@/lib/lifestyle'
+import { TRANSPORTS } from '@/lib/transport'
 import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
-import type { DealType, TransportMode } from '@/types/domain'
+import type { DealType } from '@/types/domain'
 
 const filters = useFiltersStore()
 
@@ -15,11 +16,6 @@ const DEALS: { value: DealType; label: string }[] = [
   { value: 'monthly', label: '월세' },
   { value: 'jeonse', label: '전세' },
   { value: 'sale', label: '매매' },
-]
-const TRANSPORTS: { value: TransportMode; label: string }[] = [
-  { value: 'transit', label: '대중교통' },
-  { value: 'car', label: '자가용' },
-  { value: 'walk', label: '도보' },
 ]
 </script>
 

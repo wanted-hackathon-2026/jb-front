@@ -34,6 +34,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '추천 결과' },
   },
   {
+    path: '/my',
+    name: 'my',
+    component: () => import('@/pages/MyPage.vue'),
+    meta: { title: '마이' },
+  },
+  {
     path: '/search',
     name: 'search',
     component: () => import('@/pages/SearchPage.vue'),
