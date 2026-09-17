@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jb-front",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-17",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // 라우트가 서버에 없는 SPA 라서, 못 찾은 경로는 index.html 로 떨어뜨린다.
+    "not_found_handling": "single-page-application",
+    // ⚠️ 이게 핵심이다. 기본값은 에셋을 먼저 찾아서, /api/* 가 위의 SPA fallback 에
+    //    걸려 index.html 이 나간다(바로 그게 배포에서 API 가 죽던 원인).
+    //    Worker 를 먼저 태워야 /api/* 를 가로챌 수 있다.
+    "run_worker_first": true
+  },
+
+  "vars": {
+    // 백엔드. 주소가 바뀌면 여기만 고친다.
+    "API_ORIGIN": "http://43.203.149.41"
+  }
+}

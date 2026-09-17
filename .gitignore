@@ -31,3 +31,6 @@ docs
 
 # Claude Code local settings (머신별 경로 — 커밋하지 않는다)
 .claude/settings.local.json
+
+# Wrangler 로컬 캐시 (wrangler dev 가 만든다)
+.wrangler
