@@ -2,7 +2,8 @@
 import BasePostcodeLayer from '@/components/BasePostcodeLayer.vue'
 import { addressToCoord } from '@/lib/api/geocode'
 import { resolveAddress } from '@/lib/postcode'
-import { useAnchorsStore } from '@/stores/anchors'
+import { ANCHOR_LIMIT_MESSAGE, useAnchorsStore } from '@/stores/anchors'
+import { useNoticeStore } from '@/stores/notice'
 
 /**
  * 우편번호 위젯으로 고른 주소를 **거점으로** 등록한다.
@@ -11,8 +12,14 @@ import { useAnchorsStore } from '@/stores/anchors'
 const emit = defineEmits<{ close: [] }>()
 
 const anchors = useAnchorsStore()
+const notice = useNoticeStore()
 
 async function pick(data: PostcodeResult) {
+  // 가득 찬 걸 add() 도 잡아내지만, 그러면 쓸데없이 좌표부터 찾아 놓고 버리게 된다.
+  if (!anchors.canAddMore) {
+    notice.error(ANCHOR_LIMIT_MESSAGE)
+    return emit('close')
+  }
   // 이름은 건물명을 쓴다. 주소를 그대로 칩에 넣으면 좁은 화면에서 한 줄을 다 먹고,
   // 자체 검색 화면(신논현역)과 표기가 어긋나 교체 시 화면이 흔들린다.
   const name = data.buildingName || data.address

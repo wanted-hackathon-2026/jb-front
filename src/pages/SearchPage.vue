@@ -4,12 +4,10 @@ import { useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
 import { searchPlaces } from '@/lib/api/places'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
-import { useNoticeStore } from '@/stores/notice'
 import type { PlaceSuggestion } from '@/types/domain'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
-const notice = useNoticeStore()
 
 const keyword = ref('')
 const results = ref<PlaceSuggestion[]>([])
@@ -20,16 +18,11 @@ watch(keyword, async (q) => {
 })
 
 function pick(place: PlaceSuggestion) {
-  /*
-   * 가득 찼으면 add() 가 조용히 아무것도 하지 않는다(stores/anchors.ts). 그대로 두면
-   * 눌러도 아무 일이 없는 화면이 되므로 여기서 이유를 말한다 — 지도에서 돋보기로
-   * 언제든 이 화면에 올 수 있어서, 한도에 걸린 사용자가 실제로 여기까지 온다.
-   */
-  if (!anchors.canAddMore) {
-    notice.error(`거점은 최대 ${MAX_ANCHORS}곳이에요. 등록된 거점을 지우고 다시 골라 주세요`)
-    return
-  }
+  // 가득 찼으면 add() 가 이유를 토스트로 알리고 아무것도 하지 않는다(stores/anchors.ts).
+  // 등록되지 않았으면 지도로 돌려보내지도 않는다 — 여기서 거점을 지워야 하기 때문이다.
+  const full = !anchors.canAddMore
   anchors.add(place)
+  if (full) return
   anchors.rememberSearch(place.name)
   keyword.value = ''
   if (!anchors.canAddMore) router.push({ name: 'map' })

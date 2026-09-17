@@ -39,6 +39,12 @@ function reasonOf(e: unknown, fallback: string): string {
 export const MAX_ANCHORS = 1
 
 /**
+ * 한도에 걸렸을 때 하는 말. 문구를 한 곳에 두는 이유는 말하는 자리가 둘이기
+ * 때문이다 — add() 와, 좌표를 찾기 전에 먼저 막는 우편번호 레이어.
+ */
+export const ANCHOR_LIMIT_MESSAGE = `거점은 최대 ${MAX_ANCHORS}곳이에요. 등록된 거점을 지우고 다시 골라 주세요`
+
+/**
  * 서버에 올라가기 전(또는 올라가지 못한) 거점의 id 접두사. 서버 id 는 UUID 라
  * 섞이지 않는다(lib/id.ts). 삭제할 때 서버를 부를지 가르는 기준이 된다.
  */
@@ -92,7 +98,15 @@ export const useAnchorsStore = defineStore('anchors', () => {
    * 실패는 토스트로만 알린다(stores/notice.ts).
    */
   async function add(place: PlaceSuggestion) {
-    if (!canAddMore.value) return
+    /*
+     * 한도에 걸리면 이유를 말한다. 여기서 알리는 이유는 부르는 곳이 여럿이기
+     * 때문이다(SearchPage·AnchorPickerLayer·지도 핀 카드) — 호출부마다 같은 검사를
+     * 두면 한 곳을 고칠 때 나머지가 조용히 어긋난다.
+     */
+    if (!canAddMore.value) {
+      notice.error(ANCHOR_LIMIT_MESSAGE)
+      return
+    }
     if (anchors.value.some((a) => a.name === place.name)) return
 
     const optimisticId = localId(LOCAL_PREFIX)
