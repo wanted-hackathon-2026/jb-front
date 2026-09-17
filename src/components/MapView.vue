@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { CLUSTER_STYLES, loadKakaoMaps } from '@/lib/kakao'
+import { CLUSTER_STYLES, LISTING_MARKER, loadKakaoMaps } from '@/lib/kakao'
 import type { Anchor, Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -51,7 +51,16 @@ function drawListings() {
   if (!map || !clusterer) return
   clusterer.clear()
   clusterer.addMarkers(
-    props.listings.map((l) => new kakao.maps.Marker({ position: new kakao.maps.LatLng(l.y, l.x) })),
+    props.listings.map(
+      (l) =>
+        new kakao.maps.Marker({
+          position: new kakao.maps.LatLng(l.y, l.x),
+          image: new kakao.maps.MarkerImage(
+            LISTING_MARKER.src,
+            new kakao.maps.Size(LISTING_MARKER.size, LISTING_MARKER.size),
+          ),
+        }),
+    ),
   )
 }
 
@@ -131,7 +140,9 @@ onMounted(async () => {
     // minLevel 0 · minClusterSize 1 이라야 한 건짜리도 배지로 그려진다 — 기본값으로 두면
     // 매물이 흩어져 있을 때 클러스터가 1건씩 만들어지며 기본 핀으로 떨어진다.
     minLevel: 0,
-    minClusterSize: 1,
+    // 2건 이상만 배지로 묶는다. 1 로 두면 '1' 만 적힌 배지가 지도를 덮는다 —
+    // 시안의 8·10·35 는 여러 건이 뭉친 숫자지 낱개가 아니다.
+    minClusterSize: 2,
     disableClickZoom: false,
     styles: CLUSTER_STYLES,
   })

@@ -32,6 +32,21 @@ export function loadKakaoMaps(): Promise<void> {
 }
 
 /** 클러스터 배지를 시안의 민트로 덮는다. SDK 기본값은 파란 원이라 그냥 두면 안 맞는다. */
+/**
+ * 단건 매물 마커.
+ *
+ * 클러스터가 1건짜리까지 삼키게 두면 지도가 '1' 만 적힌 배지로 덮인다(시안의 8·10·35 는
+ * 여러 건이 뭉친 숫자다). 그래서 2건 이상만 배지로 묶고, 단건은 이 점으로 찍는다 —
+ * 기본 파란 물방울 핀은 시안의 색 언어와 어긋난다.
+ */
+const DOT = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+  <circle cx="9" cy="9" r="6" fill="#00c8b3" stroke="#fff" stroke-width="2.5"/>
+</svg>`
+export const LISTING_MARKER = {
+  src: `data:image/svg+xml;utf8,${encodeURIComponent(DOT)}`,
+  size: 18,
+}
+
 export const CLUSTER_STYLES = [
   {
     width: '44px',
