@@ -92,7 +92,7 @@ function drawPin() {
  * 30분에서 반경 2km 라 구 단위까지 축소돼 골목이 안 보였다. 시안과 같은 동네 스케일
  * (30분 → 반경 600m)로 맞춘다. 실제 도달권은 백엔드 몫이라 여기 숫자에 이동 의미는 없다.
  *
- * 화면에서 원이 커지고 작아지는 것도 사실상 이 값이 정한다. fitToCircles 가 원에 맞춰
+ * 화면에서 원이 커지고 작아지는 것도 사실상 이 값이 정한다. fitToContent 가 원에 맞춰
  * 화면을 잡지만 카카오의 줌은 단계가 2배씩이라 딱 맞게 잡히지 않는다 — 한 단계 안에서
  * 남는 여백이 곧 원과 화면 가장자리 사이의 숨 쉴 틈이다. 25(750m)일 때는 그 틈이 거의
  * 없어 원이 폭을 꽉 채웠다.
@@ -106,6 +106,13 @@ const radiusOf = (minutes: number) => Math.max(MIN_RADIUS, minutes * METERS_PER_
 const brandColor = () =>
   getComputedStyle(document.documentElement).getPropertyValue('--color-brand-500').trim() ||
   '#00c8b3'
+
+/**
+ * 시점을 한 번이라도 내용에 맞췄는지. 매물 목록은 지도보다 늦게 도착할 수 있어서,
+ * **늦게 온 첫 목록에만** 화면을 맞추려고 둔다 — 목록이 바뀔 때마다 맞추면 지도를
+ * 움직여 둔 사용자를 계속 끌고 온다.
+ */
+let fitted = false
 
 function drawListings() {
   if (!map || !clusterer) return
@@ -122,6 +129,8 @@ function drawListings() {
         }),
     ),
   )
+  // 거점이 없으면 맞출 원도 없다. 그때는 매물이 화면을 잡는다(위 fitToContent).
+  if (!circles.length && !fitted) fitToContent()
 }
 
 function drawAnchors(fit = false) {
@@ -168,7 +177,7 @@ function drawAnchors(fit = false) {
     circle.setMap(map)
     return circle
   })
-  if (fit) fitToCircles()
+  if (fit) fitToContent()
   ensureRingGradient()
   syncRingDash()
 }
@@ -239,19 +248,36 @@ function syncRingDash() {
 }
 
 /**
- * 거점이 바뀌면 원 전체가 보이도록 화면을 맞춘다. 원만 그리고 시점을 그대로 두면
- * 원이 화면 밖으로 넘쳐 '지도가 민트색으로 물든' 것처럼 보인다.
+ * 화면을 지금 그린 것에 맞춘다 — 거점이 있으면 원 전체가, 없으면 매물이 들어오도록.
+ *
+ * 원만 그리고 시점을 그대로 두면 원이 화면 밖으로 넘쳐 '지도가 민트색으로 물든' 것처럼
+ * 보인다. 거점이 없을 때 아무것도 하지 않던 게 더 나빴다 — 거점을 지우면 지도는 지운
+ * 거점 자리에 남고 매물은 화면 밖이라, **매물이 통째로 사라진 것처럼** 보였다.
+ * 거점 등록 전에도 마찬가지다(목록이 늦게 도착해 첫 시점에는 맞출 게 없었다).
+ *
  * 이동시간 슬라이더를 움직일 때는 맞추지 않는다 — 드래그 중에 지도가 계속 튄다.
  */
-function fitToCircles() {
-  if (!map || !circles.length) return
+function fitToContent() {
+  if (!map) return
   const bounds = new kakao.maps.LatLngBounds()
+  let has = false
   circles.forEach((c) => {
     const b = c.getBounds()
     bounds.extend(b.getSouthWest())
     bounds.extend(b.getNorthEast())
+    has = true
   })
+  // 거점이 있으면 거점이 기준이다. 매물까지 넣으면 먼 매물 하나가 화면을 넓혀
+  // 도달권 원이 점만 해진다.
+  if (!has) {
+    props.listings.forEach((l) => {
+      bounds.extend(new kakao.maps.LatLng(l.y, l.x))
+      has = true
+    })
+  }
+  if (!has) return
   map.setBounds(bounds)
+  fitted = true
 }
 
 /**
