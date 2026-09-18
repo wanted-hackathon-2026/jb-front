@@ -68,7 +68,7 @@ onMounted(async () => {
       data-panel 은 배경과 따로 움직이라는 표식이다(main.css '열고 닫기 모션').
     -->
     <div class="w-full max-w-shell p-6" data-panel>
-      <div class="rounded-card bg-white px-5 pt-8 pb-5 text-center">
+      <div class="rounded-card bg-white px-5 pt-9 pb-4 text-center">
         <!--
           로고는 public/ 에 둔다 — 스플래쉬(index.html)가 번들보다 먼저 같은 파일을
           쓰기 때문이다. 비율이 고정이라 width/height 를 박아 로딩 중 밀림을 막는다.
@@ -76,29 +76,39 @@ onMounted(async () => {
           src 를 바인딩으로 쓰는 이유: 정적 속성으로 두면 vue 플러그인이 이를 import 로
           바꿔 번들에 넣으려 들고, public/ 파일은 번들 대상이 아니라 빌드가 깨진다.
         -->
-        <img :src="'/logo.svg'" width="207" height="41" alt="자취방정식" class="mx-auto w-44" />
+        <img :src="'/logo.svg'" width="207" height="41" alt="자취방정식" class="mx-auto w-36" />
 
         <!--
           팝업이 왜 떴는지부터 말한다 — 사용자는 저장을 누르려다 막힌 참이라, 권유보다
           '막힌 이유'가 먼저 궁금하다. 어느 자리에서 떴든 같은 문장이라 한 줄로 둔다.
+          다만 읽는 순서일 뿐 주인공은 아니라서, 크기는 아래 문장에 양보한다.
         -->
         <p id="login-prompt-title" class="mt-7 text-sm text-slate-500">
           로그인이 필요한 기능이에요
         </p>
-        <p class="mt-1 leading-normal font-bold text-slate-900">
-          로그인하시고<br />나한테 딱 맞는 자취방정식을 완성해보세요!
+        <!--
+          권유 문장. WelcomeOverlay 의 헤드라인과 같은 조판이다
+          (text-xl / leading-snug / break-keep / text-balance).
+
+          <br> 로 줄을 끊지 않는다 — 끊어 두면 '로그인하시고'(6자)와 뒤 문장(19자)처럼
+          길이가 따로 노는 두 줄이 가운데 정렬 아래 들쭉날쭉해 보이고, 320px 에서는
+          긴 줄이 어차피 한 번 더 접힌다. 폭에 맞춰 균등하게 나누는 일은 text-balance
+          에 맡기고, 한국어가 낱말 가운데서 끊기는 것만 break-keep 으로 막는다.
+        -->
+        <p class="mt-2 text-xl leading-snug font-bold break-keep text-balance text-slate-900">
+          나한테 딱 맞는 자취방정식을 완성해 보세요
         </p>
 
         <!--
           구글이 직접 그리는 버튼이라 우리 스타일을 입히지 않는다. 비어 있는 동안 자리가
           무너지지 않게 최소 높이를 준다.
         -->
-        <div v-if="auth.canLogin && !sdkFailed" class="mt-5 flex min-h-11 justify-center">
+        <div v-if="auth.canLogin && !sdkFailed" class="mt-7 flex min-h-11 justify-center">
           <div ref="buttonEl" class="w-full max-w-[400px]" />
         </div>
 
         <!-- 눌러도 아무 일이 없는 버튼을 두느니 이유를 밝힌다. -->
-        <p v-else class="mt-5 text-sm text-slate-400">
+        <p v-else class="mt-7 text-sm text-slate-400">
           {{ sdkFailed ? '구글 로그인을 불러오지 못했어요' : '지금은 로그인을 사용할 수 없어요' }}
         </p>
 
@@ -109,7 +119,7 @@ onMounted(async () => {
 
         <button
           type="button"
-          class="mt-2 h-12 w-full text-sm font-semibold text-slate-500"
+          class="mt-1 h-12 w-full text-sm font-semibold text-slate-500"
           @click="emit('close')"
         >
           다음에 할게요
