@@ -34,6 +34,12 @@ function toggleSave() {
   isSaved.value = !isSaved.value
 }
 
+/**
+ * 썸네일이 못 뜨면 회색 자리표시자로 돌아간다. 깨진 이미지 아이콘을 보여주느니
+ * 사진이 붙기 전 모습이 낫다 — 목 사진은 외부(picsum)에서 오므로 오프라인에선 늘 실패한다.
+ */
+const photoFailed = ref(false)
+
 /** 맥락이 있으면 추천 상세로, 없으면 매물 상세로 보낸다. */
 const detailRoute = computed(() =>
   props.recommendationId
@@ -57,10 +63,24 @@ const detailRoute = computed(() =>
       :aria-label="`${formatPrice(listing.dealType, listing.deposit, listing.rent)} 상세 보기`"
     />
 
+    <!--
+      썸네일. 회색 바탕은 사진이 오기 전(또는 못 올 때)의 자리표시자다.
+      찜 하트가 사진 위에 얹히므로 밝은 사진에서 묻히지 않게 그림자를 준다 —
+      상세 화면의 뒤로·공유 아이콘과 같은 처지다(ListingDetailPage 의 같은 주석).
+    -->
     <div class="relative size-20 shrink-0 overflow-hidden rounded-xl bg-slate-200">
+      <!-- 목록은 한 화면에 여럿이라 lazy 로 둔다. 첫 장이 대표 사진이다. -->
+      <img
+        v-if="listing.photos.length && !photoFailed"
+        :src="listing.photos[0]"
+        alt=""
+        loading="lazy"
+        class="size-full object-cover"
+        @error="photoFailed = true"
+      />
       <button
         type="button"
-        class="absolute bottom-1 left-1 z-20 grid size-7 place-items-center text-white/90"
+        class="absolute bottom-1 left-1 z-20 grid size-7 place-items-center text-white/90 drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
         :aria-label="isSaved ? '관심 매물에서 빼기' : '관심 매물로 저장'"
         :aria-pressed="isSaved"
         @click="toggleSave"

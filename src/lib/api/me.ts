@@ -55,7 +55,7 @@ function toListing(p: FavoritePropertySummary): Listing {
     lines: [],
     supplyPyeong: 0,
     bathrooms: 0,
-    photoCount: 0,
+    photos: [],
     aiSummary: null,
     rank: null,
     lifestyleInsights: [],

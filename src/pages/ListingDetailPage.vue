@@ -78,8 +78,23 @@ async function share() {
   if (result === 'failed') notice.error('공유하지 못했어요. 주소창의 링크를 복사해 주세요')
 }
 
-/** 사진이 아직 없어 첫 장에 고정한다. 슬라이더가 붙으면 이 값이 움직인다. */
+/**
+ * 갤러리에서 보고 있는 장(1부터). 버튼이 아니라 손가락으로 미는 UI라 **스크롤 위치가
+ * 정본**이다 — 따로 세지 않고 위치에서 되읽는다.
+ */
 const photoIndex = ref(1)
+function onPhotoScroll(e: Event) {
+  const track = e.target as HTMLElement
+  if (!track.clientWidth) return
+  photoIndex.value = Math.round(track.scrollLeft / track.clientWidth) + 1
+}
+
+/**
+ * 사진이 하나라도 못 뜨면 갤러리를 접고 회색 자리표시자로 돌아간다. 목 사진은
+ * 외부(picsum)에서 오므로 오프라인에선 전부 실패한다 — 깨진 이미지를 늘어놓느니
+ * 사진이 붙기 전 모습이 낫다. 한 장이 실패하면 나머지도 같은 처지라 통째로 판단한다.
+ */
+const photosFailed = ref(false)
 
 const price = computed(() =>
   listing.value
@@ -115,8 +130,27 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
 <template>
   <main class="relative flex min-h-0 flex-1 flex-col bg-white">
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <!-- 히어로. 이미지가 아직 없어 회색 자리표시자로 둔다. -->
+      <!-- 히어로. 사진이 없거나 못 뜨면 회색 자리표시자가 그대로 보인다. -->
       <div class="relative aspect-[4/3] shrink-0 bg-[#c7c7c7]">
+        <!--
+          가로로 미는 갤러리. 한 장씩 맞물리게(snap) 두면 어중간하게 걸친 상태가 없어
+          카운터와 화면이 항상 같은 말을 한다. 버튼은 이 뒤에 오므로 사진 위에 얹힌다.
+        -->
+        <div
+          v-if="listing?.photos.length && !photosFailed"
+          class="flex size-full snap-x snap-mandatory overflow-x-auto"
+          @scroll.passive="onPhotoScroll"
+        >
+          <img
+            v-for="(src, n) in listing.photos"
+            :key="src"
+            :src="src"
+            :alt="`매물 사진 ${n + 1}`"
+            :loading="n === 0 ? 'eager' : 'lazy'"
+            class="size-full shrink-0 snap-center object-cover"
+            @error="photosFailed = true"
+          />
+        </div>
         <!--
           시안에는 받침판이 없다 — 아이콘만 사진 위에 얹힌다(측정: 아이콘 주변이 전부
           사진색). 밝은 사진에서 흰 아이콘이 묻힐 수 있어 그림자로만 버틴다.
@@ -153,10 +187,10 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         </button>
 
         <span
-          v-if="listing"
+          v-if="listing?.photos.length && !photosFailed"
           class="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white"
         >
-          {{ photoIndex }} / {{ listing.photoCount }}
+          {{ photoIndex }} / {{ listing.photos.length }}
         </span>
       </div>
 

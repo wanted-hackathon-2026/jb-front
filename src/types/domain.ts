@@ -117,8 +117,12 @@ export interface Listing {
   supplyPyeong: number
   /** 욕실 수 */
   bathrooms: number
-  /** 사진 장수 — 시안의 "4 / 13" 인디케이터 */
-  photoCount: number
+  /**
+   * 매물 사진 주소. 첫 장이 카드 썸네일이고, 상세는 전부를 갤러리로 넘긴다.
+   * 시안의 "4 / 13" 인디케이터는 이 배열의 길이에서 나온다 — 장수를 따로 들고 있으면
+   * 사진과 숫자가 어긋날 수 있다.
+   */
+  photos: string[]
   /**
    * AI 추천 요약 한 줄. 추천 맥락이 있을 때만 있다 — 어떤 조건으로 추천됐는지가 있어야
    * 나오는 문장이라, 주변 매물에서 들어온 상세에는 null 이다(score·rank·route 와 같은 부류).

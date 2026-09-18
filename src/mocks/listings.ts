@@ -118,6 +118,19 @@ function buildRoute(i: number, lines: string[], walkMinutes: number): RouteLeg[]
   return legs
 }
 
+/**
+ * 목 사진.
+ *
+ * picsum.photos 는 **씨드가 같으면 늘 같은 사진**을 준다. 이 파일의 다른 값들이 전부
+ * 결정적인 것과 같은 이유로 씨드를 쓴다 — 새로고침마다 방이 바뀌면 화면 비교가 안 된다.
+ *
+ * ⚠️ 네트워크가 필요하다. 끊기면 <img> 가 실패하고 지금의 회색 자리표시자가 남는다
+ * (ListingCard·ListingDetailPage 가 실패를 받아 이미지를 숨긴다).
+ * 이 파일과 함께 사라질 값이라 레포에 사진 파일을 들이지는 않는다.
+ */
+const photosOf = (i: number) =>
+  Array.from({ length: 5 + (i % 4) }, (_, n) => `https://picsum.photos/seed/jb-${i}-${n}/800/600`)
+
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
   const spot = HOTSPOTS[SPOT_OF[i]]
@@ -145,7 +158,7 @@ function build(i: number): Listing {
     lines,
     supplyPyeong: areaPyeong + 4 + (i % 3),
     bathrooms: 1 + (i % 2),
-    photoCount: 8 + (i % 8),
+    photos: photosOf(i),
     aiSummary: SUMMARIES[i % SUMMARIES.length],
     rank: null,
     lifestyleInsights: buildInsights(i, score),
