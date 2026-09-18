@@ -83,10 +83,18 @@ async function share() {
  * 정본**이다 — 따로 세지 않고 위치에서 되읽는다.
  */
 const photoIndex = ref(1)
+const photoTrack = ref<HTMLElement>()
 function onPhotoScroll(e: Event) {
   const track = e.target as HTMLElement
   if (!track.clientWidth) return
   photoIndex.value = Math.round(track.scrollLeft / track.clientWidth) + 1
+}
+
+/** 점을 눌러도 넘어간다. 미는 것과 같은 스크롤이라 카운터는 저절로 따라온다. */
+function goToPhoto(n: number) {
+  const track = photoTrack.value
+  if (!track) return
+  track.scrollTo({ left: n * track.clientWidth, behavior: 'smooth' })
 }
 
 /**
@@ -138,6 +146,7 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         -->
         <div
           v-if="listing?.photos.length && !photosFailed"
+          ref="photoTrack"
           class="flex size-full snap-x snap-mandatory overflow-x-auto"
           @scroll.passive="onPhotoScroll"
         >
@@ -185,6 +194,34 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         >
           <img src="/share.svg" width="25" height="25" alt="" aria-hidden="true" />
         </button>
+
+        <!--
+          장수만큼 찍는 점. 사진이 몇 장인지 배지의 숫자보다 먼저 눈에 들어오고,
+          한 장뿐이면(=넘길 게 없으면) 아예 뜨지 않는다.
+
+          점은 8px 인데 버튼은 44px 다 — 손가락으로 누를 것이라 시안의 점 크기를
+          그대로 두고 잡히는 영역만 키운다(README '모바일 전용 설계').
+          그림자는 밝은 사진 위에서 흰 점이 묻히지 않게 — 이 화면의 아이콘들과 같은 처지다.
+        -->
+        <div
+          v-if="listing && listing.photos.length > 1 && !photosFailed"
+          class="absolute inset-x-0 bottom-0 flex justify-center drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
+        >
+          <button
+            v-for="(src, n) in listing.photos"
+            :key="src"
+            type="button"
+            class="grid h-11 w-4 place-items-center"
+            :aria-label="`${n + 1}번째 사진 보기`"
+            :aria-current="n + 1 === photoIndex"
+            @click="goToPhoto(n)"
+          >
+            <span
+              class="size-2 rounded-full transition-colors"
+              :class="n + 1 === photoIndex ? 'bg-white' : 'bg-white/50'"
+            />
+          </button>
+        </div>
 
         <span
           v-if="listing?.photos.length && !photosFailed"
