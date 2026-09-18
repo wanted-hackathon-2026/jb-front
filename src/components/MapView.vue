@@ -152,11 +152,12 @@ function drawAnchors(fit = false) {
       // 시안의 성긴 파선은 longdash 다.
       strokeStyle: 'longdash',
       /*
-        시안의 채움은 그라데이션이지만 여기선 단색이다. Circle 의 fillColor 가 색 하나만
-        받아서, 그라데이션을 내려면 벡터 오버레이를 버리고 CustomOverlay(DOM)로 가야 한다.
-        실제로 해 봤더니 카카오가 줌 애니메이션 동안 CustomOverlay 를 통째로 숨겨서
-        원이 304ms 사라졌다 나타났다 — 화면의 절반을 차지하는 요소라 눈에 띈다.
-        줌은 자주 쓰는 동작이라 그 대가를 치르지 않기로 했다.
+        여기 단색은 **바탕**이다. 화면에 실제로 보이는 채움은 아래 <style> 이 시안의
+        그라데이션(#jb-ring-fill)으로 덮는다 — Circle 의 fillColor 는 색을 하나만 받는다.
+
+        그라데이션 때문에 벡터 오버레이를 버리고 CustomOverlay(DOM)로 가는 길도 있었지만
+        가지 않았다. 카카오가 줌 애니메이션 동안 CustomOverlay 를 통째로 숨겨서 원이
+        304ms 사라졌다 나타난다 — 화면의 절반을 차지하는 요소라 눈에 띈다.
       */
       fillColor: color,
       fillOpacity: 0.1,
@@ -294,6 +295,22 @@ onBeforeUnmount(() => {
 <template>
   <div class="absolute inset-0">
     <div ref="el" class="jb-map size-full" />
+    <!--
+      도달권 원의 채움(시안의 그라데이션). 그릴 도형 없이 페인트만 정의해 두고, 아래
+      <style> 이 카카오가 만든 path 의 fill 을 이 id 로 돌린다. 원 자체는 그대로 벡터
+      오버레이라 줌·드래그 동작이 달라지지 않는다.
+
+      size-0 로 접어 둔다 — display:none 으로 숨기면 참조가 끊기는 브라우저가 있다.
+    -->
+    <svg class="absolute size-0" aria-hidden="true">
+      <defs>
+        <!-- 원의 경계상자 비율이라(기본 objectBoundingBox) 반경이 변해도 결이 같다. -->
+        <linearGradient id="jb-ring-fill" x1="0" y1="1" x2="1" y2="0">
+          <stop class="jb-ring-from" offset="0" />
+          <stop class="jb-ring-to" offset="1" />
+        </linearGradient>
+      </defs>
+    </svg>
     <p v-if="failed" class="absolute inset-x-0 top-1/2 text-center text-sm text-slate-500">
       지도를 불러오지 못했어요. 카카오 개발자 사이트에 도메인이 등록됐는지 확인해 주세요.
     </p>
@@ -320,5 +337,26 @@ onBeforeUnmount(() => {
 */
 .jb-map :deep(svg:not(.jb-anchor-label) path) {
   stroke-dasharray: var(--ring-dash, 14 8) !important;
+  /*
+    채움을 위 <defs> 의 그라데이션으로 돌린다. 뒤의 색은 그 참조가 못 살 때의 대비값이고,
+    진하기도 여기서 준다 — 그래야 SDK 에 넘긴 fillColor·fillOpacity 가 종전 그대로
+    남아, 이 규칙이 통째로 빠져도 지금까지의 단색 원으로 돌아간다.
+  */
+  fill: url(#jb-ring-fill) var(--color-brand-500) !important;
+  fill-opacity: 0.35 !important;
+}
+
+/*
+  시안의 채움은 왼쪽 아래 민트에서 오른쪽 위 초록으로 가고, 가면서 진해진다.
+  시안 캡처의 픽셀에서 역산한 값이다 — 흰 바탕 위에서 왼쪽 #d7f6f3, 오른쪽 #b6e6c9 로
+  앉는다. 초록은 팔레트에 없는 색이라 토큰이 아니라 여기 적는다.
+*/
+.jb-ring-from {
+  stop-color: var(--color-brand-500);
+  stop-opacity: 0.45;
+}
+
+.jb-ring-to {
+  stop-color: #2fb864;
 }
 </style>
