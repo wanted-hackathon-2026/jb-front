@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
+  ANCHOR_LABEL,
   CLUSTER_MIN_LEVEL,
   CLUSTER_STYLES,
   LISTING_MARKER,
@@ -126,19 +127,13 @@ function drawAnchors(fit = false) {
   anchorLabels.forEach((o) => o.setMap(null))
   const color = brandColor()
 
-  anchorLabels = props.anchors.map((a, i) => {
-    // SDK 가 문자열로 붙이는 DOM 이라 Tailwind 클래스가 아니라 인라인 스타일을 쓴다.
-    const el = document.createElement('div')
-    // 번호는 여럿일 때만 뜻이 있다 — 하나뿐인데 '1'이 붙으면 더 있을 것처럼 보인다.
-    el.textContent = props.anchors.length > 1 ? `주요 거점 ${i + 1}` : '주요 거점'
-    el.style.cssText =
-      'padding:3px 10px;border-radius:9999px;background:#fff;color:#0f172a;' +
-      'font-size:12px;font-weight:700;white-space:nowrap;' +
-      'box-shadow:0 1px 4px rgb(15 23 42 / .2)'
+  anchorLabels = props.anchors.map((a) => {
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(a.y, a.x),
-      content: el,
-      yAnchor: 1.6,
+      // 시안 말풍선 그대로다(lib/kakao.ts). 꼬리 끝이 거점에 닿도록 앵커를 그 점에 맞춘다.
+      content: ANCHOR_LABEL.html,
+      xAnchor: ANCHOR_LABEL.xAnchor,
+      yAnchor: ANCHOR_LABEL.yAnchor,
       zIndex: 2,
     })
     overlay.setMap(map)
@@ -152,8 +147,9 @@ function drawAnchors(fit = false) {
       strokeWeight: 2,
       strokeColor: color,
       strokeOpacity: 1,
-      // 'dashed' 는 대시가 짧아 멀리서 보면 실선에 가깝게 뭉친다. 시안의 성긴 파선은
-      // longdash 다 — 원이 크고 곡률이 완만해서 대시가 길어야 파선으로 읽힌다.
+      // 실제 파선 간격은 syncRingDash 가 둘레에 맞춰 다시 잡는다. 여기 값은 그게
+      // 못 먹었을 때의 바탕이다 — 'dashed' 는 대시가 짧아 멀리서 실선처럼 뭉치고,
+      // 시안의 성긴 파선은 longdash 다.
       strokeStyle: 'longdash',
       /*
         시안의 채움은 그라데이션이지만 여기선 단색이다. Circle 의 fillColor 가 색 하나만
@@ -169,6 +165,31 @@ function drawAnchors(fit = false) {
     return circle
   })
   if (fit) fitToCircles()
+  syncRingDash()
+}
+
+/**
+ * 파선 한 칸을 둘레에 비례시킨다 — 배율이 달라도 같은 파선으로 보이게.
+ *
+ * 카카오의 strokeStyle 은 px 로 고정된 dasharray 다(longdash = strokeWeight 2 기준
+ * 선 14px + 공백 8px). 반경은 미터라 축소하면 원이 작아지는데 대시는 그대로라,
+ * 줌아웃할수록 대시 하나가 둘레의 큰 몫을 차지해 '점이 굵어진' 것처럼 보였다.
+ * 둘레를 늘 같은 수로 쪼개면 원이 커지든 작아지든 파선의 결이 같다.
+ *
+ * SDK 가 path 의 style 속성에 직접 박으므로 CSS 변수 + !important 로 덮는다(아래
+ * <style>). 원을 다시 그리지 않아도 되는 게 덤이다 — 줌마다 지우고 새로 만들면
+ * 깜빡인다.
+ */
+const RING_DASHES = 64
+function syncRingDash() {
+  if (!map || !circles.length || !el.value) return
+  const projection = map.getProjection()
+  const bounds = circles[0].getBounds()
+  const west = projection.containerPointFromCoords(bounds.getSouthWest()).x
+  const east = projection.containerPointFromCoords(bounds.getNorthEast()).x
+  // 원의 bounds 는 정사각형이라 x 폭이 곧 지름이다. 둘레 = π × 지름.
+  const step = (Math.PI * Math.abs(east - west)) / RING_DASHES
+  el.value.style.setProperty('--ring-dash', `${step * 0.64} ${step * 0.36}`)
 }
 
 /**
@@ -226,6 +247,7 @@ onMounted(async () => {
   // 레벨은 버튼 말고 핀치·더블탭·클러스터 클릭·setBounds 로도 바뀐다 — 한 곳에서 받는다.
   kakao.maps.event.addListener(map, 'zoom_changed', () => {
     level.value = map!.getLevel()
+    syncRingDash()
   })
   clusterer = new kakao.maps.MarkerClusterer({
     map,
@@ -287,5 +309,16 @@ onBeforeUnmount(() => {
 */
 .jb-map :deep(svg) {
   pointer-events: none;
+}
+
+/*
+  거점 원의 파선 간격. 값은 syncRingDash 가 줌에 맞춰 넣는다 — SDK 가 path 에 style 을
+  인라인으로 박으므로 !important 로만 덮인다. 대비값 14 8 은 longdash(7·4 × strokeWeight
+  2)와 같은 수라, 변수가 비어도 지금 모양 그대로다.
+
+  거점 말풍선도 SVG 라 여기 걸리면 글자가 점선이 된다 — 그래서 빼 둔다(lib/kakao.ts).
+*/
+.jb-map :deep(svg:not(.jb-anchor-label) path) {
+  stroke-dasharray: var(--ring-dash, 14 8) !important;
 }
 </style>
