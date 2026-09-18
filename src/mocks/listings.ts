@@ -119,16 +119,20 @@ function buildRoute(i: number, lines: string[], walkMinutes: number): RouteLeg[]
 }
 
 /**
- * 목 사진 — 실제 방 사진이다.
+ * 목 사진 — 매물 한 건이 **한 집**이 되도록 묶은 세트다.
  *
- * 처음엔 picsum.photos 를 썼는데 주제를 못 고른다. 분류를 받는 대체 서비스
- * (loremflickr)는 죽어 있어서, 언스플래시에서 원룸·주방·침실 사진을 골라 id 로 박았다.
+ * 처음엔 사진 스물네 장을 공용 풀로 두고 돌려 썼는데, 그러면 한 매물 안에서 첫 장은
+ * A 집 주방이고 둘째 장은 B 집 침실이었다. 매물 사진은 같은 집이어야 말이 된다.
+ *
+ * 그래서 **같은 촬영본끼리 묶었다.** 언스플래시 사진 id 의 앞자리는 업로드 시각(ms)이라,
+ * 같은 작가가 비슷한 시각에 올린 것들은 한 집을 찍은 연작이다. 그렇게 모은 뒤 눈으로
+ * 확인해 열두 세트를 남겼다. 순서도 손으로 잡았다 — **첫 장이 집 전체가 보이는 컷**이고
+ * 뒤로 갈수록 주방·욕실 같은 부분 컷이다. 카드 썸네일이 곧 첫 장이라 더 그렇다.
+ *
+ * 장수는 네 장이다. 목으로 화면을 굴리는 데는 그 이상이 필요 없다.
+ *
  * 언스플래시 라이선스는 상업적 사용까지 무료이고 출처 표기 의무가 없다. 유료인
  * Unsplash+(plus.unsplash.com)는 골라내고 무료(images.unsplash.com)만 남겼다.
- *
- * **눈으로 고른 목록이다.** 검색 결과를 그대로 쓰면 같은 촬영본이 여러 장 섞여
- * (한 번 그렇게 됐다) 카드마다 같은 흰 주방이 뜬다. 스물네 장을 서로 다르게 골랐다.
- *
  * 주소에 붙는 건 언스플래시가 제공하는 리사이즈 파라미터다 — 원본은 수 MB 라
  * 그대로 부르면 목록 한 장이 통째로 느려진다.
  *
@@ -136,48 +140,121 @@ function buildRoute(i: number, lines: string[], walkMinutes: number): RouteLeg[]
  * (ListingCard·ListingDetailPage 가 실패를 받아 이미지를 숨긴다).
  * 이 파일과 함께 사라질 값이라 레포에 사진 파일을 들이지는 않는다.
  */
-const PHOTO_IDS = [
-  '1630699376167-3870469e7598', // white and brown kitchen cabinet
-  '1616486029423-aaa4789e8c9a', // A bedroom with a bed, a leather bench, and wall art in a sunlit room
-  '1737233463795-34fccdfc67bb', // A kitchen with a wooden floor and white walls
-  '1696762932825-2737db830bbe', // a bedroom with a bed and a chair
-  '1702014859908-d48b9b844240', // a room with a table, chairs and a television
-  '1633944095397-878622ebc01c', // a bed sitting in a bedroom next to a window
-  '1689043528099-2ba014dd7c64', // a kitchen with a table and chairs next to a window
-  '1699869653495-fe26f4c70b3e', // a bedroom with a large bed and a round mirror on the wall
-  '1764080582659-652c0000ff1d', // Modern kitchen with dining table and chairs
-  '1757344454333-cc666252e596', // Modern bedroom with wooden accents and soft lighting
-  '1702014861373-527115231f8c', // a kitchen with a sink, stove, microwave and toaster oven
-  '1633809365429-2fa048a02119', // a bedroom with a large bed and a dresser
-  '1720420021124-4e18564e070f', // A bedroom with a bed and a desk
-  '1675279200694-8529c73b1fd0', // a kitchen with a table and chairs next to a window
-  '1616593969747-4797dc75033e', // 2 brown wooden armchairs beside white wall
-  '1560448076-957f79776e95', // white table lamp
-  '1555930112-0159bcdc3fe5', // black laptop computer
-  '1785706313842-541f09684d5f', // Bright room with wooden floor, patterned rug, and leaded win
-  '1697807665472-908cfe732b8e', // a room with a desk and a book shelf
-  '1650347683799-c2e44df2859c', // a desk with a lamp, books, and papers on it
-  '1633948393301-d43e3ec0e5cd', // a bed room with a neatly made bed and a desk
-  '1648634158203-199accfd7afc', // a bedroom with a large bed
-  '1663811397207-418a92396ad5', // a bedroom with a large mirror
-  '1773098587137-1a62971cfedb', // A modern kitchen with stainless steel appliances and wooden floors
+const PHOTO_SETS = [
+  // 흰 주방 원룸
+  [
+    '1630699293875-e56c25151c4b',
+    '1630699294110-6bbec2bb9ea4',
+    '1630699293676-74731c1a0e66',
+    '1630699293259-0b6c08606c62',
+  ],
+  // 볕 드는 거실 아파트
+  [
+    '1560185009-5bf9f2849488',
+    '1560185007-cde436f6a4d0',
+    '1560185007-5f0bb1866cab',
+    '1560448075-57d0285fc59b',
+  ],
+  // 파란 소파 원룸
+  [
+    '1737737210863-387afd35344e',
+    '1737737149038-e6532662659e',
+    '1737737192166-e0e2fa311fd7',
+    '1737737196308-e5b848160b78',
+  ],
+  // 가벽 나눈 원룸
+  [
+    '1702014859878-5d4743176d28',
+    '1702014857653-dcea938d51f0',
+    '1702014859908-d48b9b844240',
+    '1702014859028-c773f15029db',
+  ],
+  // 빈 회색 원룸
+  [
+    '1789353527502-929a999695ac',
+    '1789353527453-2121cc451a89',
+    '1789353527453-791631816c06',
+    '1789353527593-53f737dc286f',
+  ],
+  // 붉은 포인트 원룸
+  [
+    '1629042306547-c1d7c6c85ffa',
+    '1629042306541-85e77116aed3',
+    '1629042306558-7d1e15cc02fa',
+    '1629042306548-1bfb25a3ff78',
+  ],
+  // 짙은 초록 주방 원룸
+  [
+    '1738748444626-ed333be8afc7',
+    '1738748444659-f8975b12ce57',
+    '1738748444626-08b04513bcac',
+    '1738748444551-2f0819de6faa',
+  ],
+  // 빈 원룸(주방 분리)
+  [
+    '1789352844272-7753113a8384',
+    '1789352844192-7d495ffebb69',
+    '1789352844229-28e8ecc783a5',
+    '1789352844163-a44a9fcc9070',
+  ],
+  // 민트 주방 원룸
+  [
+    '1737233459465-8eaf6c7d8856',
+    '1737233451637-9fd32d96eb26',
+    '1737233463795-34fccdfc67bb',
+    '1737233523182-99e287258d58',
+  ],
+  // 어두운 우드 아파트
+  [
+    '1738168279272-c08d6dd22002',
+    '1738168246881-40f35f8aba0a',
+    '1738168362059-44a0b8a80b39',
+    '1738168273959-952fdc961991',
+  ],
+  // 흰 거실 아파트
+  [
+    '1628744876497-eb30460be9f6',
+    '1628745277862-bc0b2d68c50c',
+    '1628744876525-f2678d8af47f',
+    '1628744876490-19b035ecf9c3',
+  ],
+  // 빈 흰 원룸
+  [
+    '1630699144919-681cf308ae82',
+    '1630699144867-37acec97df5a',
+    '1630699144641-72fa7a6b8aa1',
+    '1630699144418-6ca9059f9a44',
+  ],
 ]
 
 /**
- * i 번째 매물의 사진.
+ * i 번째 매물의 사진 = 세트 하나.
  *
- * 시작점을 5 씩 어긋나게 돌린다. 사진이 매물 수(24)와 같고 5 와 24 가 서로소라
- * **모든 매물의 첫 장이 다르다** — 대표 사진이 겹치면 목록에서 같은 방이 두 번
- * 나온 것처럼 보인다. 한 번 그렇게 됐다(사진 14장에 매물 24개라 열 개가 겹쳤다).
- *
- * 새로고침마다 방이 바뀌면 화면 비교가 안 되므로 여기서도 결정적으로 고른다.
+ * 세트를 5 씩 건너뛰며 고른다. 목록은 점수순으로 정렬되는데 점수가 i % 8 로 정해져서
+ * **i, i+8, i+16 이 목록에서 나란히 붙는다.** 5 와 12 가 서로소라 그 셋은 서로 다른
+ * 세트를 받는다 — 같은 집이 연달아 세 줄 나오는 걸 막는 건 이 한 줄이다.
  */
 const photosOf = (i: number) =>
-  Array.from(
-    { length: 5 + (i % 4) },
-    (_, n) =>
-      `https://images.unsplash.com/photo-${PHOTO_IDS[(i * 5 + n) % PHOTO_IDS.length]}?w=800&h=600&fit=crop&q=70`,
+  PHOTO_SETS[(i * 5) % PHOTO_SETS.length].map(
+    (id) => `https://images.unsplash.com/photo-${id}?w=800&h=600&fit=crop&q=70`,
   )
+
+/** 중개사가 적어 넣는 한 줄. 실제 매물 글의 말투를 흉내 낸다. */
+const DESCRIPTIONS = [
+  '보증보험 가능 · 즉시 입주 가능한 깔끔한 매물이에요',
+  '전세자금대출 가능하고 관리비에 수도세가 포함됩니다',
+  '남향이라 하루 종일 볕이 들고 채광이 아주 좋아요',
+  '역까지 도보 5분, 주변에 편의점과 마트가 가깝습니다',
+  '리모델링 완료된 매물로 옵션이 모두 새 제품이에요',
+]
+
+/** 빌트인 옵션. 매물마다 한 벌씩 돌려 쓴다. */
+const OPTION_SETS = [
+  ['에어컨', '냉장고', '세탁기', '인덕션', '붙박이장'],
+  ['에어컨', '냉장고', '전자레인지', '책상', '신발장'],
+  ['에어컨', '세탁기', '가스레인지', '도어록'],
+  ['에어컨', '냉장고', '세탁기', '전자레인지', '붙박이장', '도어록'],
+]
 
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
@@ -206,6 +283,19 @@ function build(i: number): Listing {
     lines,
     supplyPyeong: areaPyeong + 4 + (i % 3),
     bathrooms: 1 + (i % 2),
+    description: DESCRIPTIONS[i % DESCRIPTIONS.length],
+    // 0 이 섞여야 '관리비 없음'으로 떨어지는 화면도 같이 확인된다.
+    maintenanceFee: [0, 5, 7, 8, 12][i % 5],
+    // 전체 층수는 반드시 floor 보다 크다 — '5층 / 전체 3층'은 말이 안 된다.
+    totalFloors: 1 + (i % 5) + 3 + (i % 12),
+    direction: ['남', '남동', '동', '남서', '서'][i % 5],
+    moveInDate: ['즉시 입주', '협의 가능', '1개월 후', '즉시 입주'][i % 4],
+    parking: i % 3 !== 0,
+    elevator: i % 4 !== 0,
+    options: OPTION_SETS[i % OPTION_SETS.length],
+    // 자릿수만 실제 매물 번호를 닮게 둔다. 뜻이 있는 값은 아니다.
+    listingNo: String(50353437 + i * 613),
+    postedDaysAgo: 1 + (i % 14),
     photos: photosOf(i),
     aiSummary: SUMMARIES[i % SUMMARIES.length],
     rank: null,

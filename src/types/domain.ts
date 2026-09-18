@@ -117,6 +117,25 @@ export interface Listing {
   supplyPyeong: number
   /** 욕실 수 */
   bathrooms: number
+  /** 중개사가 적은 한 줄 소개. 시안의 매물 설명 자리다. */
+  description: string
+  /** 월 관리비(만원). 0 이면 '없음'으로 보여준다 — 없는 것과 모르는 것은 다르다. */
+  maintenanceFee: number
+  /** 건물 전체 층수. floor 와 짝을 이뤄 '3층 / 전체 15층'으로 읽힌다. */
+  totalFloors: number
+  /** 향 — '남', '남동' 처럼 방위만 담는다. 화면에서 '향'을 붙인다. */
+  direction: string
+  /** 입주 가능 시점. 날짜일 수도, '즉시 입주'·'협의 가능' 같은 말일 수도 있다. */
+  moveInDate: string
+  parking: boolean
+  elevator: boolean
+  /** 빌트인 옵션. 순서는 목에 적힌 대로 보여준다. */
+  options: string[]
+  /** 매물 등록번호. 시안 참고 화면의 '등록번호 50353437'. */
+  listingNo: string
+  /** 등록한 지 며칠 됐는지. 절대 날짜가 아니라 '4일 전'으로 읽히는 값이다. */
+  postedDaysAgo: number
+
   /**
    * 매물 사진 주소. 첫 장이 카드 썸네일이고, 상세는 전부를 갤러리로 넘긴다.
    * 시안의 "4 / 13" 인디케이터는 이 배열의 길이에서 나온다 — 장수를 따로 들고 있으면
