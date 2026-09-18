@@ -196,6 +196,38 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         </button>
 
         <!--
+          좌우 화살표. **마우스가 있는 기기에만** 뜬다(pointer: fine).
+
+          스크롤 스냅은 드래그로 안 움직여서, 손가락이 없으면 사진을 넘길 방법이 점뿐이다.
+          반대로 터치 기기에서는 미는 게 자연스럽고 화살표가 사진만 가린다.
+          이 앱은 모바일 전용이지만(README) 화면을 확인하는 자리는 대개 데스크톱이다.
+        -->
+        <button
+          v-for="step in listing && listing.photos.length > 1 && !photosFailed ? [-1, 1] : []"
+          :key="step"
+          type="button"
+          class="absolute top-1/2 hidden size-11 -translate-y-1/2 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)] disabled:opacity-30 [@media(pointer:fine)]:grid"
+          :class="step < 0 ? 'left-1' : 'right-1'"
+          :disabled="step < 0 ? photoIndex === 1 : photoIndex === listing!.photos.length"
+          :aria-label="step < 0 ? '이전 사진' : '다음 사진'"
+          @click="goToPhoto(photoIndex - 1 + step)"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-7"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              :d="step < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <!--
           장수만큼 찍는 점. 사진이 몇 장인지 배지의 숫자보다 먼저 눈에 들어오고,
           한 장뿐이면(=넘길 게 없으면) 아예 뜨지 않는다.
 
