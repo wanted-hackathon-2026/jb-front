@@ -119,17 +119,65 @@ function buildRoute(i: number, lines: string[], walkMinutes: number): RouteLeg[]
 }
 
 /**
- * 목 사진.
+ * 목 사진 — 실제 방 사진이다.
  *
- * picsum.photos 는 **씨드가 같으면 늘 같은 사진**을 준다. 이 파일의 다른 값들이 전부
- * 결정적인 것과 같은 이유로 씨드를 쓴다 — 새로고침마다 방이 바뀌면 화면 비교가 안 된다.
+ * 처음엔 picsum.photos 를 썼는데 주제를 못 고른다. 분류를 받는 대체 서비스
+ * (loremflickr)는 죽어 있어서, 언스플래시에서 원룸·주방·침실 사진을 골라 id 로 박았다.
+ * 언스플래시 라이선스는 상업적 사용까지 무료이고 출처 표기 의무가 없다. 유료인
+ * Unsplash+(plus.unsplash.com)는 골라내고 무료(images.unsplash.com)만 남겼다.
+ *
+ * **눈으로 고른 목록이다.** 검색 결과를 그대로 쓰면 같은 촬영본이 여러 장 섞여
+ * (한 번 그렇게 됐다) 카드마다 같은 흰 주방이 뜬다. 스물네 장을 서로 다르게 골랐다.
+ *
+ * 주소에 붙는 건 언스플래시가 제공하는 리사이즈 파라미터다 — 원본은 수 MB 라
+ * 그대로 부르면 목록 한 장이 통째로 느려진다.
  *
  * ⚠️ 네트워크가 필요하다. 끊기면 <img> 가 실패하고 지금의 회색 자리표시자가 남는다
  * (ListingCard·ListingDetailPage 가 실패를 받아 이미지를 숨긴다).
  * 이 파일과 함께 사라질 값이라 레포에 사진 파일을 들이지는 않는다.
  */
+const PHOTO_IDS = [
+  '1630699376167-3870469e7598', // white and brown kitchen cabinet
+  '1616486029423-aaa4789e8c9a', // A bedroom with a bed, a leather bench, and wall art in a sunlit room
+  '1737233463795-34fccdfc67bb', // A kitchen with a wooden floor and white walls
+  '1696762932825-2737db830bbe', // a bedroom with a bed and a chair
+  '1702014859908-d48b9b844240', // a room with a table, chairs and a television
+  '1633944095397-878622ebc01c', // a bed sitting in a bedroom next to a window
+  '1689043528099-2ba014dd7c64', // a kitchen with a table and chairs next to a window
+  '1699869653495-fe26f4c70b3e', // a bedroom with a large bed and a round mirror on the wall
+  '1764080582659-652c0000ff1d', // Modern kitchen with dining table and chairs
+  '1757344454333-cc666252e596', // Modern bedroom with wooden accents and soft lighting
+  '1702014861373-527115231f8c', // a kitchen with a sink, stove, microwave and toaster oven
+  '1633809365429-2fa048a02119', // a bedroom with a large bed and a dresser
+  '1720420021124-4e18564e070f', // A bedroom with a bed and a desk
+  '1675279200694-8529c73b1fd0', // a kitchen with a table and chairs next to a window
+  '1616593969747-4797dc75033e', // 2 brown wooden armchairs beside white wall
+  '1560448076-957f79776e95', // white table lamp
+  '1555930112-0159bcdc3fe5', // black laptop computer
+  '1785706313842-541f09684d5f', // Bright room with wooden floor, patterned rug, and leaded win
+  '1697807665472-908cfe732b8e', // a room with a desk and a book shelf
+  '1650347683799-c2e44df2859c', // a desk with a lamp, books, and papers on it
+  '1633948393301-d43e3ec0e5cd', // a bed room with a neatly made bed and a desk
+  '1648634158203-199accfd7afc', // a bedroom with a large bed
+  '1663811397207-418a92396ad5', // a bedroom with a large mirror
+  '1773098587137-1a62971cfedb', // A modern kitchen with stainless steel appliances and wooden floors
+]
+
+/**
+ * i 번째 매물의 사진.
+ *
+ * 시작점을 5 씩 어긋나게 돌린다. 사진이 매물 수(24)와 같고 5 와 24 가 서로소라
+ * **모든 매물의 첫 장이 다르다** — 대표 사진이 겹치면 목록에서 같은 방이 두 번
+ * 나온 것처럼 보인다. 한 번 그렇게 됐다(사진 14장에 매물 24개라 열 개가 겹쳤다).
+ *
+ * 새로고침마다 방이 바뀌면 화면 비교가 안 되므로 여기서도 결정적으로 고른다.
+ */
 const photosOf = (i: number) =>
-  Array.from({ length: 5 + (i % 4) }, (_, n) => `https://picsum.photos/seed/jb-${i}-${n}/800/600`)
+  Array.from(
+    { length: 5 + (i % 4) },
+    (_, n) =>
+      `https://images.unsplash.com/photo-${PHOTO_IDS[(i * 5 + n) % PHOTO_IDS.length]}?w=800&h=600&fit=crop&q=70`,
+  )
 
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
