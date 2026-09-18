@@ -7,9 +7,10 @@ import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
 import { lifestyleLabel } from '@/lib/lifestyle'
-import { formatCommute, formatPrice } from '@/lib/format'
+import { formatCommute, formatMoney, formatPrice } from '@/lib/format'
 import { shareLink } from '@/lib/share'
 import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import { useNoticeStore } from '@/stores/notice'
 import type { Listing } from '@/types/domain'
@@ -23,12 +24,18 @@ const props = defineProps<{
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const favorites = useFavoritesStore()
 const loginPrompt = useLoginPromptStore()
 const notice = useNoticeStore()
 
 const listing = ref<Listing | null>(null)
 const failed = ref(false)
-const saved = ref(false)
+
+/**
+ * 저장 여부는 스토어가 들고 있다 — 이 화면이 직접 들면 **이미 저장한 매물을 다시 열었을 때
+ * '저장하기'라고 적혀 있다.** 목록 카드의 하트와 같은 값을 봐야 하는 것도 같은 이유다.
+ */
+const saved = computed(() => favorites.has(props.id))
 
 /**
  * 저장(찜)은 **로그인 전용이다** — 서버의 favorite 에는 비로그인 개념이 없다
@@ -38,15 +45,14 @@ const saved = ref(false)
  * 로그인이 끝나면 사용자가 원래 누른 대로 저장까지 이어간다 — 팝업을 닫고 다시
  * 누르게 하면 같은 동작을 두 번 시키는 것이다.
  *
- * ⚠️ 아직 서버에 보내지 않는다. 화면 상태만 바뀐다(찜 API 는 만들어져 있지만
- * 매물 id 가 목이라 붙일 수 없다 — 매물 API 가 실제 백엔드로 바뀔 때 연결한다).
+ * ⚠️ 아직 서버에 보내지 않는다. 이 기기에만 남는다(stores/favorites.ts).
  */
 function toggleSave() {
   if (!auth.isAuthenticated) {
-    loginPrompt.require({ redirect: route.fullPath, then: () => (saved.value = true) })
+    loginPrompt.require({ redirect: route.fullPath, then: () => favorites.add(props.id) })
     return
   }
-  saved.value = !saved.value
+  favorites.toggle(props.id)
 }
 
 /**
@@ -109,6 +115,23 @@ const price = computed(() =>
     ? formatPrice(listing.value.dealType, listing.value.deposit, listing.value.rent)
     : '',
 )
+
+/** 매물 정보 표. 값이 없을 수 있는 줄은 '없음'까지 말한다 — 빈칸은 모른다는 뜻이 된다. */
+const infoRows = computed(() => {
+  const l = listing.value
+  if (!l) return []
+  return [
+    { label: '층', value: `${l.floor}층 / 전체 ${l.totalFloors}층` },
+    { label: '향', value: `${l.direction}향` },
+    {
+      label: '관리비',
+      value: l.maintenanceFee ? `월 ${formatMoney(l.maintenanceFee)}만원` : '없음',
+    },
+    { label: '입주', value: l.moveInDate },
+    { label: '주차', value: l.parking ? '가능' : '불가' },
+    { label: '엘리베이터', value: l.elevator ? '있음' : '없음' },
+  ]
+})
 
 const commute = computed(() => {
   const c = listing.value?.commutes[0]
@@ -316,7 +339,13 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
               추천 {{ listing.rank }}순위
             </p>
             <h1 class="truncate text-2xl font-bold text-slate-900">{{ price }}</h1>
-            <p class="mt-1 truncate text-sm text-slate-500">{{ listing.address }}</p>
+            <!-- 관리비는 가격 바로 옆에 붙어야 하는 돈이다 — 따로 두면 아래 표까지 내려가야 안다. -->
+            <p class="mt-1 truncate text-sm text-slate-500">
+              {{ listing.address }}
+              <span v-if="listing.maintenanceFee">
+                · 관리비 {{ formatMoney(listing.maintenanceFee) }}만원
+              </span>
+            </p>
           </div>
 
           <BaseScoreDonut v-if="listing.score !== null" :score="listing.score" :size="80" />
@@ -357,6 +386,37 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
               {{ listing.roomType }} / {{ listing.bathrooms }}개
             </p>
           </div>
+        </section>
+
+        <section class="px-5 pt-7">
+          <h2 class="font-bold text-slate-900">매물 정보</h2>
+          <p class="mt-2 text-sm leading-relaxed text-slate-600">{{ listing.description }}</p>
+
+          <!--
+            라벨 폭을 고정해 값이 한 줄에 맞춰 선다. 320px 에서도 라벨 80px + 여백을 빼면
+            값에 190px 이 남아 '3층 / 전체 15층'이 접히지 않는다(README '대응 화면 폭').
+          -->
+          <dl class="mt-4 flex flex-col gap-2.5 text-sm">
+            <div v-for="row in infoRows" :key="row.label" class="flex gap-3">
+              <dt class="w-20 shrink-0 text-slate-500">{{ row.label }}</dt>
+              <dd class="min-w-0 flex-1 font-medium text-slate-800">{{ row.value }}</dd>
+            </div>
+          </dl>
+
+          <ul v-if="listing.options.length" class="mt-4 flex flex-wrap gap-2">
+            <li
+              v-for="option in listing.options"
+              :key="option"
+              class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
+            >
+              {{ option }}
+            </li>
+          </ul>
+
+          <!-- 등록번호·등록일은 매물을 특정할 때만 쓰는 값이라 절 끝에 작게 둔다. -->
+          <p class="mt-4 text-xs text-slate-400">
+            등록번호 {{ listing.listingNo }} · {{ listing.postedDaysAgo }}일 전 등록
+          </p>
         </section>
 
         <section v-if="listing.route.length" class="px-5 pt-7">
@@ -401,7 +461,7 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         :aria-pressed="saved"
         @click="toggleSave"
       >
-        {{ saved ? '저장됨' : '매물 저장하기' }}
+        {{ saved ? '저장된 매물' : '매물 저장하기' }}
       </button>
     </div>
   </main>

@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import { formatCommute, formatPrice } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing } from '@/types/domain'
 
@@ -17,21 +18,28 @@ const props = defineProps<{
 
 const route = useRoute()
 const auth = useAuthStore()
+const favorites = useFavoritesStore()
 const loginPrompt = useLoginPromptStore()
 
 /**
- * 찜 상태. 프롭은 '들어올 때 이랬다'는 초깃값이고, 이후는 카드가 들고 있는다.
- * 매물 상세의 하트와 같은 규칙이다 — 저장은 로그인 전용이라 먼저 로그인을 받는다
- * (⚠️ 아직 서버에 보내지 않는다. ListingDetailPage 의 toggleSave 주석 참고).
+ * 찜 상태는 스토어가 들고 있다(stores/favorites.ts) — 카드마다 따로 들면 상세에서
+ * 저장하고 돌아왔을 때 하트가 비어 있다.
+ *
+ * `saved` 프롭은 **서버가 알려준 초깃값**이다(마이페이지 '관심 매물'). 로컬에 한 번
+ * 심어 두면 그 뒤로는 스토어 하나만 보면 된다.
+ *
+ * 저장은 로그인 전용이라 먼저 로그인을 받는다 — 비로그인으로 누르면 눌린 것처럼
+ * 보였다가 서버에 아무것도 남지 않는다.
  */
-const isSaved = ref(props.saved ?? false)
+if (props.saved) favorites.add(props.listing.id)
+const isSaved = computed(() => favorites.has(props.listing.id))
 
 function toggleSave() {
   if (!auth.isAuthenticated) {
-    loginPrompt.require({ redirect: route.fullPath, then: () => (isSaved.value = true) })
+    loginPrompt.require({ redirect: route.fullPath, then: () => favorites.add(props.listing.id) })
     return
   }
-  isSaved.value = !isSaved.value
+  favorites.toggle(props.listing.id)
 }
 
 /**
