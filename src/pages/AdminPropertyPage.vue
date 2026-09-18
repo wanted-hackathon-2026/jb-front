@@ -161,6 +161,10 @@ function messageOf(e: unknown): string {
   if (e.code === ERROR_CODE.GEOCODING_UNAVAILABLE) {
     return '주소 좌표 변환 서비스가 응답하지 않아요. 잠시 후 다시 시도해 주세요'
   }
+  // 403 이 두 가지다. 등록 경로가 allOf(닉네임, 관리자)로 묶여 있어서
+  // (jb-backend e11ac1a), 권한은 있는데 닉네임만 없는 관리자도 여기로 온다.
+  // 둘을 뭉뚱그리면 "권한이 없다"고 잘못 말하게 된다.
+  if (e.code === ERROR_CODE.PROFILE_INCOMPLETE) return '닉네임을 먼저 설정해 주세요'
   if (e.status === 403) return '이 계정에는 매물 등록 권한이 없어요'
   if (e.status === 400) return '입력한 값을 서버가 거절했어요. 금액·면적·층을 확인해 주세요'
   return '저장하지 못했어요. 잠시 후 다시 시도해 주세요'

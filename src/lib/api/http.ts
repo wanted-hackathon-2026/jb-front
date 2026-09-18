@@ -60,12 +60,11 @@ export class NotFoundError extends ApiError {
 }
 
 /**
- * 닉네임 설정 전에는 인증·닉네임 설정 API 만 부를 수 있고, 나머지는 이 코드로 막힌다
- * (docs/specs/google-oauth-login.md §3).
+ * 닉네임 설정 전에는 `GET`·`PATCH /api/me` 만 부를 수 있고, 나머지는 이 코드로 막힌다
+ * (`ProfileAuthorizationManager`, jb-backend e11ac1a).
  *
- * ⚠️ **a2ee567 시점 백엔드에는 아직 구현돼 있지 않다.** 명세는 '확정'인데 이를 강제하는
- *    필터가 없어서 지금은 닉네임 없이도 거점·찜이 호출된다. 구현되는 순간 신규 가입자의
- *    첫 동기화가 전부 403 으로 바뀌므로, 그때 조용히 깨지지 않도록 미리 분기해 둔다.
+ * 그래서 서버를 부를지 가르는 기준은 '로그인했나'가 아니라 `auth.canUseApi` 다 —
+ * 신규 가입자는 로그인 직후 항상 닉네임이 없다.
  */
 export const PROFILE_INCOMPLETE = 'PROFILE_INCOMPLETE'
 

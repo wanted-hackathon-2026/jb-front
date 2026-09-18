@@ -58,13 +58,21 @@ const recent = ref<Listing[]>([])
  */
 const needsLogin = computed(() => tab.value === 'favorites' && auth.status === 'anonymous')
 
+/**
+ * 로그인은 했는데 닉네임이 없다. 백엔드가 이 상태의 요청을 403 `PROFILE_INCOMPLETE` 로
+ * 막으므로(jb-backend e11ac1a) 역시 부르지 않는다 — 부르면 '못 불러왔다'는 오류로 보이지만
+ * 사실은 **사용자가 할 일이 남은 것**이라, 오류가 아니라 안내로 갈라야 한다.
+ */
+const needsNickname = computed(() => tab.value === 'favorites' && auth.needsProfile)
+
 /** 탭을 옮길 때마다 받아온다. 세 벌을 한 번에 받으면 첫 화면이 그만큼 늦어진다. */
 async function load(which: Tab) {
-  if (which === 'favorites' && !auth.isAuthenticated) {
+  if (which === 'favorites' && !auth.canUseApi) {
     // 복원이 아직 안 끝났으면(idle·restoring) 로그인 여부를 모르는 상태다. 그때
     // 빈 목록을 보여주면 '찜한 게 없다'는 거짓말이 되므로 로딩을 유지하고, 상태가
-    // 확정되면 아래 watch 가 다시 부른다. 비로그인이 확정된 경우에만 안내로 넘긴다.
-    loading.value = auth.status !== 'anonymous'
+    // 확정되면 아래 watch 가 다시 부른다. 비로그인·닉네임 미설정이 확정된 경우에만
+    // 안내로 넘긴다.
+    loading.value = auth.status !== 'anonymous' && !auth.needsProfile
     return
   }
   loading.value = true
@@ -125,14 +133,17 @@ function backspace() {
 onMounted(() => load(tab.value))
 watch(tab, load)
 /**
- * 세션 복원이 끝나거나 로그인 상태가 바뀌면 관심 매물을 다시 받아온다.
+ * 세션 복원이 끝나거나, 로그인 상태가 바뀌거나, 닉네임을 정하면 관심 매물을 다시 받아온다.
  *
- * `isAuthenticated` 가 아니라 `status` 를 보는 이유가 있다 — 복원이 **실패**하면
- * (restoring → anonymous) `isAuthenticated` 는 false 에서 false 로 그대로라 watch 가
- * 돌지 않고, 위에서 켜둔 로딩이 영원히 풀리지 않는다.
+ * **둘 다 봐야 한다.**
+ * - `status` — `isAuthenticated` 로는 부족하다. 복원이 **실패**하면
+ *   (restoring → anonymous) false 에서 false 로 그대로라 watch 가 돌지 않고,
+ *   위에서 켜둔 로딩이 영원히 풀리지 않는다
+ * - `needsProfile` — 닉네임을 정해도 `status` 는 'authenticated' 그대로라 안 바뀐다.
+ *   이걸 빼면 닉네임 설정 직후 목록이 안내 화면에 멈춰 있는다
  */
 watch(
-  () => auth.status,
+  () => [auth.status, auth.needsProfile],
   () => {
     if (tab.value === 'favorites') void load('favorites')
   },
@@ -248,6 +259,15 @@ watch(
         hint="저장한 매물은 계정에 남아 다른 기기에서도 보여요"
         action-label="로그인"
         @action="loginPrompt.require({ redirect: '/my?tab=favorites' })"
+      />
+
+      <!-- 로그인은 했지만 닉네임이 없다. 오류가 아니라 남은 할 일이다. -->
+      <BaseEmptyState
+        v-else-if="needsNickname"
+        title="닉네임을 정하면 관심 매물을 볼 수 있어요"
+        hint="가입을 마치면 저장한 매물이 계정에 남아요"
+        action-label="닉네임 설정"
+        @action="router.push({ name: 'nickname', query: { redirect: '/my?tab=favorites' } })"
       />
 
       <!-- 실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다. -->

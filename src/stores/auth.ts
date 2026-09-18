@@ -50,6 +50,19 @@ export const useAuthStore = defineStore('auth', () => {
    * 거점·찜 호출이 전부 막히므로 **닉네임 설정 UI 가 로그인 UI 와 같이 와야 한다.**
    */
   const needsProfile = computed(() => isAuthenticated.value && !user.value?.profileCompleted)
+  /**
+   * **서버 API 를 부를 수 있는 상태인가.**
+   *
+   * 로그인만으로는 부족하다 — 백엔드가 닉네임 없는 계정의 요청을 403
+   * `PROFILE_INCOMPLETE` 로 막는다(`ProfileAuthorizationManager`, jb-backend e11ac1a).
+   * 열려 있는 건 `GET`·`PATCH /api/me` 둘뿐이다.
+   *
+   * 그래서 서버를 부를지 가르는 기준은 `isAuthenticated` 가 아니라 이 값이다.
+   * 닉네임을 정하는 순간 false → true 로 바뀌므로, 이걸 watch 하면 **설정 직후
+   * 동기화가 저절로 이어진다**(`isAuthenticated` 는 그때 이미 true 라 안 바뀐다).
+   */
+  const canUseApi = computed(() => isAuthenticated.value && !needsProfile.value)
+
   /** 구글 클라이언트 ID 가 없으면 로그인 버튼 자체를 비활성으로 둔다. */
   const canLogin = hasGoogleClientId
 
@@ -133,6 +146,7 @@ export const useAuthStore = defineStore('auth', () => {
     status,
     isAuthenticated,
     needsProfile,
+    canUseApi,
     canLogin,
     restore,
     login,

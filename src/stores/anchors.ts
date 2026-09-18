@@ -81,7 +81,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
 
   /** 서버 목록으로 로컬을 덮는다. 로그인 직후에 돈다. */
   async function syncFromServer() {
-    if (!auth.isAuthenticated) return
+    if (!auth.canUseApi) return
     syncing.value = true
     try {
       anchors.value = await listWorkplaces()
@@ -123,7 +123,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
       ...recentAnchors.value.filter((p) => p.name !== place.name),
     ].slice(0, 10)
 
-    if (!auth.isAuthenticated) return
+    if (!auth.canUseApi) return
 
     try {
       const saved = await createWorkplace(place.name, place.address)
@@ -177,7 +177,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     const [removed] = anchors.value.splice(at, 1)
 
     // 서버에 없는 거점이다 — 비로그인으로 넣었거나 add() 의 등록이 실패한 것.
-    if (!auth.isAuthenticated || id.startsWith(`${LOCAL_PREFIX}_`)) return
+    if (!auth.canUseApi || id.startsWith(`${LOCAL_PREFIX}_`)) return
 
     try {
       await deleteWorkplace(id)
@@ -204,14 +204,19 @@ export const useAnchorsStore = defineStore('anchors', () => {
   }
 
   /**
-   * 로그인하면 서버 목록을 가져오고, 로그아웃하면 로컬을 비운다.
+   * 서버를 부를 수 있게 되면 목록을 가져오고, 그 자격을 잃으면 로컬을 비운다.
    * 비운다 = 그 목록은 방금 나간 사용자의 것이라 다음 사람에게 보이면 안 된다.
    * (비로그인으로 시작한 손님의 목록은 이 전이가 일어나지 않아 그대로 남는다.)
+   *
+   * `isAuthenticated` 가 아니라 `canUseApi` 를 보는 게 중요하다. 신규 가입자는 로그인
+   * 직후 닉네임이 없어 서버가 403 으로 막으므로, 그때 부르면 실패 토스트만 뜬다.
+   * 닉네임을 정하는 순간 이 값이 true 로 바뀌며 **동기화가 저절로 이어진다** —
+   * `isAuthenticated` 로 보면 그 시점에 이미 true 라 watch 가 돌지 않는다.
    */
   watch(
-    () => auth.isAuthenticated,
-    (loggedIn, was) => {
-      if (loggedIn) void syncFromServer()
+    () => auth.canUseApi,
+    (usable, was) => {
+      if (usable) void syncFromServer()
       else if (was) anchors.value = []
     },
   )

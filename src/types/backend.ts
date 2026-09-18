@@ -268,8 +268,8 @@ export const ERROR_CODE = {
   /** 502. 구글 공개 키 조회 실패 등. 사용자 잘못이 아니므로 재시도를 권한다. */
   GOOGLE_AUTH_UNAVAILABLE: 'GOOGLE_AUTH_UNAVAILABLE',
   /**
-   * 403. 닉네임 설정 전에 다른 API 를 불렀다.
-   * ⚠️ a2ee567 기준 **아직 구현돼 있지 않다**(lib/api/http.ts 의 PROFILE_INCOMPLETE 참고).
+   * 403. 닉네임 설정 전에 `GET`·`PATCH /api/me` 외의 API 를 불렀다.
+   * 호출 전에 `auth.canUseApi` 로 걸러야 한다 — 이 코드를 보게 되면 이미 늦은 것이다.
    */
   PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
   /** 409. 다른 사용자가 쓰는 닉네임. 자기 닉네임을 다시 저장하는 건 성공한다. */
