@@ -79,12 +79,26 @@ const sections = computed(() => [
   },
 ])
 
-/** 입력어와 일치하는 앞부분만 강조한다. */
-function split(name: string) {
+/**
+ * 입력어와 일치하는 부분을 잘라 낸다 — `hit` 인 조각을 화면이 민트로 칠한다.
+ *
+ * 이름만이 아니라 주소에도 쓴다. 카카오는 이름에 없는 말도 주소로 걸어 주기 때문에
+ * ("신림" → 관악산 / 서울 관악구 **신림동** 산 56-1) 이름만 칠하면 목록 대부분이
+ * 왜 여기 있는지 말하지 않는 회색 줄로 남는다.
+ */
+function split(text: string) {
   const q = keyword.value.trim()
-  const i = q ? name.indexOf(q) : -1
-  if (i < 0) return [name, '', ''] as const
-  return [name.slice(0, i), name.slice(i, i + q.length), name.slice(i + q.length)] as const
+  if (!q) return [{ text, hit: false }]
+  const parts: { text: string; hit: boolean }[] = []
+  let from = 0
+  // 첫 한 곳만이 아니라 나온 곳 전부를 칠한다 — 주소는 같은 말이 두 번 나오기도 한다.
+  for (let i = text.indexOf(q); i >= 0; i = text.indexOf(q, from)) {
+    if (i > from) parts.push({ text: text.slice(from, i), hit: false })
+    parts.push({ text: q, hit: true })
+    from = i + q.length
+  }
+  if (from < text.length) parts.push({ text: text.slice(from), hit: false })
+  return parts
 }
 </script>
 
@@ -181,13 +195,17 @@ function split(name: string) {
         <button type="button" class="w-full px-5 py-3 text-left" @click="pick(p)">
           <p class="font-semibold text-slate-900">
             <template v-for="(part, i) in split(p.name)" :key="i">
-              <span :class="{ 'text-brand-500': i === 1 }">{{ part }}</span>
+              <span :class="{ 'text-brand-500': part.hit }">{{ part.text }}</span>
             </template>
             <span v-if="p.lines" class="font-normal text-slate-600">
               ({{ p.lines.join(', ') }})
             </span>
           </p>
-          <p class="text-sm text-slate-500">{{ p.address }}</p>
+          <p class="text-sm text-slate-500">
+            <template v-for="(part, i) in split(p.address)" :key="i">
+              <span :class="{ 'text-brand-500': part.hit }">{{ part.text }}</span>
+            </template>
+          </p>
         </button>
       </li>
       <!--
