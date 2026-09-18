@@ -14,6 +14,12 @@ const props = defineProps<{
   anchors: Anchor[]
   /** 도달권 원의 기준이 되는 분 단위 이동시간 */
   maxMinutes: number
+  /**
+   * 지도에서 고른 지점. 핀은 이 값의 그림이다 — null 이면 거둔다.
+   * 클릭 때 여기서 바로 찍지 않고 부모를 한 번 거치는 이유가 이것이다.
+   * 명령형으로 찍어두면 주소 팝업을 닫아도 핀만 지도에 남는다.
+   */
+  picked: { x: number; y: number } | null
 }>()
 
 const emit = defineEmits<{ pick: [{ x: number; y: number }] }>()
@@ -56,7 +62,10 @@ let anchorLabels: kakao.maps.CustomOverlay[] = []
 let pinMarker: kakao.maps.Marker | null = null
 
 /** 지도에서 찍은 위치를 표시한다. 매물 마커와 달리 클러스터에 넣지 않는다. */
-function dropPin(latlng: kakao.maps.LatLng) {
+function drawPin() {
+  if (!map) return
+  if (!props.picked) return pinMarker?.setMap(null)
+  const latlng = new kakao.maps.LatLng(props.picked.y, props.picked.x)
   if (!pinMarker) {
     pinMarker = new kakao.maps.Marker({
       position: latlng,
@@ -214,13 +223,13 @@ onMounted(async () => {
   drawAnchors(true)
 
   kakao.maps.event.addListener(map, 'click', (e: kakao.maps.event.MouseEvent) => {
-    const latlng = e.latLng
-    dropPin(latlng)
-    emit('pick', { x: latlng.getLng(), y: latlng.getLat() })
+    emit('pick', { x: e.latLng.getLng(), y: e.latLng.getLat() })
   })
+  drawPin()
 })
 
 watch(() => props.listings, drawListings)
+watch(() => props.picked, drawPin)
 // 거점이 바뀔 때만 시점을 맞춘다. 이동시간은 원 크기만 다시 그린다.
 watch(
   () => props.anchors,

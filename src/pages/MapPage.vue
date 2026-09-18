@@ -171,6 +171,7 @@ function addPickedAnchor() {
       :listings="listings"
       :anchors="anchors.anchors"
       :max-minutes="filters.maxMinutes"
+      :picked="picked"
       @pick="onPick"
     />
     <MapPlaceholder v-else :show-radius="anchors.hasAnchors" @pick="onPick" />
