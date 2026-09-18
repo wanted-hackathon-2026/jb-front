@@ -178,13 +178,16 @@ function addPickedAnchor() {
 
     <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
     <!-- 상단 여백 14px 은 시안에서 실측한 값이다(좌우는 아래 주석의 광학 정렬을 따른다). -->
-    <div class="safe-top absolute inset-x-0 top-0 z-30 p-3 pt-3.5">
+    <div class="safe-top pointer-events-none absolute inset-x-0 top-0 z-30 p-3 pt-3.5">
       <!--
         좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
         아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
         왼쪽도 8px + 내용 들여쓰기 10px 로 같은 18px 을 만든다.
       -->
-      <div data-tour="anchors" class="flex items-center gap-2 rounded-full bg-white p-2 shadow-md">
+      <div
+        data-tour="anchors"
+        class="pointer-events-auto flex items-center gap-2 rounded-full bg-white p-2 shadow-md"
+      >
         <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
           <template v-if="anchors.hasAnchors">
             <BaseChip
@@ -241,8 +244,15 @@ function addPickedAnchor() {
     <!--
       지도 위 오버레이 스택. FAB 까지 같은 flex 컬럼에 넣어두면 진행 표시·핀 카드가
       늘었다 줄었다 해도 bottom 값을 손으로 계산할 필요가 없다.
+
+      ⚠️ 컬럼 자체는 pointer-events-none 이고 실제 카드·버튼만 auto 로 되돌린다.
+      이 상자는 inset-x-4 로 셸 폭을 거의 다 차지하는데 보이는 건 오른쪽 FAB 뿐이라,
+      그대로 두면 지도 아래쪽 절반에서 투명한 상자가 터치를 가로챈다. 한 손가락 이동은
+      먹통이 되고, 핀치는 지도가 아닌 브라우저에 가 페이지가 통째로 확대된다.
     -->
-    <div class="absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 flex flex-col gap-3">
+    <div
+      class="pointer-events-none absolute inset-x-4 bottom-[calc(var(--sheet-peek)+1rem)] z-20 flex flex-col gap-3"
+    >
       <div class="flex flex-col items-end gap-3">
         <!--
           줌은 마이·관심매물과 성격이 달라(시점 조작 vs 화면 이동) 따로 떨어진 원이 아니라
@@ -251,7 +261,7 @@ function addPickedAnchor() {
         -->
         <div
           v-if="hasKakaoKey"
-          class="flex flex-col overflow-hidden rounded-full bg-white text-neutral-500 shadow-md"
+          class="pointer-events-auto flex flex-col overflow-hidden rounded-full bg-white text-neutral-500 shadow-md"
         >
           <button
             type="button"
@@ -295,7 +305,7 @@ function addPickedAnchor() {
         </div>
         <button
           type="button"
-          class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+          class="pointer-events-auto grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="마이"
           @click="openProfile"
         >
@@ -312,7 +322,7 @@ function addPickedAnchor() {
         <button
           type="button"
           data-tour="saved"
-          class="grid size-12 place-items-center rounded-full bg-white shadow-md"
+          class="pointer-events-auto grid size-12 place-items-center rounded-full bg-white shadow-md"
           aria-label="관심 매물"
           @click="openFavorites"
         >
@@ -327,10 +337,15 @@ function addPickedAnchor() {
 
       <!-- 시안 39-1780. 모달이 떠 있는 동안엔 감춘다 — 시안 1번 프레임에는 진행 바가 없고,
            같은 말을 모달과 두 번 하게 된다. -->
-      <RecommendationProgress v-if="shownJob && !started" :job="shownJob" data-tour="progress" />
+      <RecommendationProgress
+        v-if="shownJob && !started"
+        class="pointer-events-auto"
+        :job="shownJob"
+        data-tour="progress"
+      />
 
       <!-- 지도에서 찍은 위치의 주소 확인 -->
-      <div v-if="picked" class="rounded-xl bg-white p-4 shadow-lg">
+      <div v-if="picked" class="pointer-events-auto rounded-xl bg-white p-4 shadow-lg">
         <p class="text-xs text-slate-500">선택한 위치</p>
         <p class="mt-0.5 font-semibold text-slate-900">
           {{ picking ? '주소를 확인하는 중…' : picked.address }}

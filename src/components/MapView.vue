@@ -187,7 +187,27 @@ function fitToCircles() {
   map.setBounds(bounds)
 }
 
+/**
+ * 지도 위 핀치가 페이지 확대로 새는 걸 막는다.
+ *
+ * iOS 사파리는 접근성을 이유로 viewport 의 maximum-scale 을 무시한다 — index.html 에
+ * 적혀 있어도 두 손가락을 대면 페이지가 확대된다. 평소엔 카카오가 touchmove 를
+ * preventDefault 해서 브라우저까지 가지 않지만, 손가락 하나가 지도 밖(시트 경계·상단 바
+ * 여백)에 걸치는 순간 카카오는 그 제스처를 모르고 사파리가 페이지를 확대해 버린다.
+ * 셸이 position:fixed 라 확대된 채로 굳으면 되돌리기도 번거롭다.
+ *
+ * **지도 위에서만** 막는다. 시트·목록·상세의 글자는 확대할 수 있어야 하므로 document
+ * 에 걸지 않는다. 지도는 자체 줌(핀치·버튼)이 있어 브라우저 확대가 할 일이 없다.
+ * 리스너는 이 엘리먼트에 붙으므로 언마운트될 때 같이 사라진다.
+ */
+function blockPageZoom(target: HTMLElement) {
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    target.addEventListener(type, (e) => e.preventDefault(), { passive: false })
+  }
+}
+
 onMounted(async () => {
+  blockPageZoom(el.value!)
   try {
     await loadKakaoMaps()
   } catch {
