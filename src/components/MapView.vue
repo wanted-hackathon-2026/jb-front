@@ -334,8 +334,12 @@ onBeforeUnmount(() => {
   2)와 같은 수라, 변수가 비어도 지금 모양 그대로다.
 
   거점 말풍선도 SVG 라 여기 걸리면 글자가 점선이 된다 — 그래서 빼 둔다(lib/kakao.ts).
+
+  ⚠️ 도형 이름을 넓게 잡은 건 SDK 를 못 믿어서다. 지금 버전(4.5.26)은 원을 <ellipse> 로
+  그리는데 선·다각형은 <path> 다. path 만 집었다가 규칙이 통째로 헛돌았다 — 선택자가
+  빗나가도 화면은 종전 모양 그대로라 아무도 모른다.
 */
-.jb-map :deep(svg:not(.jb-anchor-label) path) {
+.jb-map :deep(svg:not(.jb-anchor-label) :is(ellipse, circle, path)) {
   stroke-dasharray: var(--ring-dash, 14 8) !important;
   /*
     채움을 위 <defs> 의 그라데이션으로 돌린다. 뒤의 색은 그 참조가 못 살 때의 대비값이고,
@@ -343,7 +347,7 @@ onBeforeUnmount(() => {
     남아, 이 규칙이 통째로 빠져도 지금까지의 단색 원으로 돌아간다.
   */
   fill: url(#jb-ring-fill) var(--color-brand-500) !important;
-  fill-opacity: 0.35 !important;
+  fill-opacity: 0.3 !important;
 }
 
 /*
