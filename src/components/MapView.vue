@@ -166,7 +166,49 @@ function drawAnchors(fit = false) {
     return circle
   })
   if (fit) fitToCircles()
+  ensureRingGradient()
   syncRingDash()
+}
+
+/**
+ * 시안의 채움을 **카카오가 만든 SVG 안에** 심는다.
+ *
+ * Circle 의 fillColor 는 색을 하나만 받으므로 채움은 CSS 로 덮는데, 그러려면 그라데이션
+ * 정의가 어딘가에 있어야 한다. 처음엔 컴포넌트 템플릿에 따로 <svg> 를 두고 그걸
+ * 가리켰다 — 크롬에서는 칠해지고 **웹킷에서는 대비색(단색)이 칠해졌다.** 페인트 서버를
+ * 다른 SVG 뿌리에서 찾아오는 건 브라우저마다 지키는 정도가 다르다.
+ *
+ * 같은 뿌리 안이면 그런 재량이 없다. 그래서 카카오의 <defs> 에 직접 넣는다.
+ * 하필 <defs> 인 이유는 거기가 안전해서다 — SDK 는 오버레이를 지울 때 svg 의 자식을
+ * **첫 번째만 남기고** 걷어내는데, 그 첫 자식이 이 <defs> 다.
+ *
+ * 방사형인 게 핵심이다. 거점(=원의 중심)이 가장 진하고 밖으로 갈수록 옅어진다 —
+ * 도달권은 가장자리로 갈수록 '덜 확실한' 영역이라 색도 그렇게 빠져야 한다.
+ * 경계상자 비율(objectBoundingBox)이 기본이라 지름 50% 가 곧 원의 테두리다. 그래서
+ * 위치를 따로 주지 않는다(기본값 cx·cy·r = 50%) — 마지막 색이 파선 위에 정확히 앉는다.
+ *
+ * 색·진하기는 스코프 CSS 가 준다(아래 <style>). 여기서 만든 노드에는 스코프 표식이
+ * 안 붙지만 :deep() 으로 집으므로 상관없다.
+ */
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const RING_STOPS = [
+  ['0', 'jb-ring-core'],
+  ['0.5', 'jb-ring-mid'],
+  ['1', 'jb-ring-edge'],
+]
+function ensureRingGradient() {
+  const svg = el.value?.querySelector<SVGSVGElement>('svg:not(.jb-anchor-label)')
+  const defs = svg?.querySelector('defs')
+  if (!defs || defs.querySelector('#jb-ring-fill')) return
+  const gradient = document.createElementNS(SVG_NS, 'radialGradient')
+  gradient.setAttribute('id', 'jb-ring-fill')
+  for (const [offset, cls] of RING_STOPS) {
+    const stop = document.createElementNS(SVG_NS, 'stop')
+    stop.setAttribute('offset', offset)
+    stop.setAttribute('class', cls)
+    gradient.append(stop)
+  }
+  defs.append(gradient)
 }
 
 /**
@@ -295,30 +337,6 @@ onBeforeUnmount(() => {
 <template>
   <div class="absolute inset-0">
     <div ref="el" class="jb-map size-full" />
-    <!--
-      도달권 원의 채움(시안의 그라데이션). 그릴 도형 없이 페인트만 정의해 두고, 아래
-      <style> 이 카카오가 만든 path 의 fill 을 이 id 로 돌린다. 원 자체는 그대로 벡터
-      오버레이라 줌·드래그 동작이 달라지지 않는다.
-
-      1px 로 접어 둔다. display:none 이나 0 크기로 숨기면 렌더 트리에서 빠지면서 참조가
-      끊기는 브라우저가 있다 — 그릴 게 <defs> 뿐이라 1px 라도 화면에는 아무것도 안 나온다.
-    -->
-    <svg class="absolute h-px w-px overflow-hidden" aria-hidden="true">
-      <defs>
-        <!--
-          원의 경계상자 비율이라(기본 objectBoundingBox) 반경이 변해도 결이 같다.
-
-          양 끝이 0·1 이 아닌 건 **원이 경계상자의 모서리에 닿지 않기** 때문이다. 대각선을
-          0~1 로 잡으면 색의 양 끝은 상자 모서리, 즉 원 바깥에 놓이고 원에는 가운데 71%
-          구간만 걸린다 — 그만큼 두 색이 서로에게 다가가 그라데이션이 죽는다.
-          (1-1/√2)/2 = 0.146 만큼 안쪽으로 당겨 원이 색 전부를 쓰게 한다.
-        -->
-        <linearGradient id="jb-ring-fill" x1="0.146" y1="0.854" x2="0.854" y2="0.146">
-          <stop class="jb-ring-from" offset="0" />
-          <stop class="jb-ring-to" offset="1" />
-        </linearGradient>
-      </defs>
-    </svg>
     <p v-if="failed" class="absolute inset-x-0 top-1/2 text-center text-sm text-slate-500">
       지도를 불러오지 못했어요. 카카오 개발자 사이트에 도메인이 등록됐는지 확인해 주세요.
     </p>
@@ -350,29 +368,36 @@ onBeforeUnmount(() => {
 .jb-map :deep(svg:not(.jb-anchor-label) :is(ellipse, circle, path)) {
   stroke-dasharray: var(--ring-dash, 14 8) !important;
   /*
-    채움을 위 <defs> 의 그라데이션으로 돌린다. 뒤의 색은 그 참조가 못 살 때의 대비값이고,
+    채움을 ensureRingGradient 가 심은 그라데이션으로 돌린다. 뒤의 색은 그 참조가 못 살
+    때의 대비값이고,
     진하기도 여기서 준다 — 그래야 SDK 에 넘긴 fillColor·fillOpacity 가 종전 그대로
     남아, 이 규칙이 통째로 빠져도 지금까지의 단색 원으로 돌아간다.
   */
   fill: url(#jb-ring-fill) var(--color-brand-500) !important;
-  fill-opacity: 0.35 !important;
+  fill-opacity: 0.4 !important;
 }
 
 /*
-  시안의 채움은 왼쪽 아래 민트에서 오른쪽 위 초록으로 가고, 가면서 진해진다.
-  흰 바탕 위에서 왼쪽 #dbf7f4, 오른쪽 #b8e4ba 로 앉는다 — 시안 캡처에서 잰 값과 같다.
+  ensureRingGradient 가 심은 그라데이션의 색. 하나의 민트로 **진하기만** 떨어뜨린다 —
+  색까지 같이 돌리면 원 안에서 색이 두 개로 읽혀 도달권이 두 구역처럼 보인다.
 
-  **두 끝의 차이가 이 값들의 전부다.** 한번 민트에 가까운 초록으로 좁게 잡았다가
-  (#2fb864, 진하기 0.3) 화면에서 그라데이션으로 안 읽혔다. 옅은 쪽은 더 옅게, 진한
-  쪽은 더 초록으로 벌려야 원 하나 안에서 번지는 게 보인다.
-  초록은 팔레트에 없는 색이라 토큰이 아니라 여기 적는다.
+  세 단계인 건 시안이 가운데에서 한 번 머물다 떨어지기 때문이다. 시안 캡처에서 중심
+  거리별 감쇠를 재면 R 기준 107 → 88 → 80 → 62 → 43 → 27(중심 → 테두리)인데,
+  두 단계로 곧게 이으면 가운데가 얇아진다. 0.5 지점에 하나 더 두면 여섯 지점이
+  ±5 안에서 맞는다.
 */
-.jb-ring-from {
+.jb-map :deep(.jb-ring-core) {
   stop-color: var(--color-brand-500);
-  stop-opacity: 0.4;
+  stop-opacity: 1;
 }
 
-.jb-ring-to {
-  stop-color: #35b13a;
+.jb-map :deep(.jb-ring-mid) {
+  stop-color: var(--color-brand-500);
+  stop-opacity: 0.8;
+}
+
+.jb-map :deep(.jb-ring-edge) {
+  stop-color: var(--color-brand-500);
+  stop-opacity: 0.25;
 }
 </style>
