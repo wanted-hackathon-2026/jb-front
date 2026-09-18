@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseSpinner from './BaseSpinner.vue'
 import { renderGoogleButton } from '@/lib/google'
 import { useAuthStore } from '@/stores/auth'
 
@@ -62,8 +63,11 @@ onMounted(async () => {
     aria-modal="true"
     aria-labelledby="login-prompt-title"
   >
-    <!-- fixed 라 뷰포트 기준이다. max-w-shell 로 묶어야 데스크톱에서 안 퍼진다. -->
-    <div class="w-full max-w-shell p-6">
+    <!--
+      fixed 라 뷰포트 기준이다. max-w-shell 로 묶어야 데스크톱에서 안 퍼진다.
+      data-panel 은 배경과 따로 움직이라는 표식이다(main.css '열고 닫기 모션').
+    -->
+    <div class="w-full max-w-shell p-6" data-panel>
       <div class="rounded-card bg-white px-5 pt-8 pb-5 text-center">
         <!--
           로고는 public/ 에 둔다 — 스플래쉬(index.html)가 번들보다 먼저 같은 파일을
@@ -98,7 +102,10 @@ onMounted(async () => {
           {{ sdkFailed ? '구글 로그인을 불러오지 못했어요' : '지금은 로그인을 사용할 수 없어요' }}
         </p>
 
-        <p v-if="busy" class="mt-3 text-sm text-slate-400">로그인 중…</p>
+        <p v-if="busy" class="mt-3 flex items-center justify-center gap-2 text-sm text-slate-400">
+          <BaseSpinner :size="16" />
+          로그인 중…
+        </p>
 
         <button
           type="button"

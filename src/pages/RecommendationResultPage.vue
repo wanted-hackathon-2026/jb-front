@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
 import { useRecommendationStore } from '@/stores/recommendation'
 import type { RecommendationStatus } from '@/lib/api/recommendation'
@@ -47,11 +48,18 @@ onMounted(async () => {
       <h1 class="font-bold text-slate-900">추천 결과</h1>
     </header>
 
-    <p v-if="status === 'LOADING'" class="px-5 py-16 text-center text-sm text-slate-400">
-      결과를 불러오는 중…
-    </p>
+    <!-- 로딩 골격은 목록이 직접 안다 — 결과가 들어올 자리와 같은 컴포넌트로 깐다. -->
+    <ListingList
+      v-if="status === 'LOADING'"
+      class="min-h-0 flex-1 pt-4"
+      :listings="[]"
+      loading
+      scored-when-loaded
+    />
 
     <div v-else-if="status === 'PENDING' || status === 'PROCESSING'" class="px-5 py-16 text-center">
+      <!-- 결과가 아직 없는 화면이라 깔아둘 골격이 없다 — 스켈레톤 대신 도는 표시다. -->
+      <BaseSpinner :size="28" class="mx-auto mb-4 text-brand-500" />
       <p class="font-semibold text-slate-900">
         {{ status === 'PENDING' ? '대기 중이에요' : 'AI가 매물을 분석하고 있어요' }}
       </p>

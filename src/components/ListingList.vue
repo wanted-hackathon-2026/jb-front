@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
 import { SORT_LABELS, sortListings, type SortKey } from '@/lib/listing-sort'
@@ -8,6 +9,14 @@ import type { Listing } from '@/types/domain'
 const props = defineProps<{
   listings: Listing[]
   loading?: boolean
+  /**
+   * 로딩 중 '총 N건 · 정렬' 줄의 자리를 미리 잡을지.
+   *
+   * 그 줄은 점수가 있을 때만 뜨는데(아래 hasScores), 빈 배열로 기다리는 동안에는
+   * 점수가 붙어 올지 알 수 없다. 아는 건 부르는 쪽이다 — 거점이 있으면 점수가 온다.
+   * 안 넘기면 목록이 도착하는 순간 그 줄이 생겨 목록 전체가 한 줄만큼 내려앉는다.
+   */
+  scoredWhenLoaded?: boolean
   /** 추천 결과 목록이면 그 추천의 id — 카드가 어느 상세로 갈지 정한다. */
   recommendationId?: string
 }>()
@@ -45,11 +54,19 @@ function choose(key: SortKey) {
       시안이 그렇게 나뉜다 — 추천 결과 화면(39-2654)에는 '총 34건 / 매칭점수순' 이 있고,
       거점 없이 보는 매물 조회 화면(39-3373)에는 탭 바로 아래가 카드다.
     -->
-    <div v-if="hasScores" class="flex shrink-0 items-center justify-between px-5">
-      <p class="text-sm text-slate-500">총 {{ listings.length }}건</p>
+    <div
+      v-if="hasScores || (loading && scoredWhenLoaded)"
+      class="flex shrink-0 items-center justify-between px-5"
+    >
+      <!-- 로딩 중에도 같은 높이를 차지해야 한다. 높이를 정하는 건 오른쪽 버튼(min-h-11)이다. -->
+      <template v-if="loading">
+        <BaseSkeleton class="h-4 w-16" />
+        <span class="flex min-h-11 items-center"><BaseSkeleton class="h-4 w-20" /></span>
+      </template>
+      <p v-else class="text-sm text-slate-500">총 {{ listings.length }}건</p>
       <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 시안의 오른쪽 정렬은 유지한다. -->
       <button
-        v-if="listings.length"
+        v-if="listings.length && !loading"
         ref="trigger"
         data-tour="sort"
         type="button"
@@ -77,9 +94,27 @@ function choose(key: SortKey) {
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <p v-if="loading" class="px-5 py-10 text-center text-sm text-slate-400">
-        매물을 불러오는 중…
-      </p>
+      <!--
+        로딩은 카드와 **같은 골격**으로 깐다(divide-y·px-5·py-4·썸네일 80·도넛 72).
+        글자 한 줄로 두면 목록이 도착하는 순간 높이가 달라져 화면이 튄다.
+        폭은 비율로 준다 — 320px 에서 본문에 남는 폭이 104px 뿐이라(README) 고정폭을
+        박으면 그 칸을 넘는다.
+      -->
+      <template v-if="loading">
+        <p class="sr-only" role="status">매물을 불러오는 중</p>
+        <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
+          <li v-for="i in 4" :key="i" class="flex gap-3 py-4">
+            <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
+            <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
+              <BaseSkeleton class="h-4 w-2/3" />
+              <BaseSkeleton class="h-3 w-full" />
+              <BaseSkeleton class="h-3 w-4/5" />
+              <BaseSkeleton class="h-3 w-1/2" />
+            </div>
+            <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+          </li>
+        </ul>
+      </template>
       <p v-else-if="!listings.length" class="px-5 py-10 text-center text-sm text-slate-400">
         조건에 맞는 매물이 없어요<br />검색 필터를 넓혀보세요
       </p>

@@ -207,3 +207,93 @@ button:disabled {
 @utility safe-bottom {
   margin-bottom: env(safe-area-inset-bottom);
 }
+
+/*
+  ── 열고 닫기 모션 ────────────────────────────────────────────────────────────
+
+  Vue `<Transition>` 의 name 으로 쓴다. v-if 로 붙였다 떼는 요소는 Transition 없이는
+  사라지는 모습을 그릴 틈이 없다 — 언마운트가 먼저라 그냥 증발한다.
+
+  이름을 컴포넌트마다 따로 짓지 않고 **성격 네 가지**로 묶는다. 같은 성격의 것이 같은
+  속도로 움직여야 앱이 한 벌로 느껴진다.
+
+  | 이름    | 쓰는 곳                        | 움직임                      |
+  | ------- | ------------------------------ | --------------------------- |
+  | fade    | 배경만 있는 덮개               | 투명도                      |
+  | overlay | 가운데 뜨는 모달               | 배경 페이드 + 카드가 커진다 |
+  | layer   | 화면을 덮는 레이어(주소 검색)  | 배경 페이드 + 아래에서 올라옴 |
+  | rise    | 아래쪽에 얹히는 카드·배너      | 살짝 솟으며 나타남          |
+  | toast   | 위에서 내려오는 알림(여러 장)  | 살짝 내려오며 나타남        |
+
+  overlay·layer 는 배경과 패널이 따로 움직여야 해서 패널을 `[data-panel]` 로 집는다 —
+  전환 클래스는 루트에만 붙기 때문이다. 패널 쪽에 이 속성을 잊으면 배경만 페이드된다.
+
+  시간은 150~250ms 로 둔다. 그보다 길면 조작이 굼떠 보이고, 짧으면 안 넣은 것과 같다.
+  prefers-reduced-motion 은 위쪽 규칙이 일괄로 끄므로 여기서 따로 다루지 않는다.
+*/
+
+.fade-enter-active,
+.fade-leave-active,
+.overlay-enter-active,
+.overlay-leave-active,
+.layer-enter-active,
+.layer-leave-active {
+  transition: opacity 200ms ease-out;
+}
+
+.fade-enter-from,
+.fade-leave-to,
+.overlay-enter-from,
+.overlay-leave-to,
+.layer-enter-from,
+.layer-leave-to {
+  opacity: 0;
+}
+
+.overlay-enter-active [data-panel],
+.overlay-leave-active [data-panel] {
+  transition: scale 200ms ease-out;
+}
+
+.overlay-enter-from [data-panel],
+.overlay-leave-to [data-panel] {
+  scale: 0.96;
+}
+
+/* 레이어는 화면을 통째로 갈아끼우는 것에 가까워 조금 길게 준다. */
+.layer-enter-active,
+.layer-leave-active {
+  transition-duration: 250ms;
+}
+
+.layer-enter-active [data-panel],
+.layer-leave-active [data-panel] {
+  transition: translate 250ms ease-out;
+}
+
+.layer-enter-from [data-panel],
+.layer-leave-to [data-panel] {
+  translate: 0 100%;
+}
+
+.rise-enter-active,
+.rise-leave-active,
+.toast-enter-active,
+.toast-leave-active,
+.toast-move {
+  transition:
+    opacity 200ms ease-out,
+    translate 200ms ease-out;
+}
+
+.rise-enter-from,
+.rise-leave-to {
+  opacity: 0;
+  translate: 0 0.75rem;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  translate: 0 -0.5rem;
+}

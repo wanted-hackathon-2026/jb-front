@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
@@ -95,22 +96,20 @@ const commute = computed(() => {
  * 같은 컴포넌트가 두 라우트(/listings/:id, /recommendations/:recId/listings/:id)를 맡는다.
  * onMounted 로만 받아오면 라우트만 바뀌고 인스턴스가 재사용될 때 옛 매물이 남는다.
  */
-watch(
-  () => [props.id, props.recommendationId],
-  async () => {
-    listing.value = null
-    failed.value = false
-    try {
-      // 맥락이 있으면 점수·순위·이동 동선이 함께 오는 쪽으로 묻는다.
-      listing.value = props.recommendationId
-        ? await getRecommendedListing(props.recommendationId, props.id)
-        : await getListing(props.id)
-    } catch {
-      failed.value = true
-    }
-  },
-  { immediate: true },
-)
+async function load() {
+  listing.value = null
+  failed.value = false
+  try {
+    // 맥락이 있으면 점수·순위·이동 동선이 함께 오는 쪽으로 묻는다.
+    listing.value = props.recommendationId
+      ? await getRecommendedListing(props.recommendationId, props.id)
+      : await getListing(props.id)
+  } catch {
+    failed.value = true
+  }
+}
+
+watch(() => [props.id, props.recommendationId], load, { immediate: true })
 </script>
 
 <template>
@@ -161,11 +160,48 @@ watch(
         </span>
       </div>
 
-      <p v-if="failed" class="px-5 py-16 text-center text-sm text-slate-400">
-        매물을 찾을 수 없어요
-      </p>
+      <div v-if="failed" class="px-5 py-16 text-center">
+        <p class="font-semibold text-slate-900">매물을 찾을 수 없어요</p>
+        <p class="mt-1 text-sm text-slate-500">내려간 매물이거나, 잠시 연결이 끊겼을 수 있어요</p>
+        <!-- 문구만 두면 뒤로 가기 말고는 길이 없다. 대개는 다시 부르면 된다. -->
+        <button
+          type="button"
+          class="mt-5 h-11 rounded-full bg-brand-500 px-6 text-sm font-semibold text-white"
+          @click="load"
+        >
+          다시 시도
+        </button>
+      </div>
 
-      <p v-else-if="!listing" class="px-5 py-16 text-center text-sm text-slate-400">불러오는 중…</p>
+      <!--
+        로딩 골격. 본문과 같은 절 구성(가격·주소 + 도넛 / 구분선 / 2칸 요약)으로 깔아
+        매물이 도착해도 화면이 움직이지 않게 한다. 히어로는 이미 회색이라 그대로 둔다.
+      -->
+      <template v-else-if="!listing">
+        <p class="sr-only" role="status">매물을 불러오는 중</p>
+        <div aria-hidden="true">
+          <section class="flex items-start gap-4 px-5 pb-5 pt-6">
+            <div class="min-w-0 flex-1 pt-1">
+              <BaseSkeleton class="h-7 w-40" />
+              <BaseSkeleton class="mt-2.5 h-4 w-3/4" />
+            </div>
+            <BaseSkeleton class="size-20 shrink-0 rounded-full!" />
+          </section>
+
+          <hr class="mx-5 border-slate-100" />
+
+          <section class="grid grid-cols-2 gap-3 px-5 pt-5">
+            <BaseSkeleton class="h-23 rounded-2xl!" />
+            <BaseSkeleton class="h-23 rounded-2xl!" />
+          </section>
+
+          <section class="flex flex-col gap-2.5 px-5 pt-7">
+            <BaseSkeleton class="h-5 w-24" />
+            <BaseSkeleton class="h-4 w-full" />
+            <BaseSkeleton class="h-4 w-5/6" />
+          </section>
+        </div>
+      </template>
 
       <template v-else>
         <section class="flex items-start gap-4 px-5 pb-5 pt-6">

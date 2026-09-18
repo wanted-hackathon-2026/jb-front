@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
@@ -211,7 +212,34 @@ watch(
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <p v-if="loading" class="px-5 py-16 text-center text-sm text-slate-400">불러오는 중…</p>
+      <!--
+        로딩 골격은 탭마다 다르다 — 기록 카드와 매물 카드는 높이가 아예 달라서,
+        한 모양으로 때우면 도착하는 순간 목록이 통째로 밀린다.
+      -->
+      <template v-if="loading">
+        <p class="sr-only" role="status">목록을 불러오는 중</p>
+        <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
+          <li v-for="i in 3" :key="i">
+            <!-- 기록 카드: 날짜 + 거점 줄 + 조건 줄(py-5) -->
+            <div v-if="tab === 'history'" class="flex flex-col gap-3 py-5">
+              <BaseSkeleton class="h-5 w-32" />
+              <BaseSkeleton class="h-5 w-1/2 rounded-full!" />
+              <BaseSkeleton class="h-5 w-2/3" />
+            </div>
+            <!-- 매물 카드: 썸네일 80 + 본문 + 도넛 72(py-4) -->
+            <div v-else class="flex gap-3 py-4">
+              <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
+              <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
+                <BaseSkeleton class="h-4 w-2/3" />
+                <BaseSkeleton class="h-3 w-full" />
+                <BaseSkeleton class="h-3 w-4/5" />
+                <BaseSkeleton class="h-3 w-1/2" />
+              </div>
+              <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+            </div>
+          </li>
+        </ul>
+      </template>
 
       <!-- 로그인해야 볼 수 있는 탭. 호출도 하지 않고 여기서 멈춘다. -->
       <BaseEmptyState

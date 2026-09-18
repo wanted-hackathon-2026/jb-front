@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseSpinner from '@/components/BaseSpinner.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NicknameTakenError } from '@/lib/api/account'
@@ -183,9 +184,11 @@ const logout = () => auth.logout()
 
         <button
           type="submit"
-          class="mt-1 h-14 w-full rounded-full bg-brand-500 text-lg font-semibold text-white transition-opacity active:opacity-90 disabled:opacity-40"
+          class="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-brand-500 text-lg font-semibold text-white transition-opacity active:opacity-90 disabled:opacity-40"
           :disabled="!valid || saving"
+          :aria-busy="saving"
         >
+          <BaseSpinner v-if="saving" :size="20" />
           {{ saving ? '저장 중…' : isFirstTime ? '시작하기' : '적용' }}
         </button>
       </div>

@@ -45,7 +45,8 @@ onMounted(async () => {
 
 <template>
   <div class="fixed inset-0 z-50 bg-slate-900/40">
-    <div class="mx-auto flex h-full max-w-shell flex-col bg-white">
+    <!-- data-panel: 배경은 페이드, 이 판은 아래에서 올라온다(main.css '열고 닫기 모션'). -->
+    <div class="mx-auto flex h-full max-w-shell flex-col bg-white" data-panel>
       <header
         class="safe-top flex shrink-0 items-center justify-between border-b border-slate-100 px-2 py-3"
       >

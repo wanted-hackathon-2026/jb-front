@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseSpinner from './BaseSpinner.vue'
 import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
 import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
 import { formatMoney } from '@/lib/format'
@@ -121,10 +122,13 @@ const DEALS: { value: DealType; label: string }[] = [
       <button
         type="button"
         data-tour="apply"
-        class="h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white disabled:opacity-50"
+        class="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-brand-500 text-base font-bold text-white disabled:opacity-50"
         :disabled="submitting"
+        :aria-busy="submitting"
         @click="$emit('submit')"
       >
+        <!-- 글자만 바꾸면 눌린 건지 멈춘 건지 알 수 없다. 도는 것이 있어야 '받는 중'이 된다. -->
+        <BaseSpinner v-if="submitting" />
         {{ submitting ? '요청하는 중…' : '적용' }}
       </button>
       <button

@@ -50,19 +50,28 @@ function open(id: string) {
     <RouterView />
   </div>
 
-  <LoginPrompt
-    v-if="loginPrompt.open"
-    :redirect="loginPrompt.redirect"
-    @close="loginPrompt.close"
-    @done="loginPrompt.done"
-  />
+  <!-- 전환 이름 네 가지는 main.css '열고 닫기 모션' 에 정의돼 있다. -->
+  <Transition name="overlay">
+    <LoginPrompt
+      v-if="loginPrompt.open"
+      :redirect="loginPrompt.redirect"
+      @close="loginPrompt.close"
+      @done="loginPrompt.done"
+    />
+  </Transition>
 
   <!--
     실패 알림. **화면 위쪽**에 둔다 — 아래는 시트·완료 배너·FAB 가 이미 쓰는 자리라
     겹치면 서로를 가린다. 여러 건이면 쌓이고, 각자 따로 사라진다.
   -->
-  <div
-    v-if="notice.notices.length"
+  <!--
+    여러 장이 쌓이므로 TransitionGroup 이다 — 한 장이 사라질 때 남은 장이 제자리를
+    찾아가는 것(toast-move)까지 같이 움직인다. v-if 를 떼고 늘 그려도 되는 건
+    비었을 때 pointer-events-none 인 빈 상자만 남기 때문이다.
+  -->
+  <TransitionGroup
+    name="toast"
+    tag="div"
     class="safe-top pointer-events-none fixed inset-x-0 top-0 z-60 mx-auto flex max-w-shell flex-col gap-2 px-4 pt-2"
   >
     <BaseToast
@@ -73,18 +82,20 @@ function open(id: string) {
       :tone="n.tone"
       @dismiss="notice.dismiss(n.id)"
     />
-  </div>
+  </TransitionGroup>
 
   <!-- 셸 폭 안에서만 뜨도록 max-w-shell 로 묶는다 — 데스크톱에서 화면 전체로 퍼지지 않게. -->
-  <div
-    v-if="reco.arrived"
-    class="pointer-events-none fixed inset-x-0 z-50 mx-auto flex max-w-shell justify-center px-4 transition-[bottom] duration-300"
-    :style="{ bottom: bannerBottom }"
-  >
-    <RecommendationToast
-      class="pointer-events-auto"
-      :job="reco.arrived"
-      @open="open(reco.arrived.id)"
-    />
-  </div>
+  <Transition name="rise">
+    <div
+      v-if="reco.arrived"
+      class="pointer-events-none fixed inset-x-0 z-50 mx-auto flex max-w-shell justify-center px-4 transition-[bottom] duration-300"
+      :style="{ bottom: bannerBottom }"
+    >
+      <RecommendationToast
+        class="pointer-events-auto"
+        :job="reco.arrived"
+        @open="open(reco.arrived.id)"
+      />
+    </div>
+  </Transition>
 </template>

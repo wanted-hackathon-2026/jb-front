@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
@@ -11,10 +12,28 @@ const anchors = useAnchorsStore()
 
 const keyword = ref('')
 const results = ref<PlaceSuggestion[]>([])
+/**
+ * 자동완성 요청이 날아가 있는 중.
+ *
+ * 이게 없으면 응답이 오기 전의 빈 목록을 화면이 '검색 결과가 없어요' 라고 말한다 —
+ * 아직 안 온 것과 없는 것은 다르다. 한 글자 칠 때마다 그 거짓말이 한 번씩 스친다.
+ */
+const searching = ref(false)
 
 // 입력이 비면 자동완성 대신 최근 목록으로 돌아간다.
 watch(keyword, async (q) => {
-  results.value = q.trim() ? await searchPlaces(q) : []
+  const word = q.trim()
+  if (!word) {
+    results.value = []
+    searching.value = false
+    return
+  }
+  searching.value = true
+  const found = await searchPlaces(word)
+  // 늦게 온 응답은 버린다 — 빨리 치면 앞 글자의 결과가 뒤에 도착해 방금 것을 덮는다.
+  if (keyword.value.trim() !== word) return
+  results.value = found
+  searching.value = false
 })
 
 function pick(place: PlaceSuggestion) {
@@ -171,7 +190,24 @@ function split(name: string) {
           <p class="text-sm text-slate-500">{{ p.address }}</p>
         </button>
       </li>
-      <li v-if="!results.length" class="px-5 py-10 text-center text-sm text-slate-400">
+      <!--
+        아직 한 건도 없을 때만 골격을 깐다. 이미 앞 글자의 결과가 떠 있으면 그대로 두는
+        편이 낫다 — 한 글자마다 목록이 회색으로 번쩍이는 게 더 산만하다.
+      -->
+      <template v-if="searching && !results.length">
+        <li class="sr-only" role="status">검색 중</li>
+        <li
+          v-for="i in 5"
+          :key="i"
+          class="flex flex-col gap-2 border-b border-slate-100 px-5 py-3.5"
+          aria-hidden="true"
+        >
+          <BaseSkeleton class="h-4 w-1/2" />
+          <BaseSkeleton class="h-3.5 w-3/4" />
+        </li>
+      </template>
+
+      <li v-else-if="!results.length" class="px-5 py-10 text-center text-sm text-slate-400">
         검색 결과가 없어요
       </li>
     </ul>

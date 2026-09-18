@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseBottomSheet from '@/components/BaseBottomSheet.vue'
+import BaseSpinner from '@/components/BaseSpinner.vue'
 import BaseSegmentedControl from '@/components/BaseSegmentedControl.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ListingList from '@/components/ListingList.vue'
@@ -337,40 +338,48 @@ function addPickedAnchor() {
 
       <!-- 시안 39-1780. 모달이 떠 있는 동안엔 감춘다 — 시안 1번 프레임에는 진행 바가 없고,
            같은 말을 모달과 두 번 하게 된다. -->
-      <RecommendationProgress
-        v-if="shownJob && !started"
-        class="pointer-events-auto"
-        :job="shownJob"
-        data-tour="progress"
-      />
+      <Transition name="rise">
+        <RecommendationProgress
+          v-if="shownJob && !started"
+          class="pointer-events-auto"
+          :job="shownJob"
+          data-tour="progress"
+        />
+      </Transition>
 
       <!-- 지도에서 찍은 위치의 주소 확인 -->
-      <div v-if="picked" class="pointer-events-auto rounded-xl bg-white p-4 shadow-lg">
-        <p class="text-xs text-slate-500">선택한 위치</p>
-        <p class="mt-0.5 font-semibold text-slate-900">
-          {{ picking ? '주소를 확인하는 중…' : picked.address }}
-        </p>
-        <p v-if="!picking && !picked.isRoad" class="mt-1 text-sm text-red-500">
-          도로명 주소가 없는 위치예요. 건물 쪽을 찍거나 검색으로 골라 주세요
-        </p>
-        <div class="mt-3 flex gap-2">
-          <button
-            type="button"
-            class="h-11 flex-1 rounded-full border border-slate-200 text-sm font-semibold text-slate-600"
-            @click="picked = null"
-          >
-            닫기
-          </button>
-          <button
-            type="button"
-            class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
-            :disabled="picking || !picked.isRoad || !anchors.canAddMore"
-            @click="addPickedAnchor"
-          >
-            {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}
-          </button>
+      <Transition name="rise">
+        <div v-if="picked" class="pointer-events-auto rounded-xl bg-white p-4 shadow-lg">
+          <p class="text-xs text-slate-500">선택한 위치</p>
+          <p class="mt-0.5 flex items-center gap-2 font-semibold text-slate-900">
+            <!-- 역지오코딩은 한 번의 왕복이다. 글자만 바뀌면 멈춘 것처럼 보인다. -->
+            <BaseSpinner v-if="picking" :size="16" class="text-slate-400" />
+            <span class="min-w-0 flex-1 truncate">
+              {{ picking ? '주소를 확인하는 중…' : picked.address }}
+            </span>
+          </p>
+          <p v-if="!picking && !picked.isRoad" class="mt-1 text-sm text-red-500">
+            도로명 주소가 없는 위치예요. 건물 쪽을 찍거나 검색으로 골라 주세요
+          </p>
+          <div class="mt-3 flex gap-2">
+            <button
+              type="button"
+              class="h-11 flex-1 rounded-full border border-slate-200 text-sm font-semibold text-slate-600"
+              @click="picked = null"
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              class="h-11 flex-1 rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-40"
+              :disabled="picking || !picked.isRoad || !anchors.canAddMore"
+              @click="addPickedAnchor"
+            >
+              {{ anchors.canAddMore ? '거점으로 추가' : `거점은 최대 ${MAX_ANCHORS}곳` }}
+            </button>
+          </div>
         </div>
-      </div>
+      </Transition>
     </div>
 
     <!--
@@ -378,35 +387,43 @@ function addPickedAnchor() {
       시트 밖에 둔다: BaseBottomSheet 가 transform 을 쓰기 때문에 그 안의 fixed 는
       뷰포트가 아니라 시트를 기준으로 잡힌다.
     -->
-    <div
-      v-if="started"
-      class="fixed inset-0 z-50 grid place-items-center bg-black/50"
-      role="dialog"
-      aria-modal="true"
-    >
-      <!-- 카드는 셸 폭 안에서 좌우 24px 을 남기고 꽉 찬다(시안 실측). fixed 라
+    <Transition name="overlay">
+      <div
+        v-if="started"
+        class="fixed inset-0 z-50 grid place-items-center bg-black/50"
+        role="dialog"
+        aria-modal="true"
+      >
+        <!-- 카드는 셸 폭 안에서 좌우 24px 을 남기고 꽉 찬다(시안 실측). fixed 라
            뷰포트 기준으로 잡히므로 max-w-shell 로 한 번 묶어줘야 데스크톱에서 안 퍼진다. -->
-      <div class="w-full max-w-shell p-6">
-        <div class="rounded-card bg-white p-5 text-center">
-          <p class="text-lg font-bold text-slate-900">나만의 방정식이 생성됐어요 ✅</p>
-          <p class="mt-5 leading-normal text-slate-500">
-            AI가 조건에 딱 맞는 매물을 검색하고 있어요!<br />완료되면 바로 알려드릴게요 :)
-          </p>
-          <button
-            type="button"
-            class="mt-5 h-15 w-full rounded-full bg-brand-500 text-lg font-semibold text-white"
-            @click="started = false"
-          >
-            확인
-          </button>
+        <!-- data-panel 은 전환이 배경과 카드를 따로 움직이게 하는 표식이다(main.css). -->
+        <div class="w-full max-w-shell p-6" data-panel>
+          <div class="rounded-card bg-white p-5 text-center">
+            <p class="text-lg font-bold text-slate-900">나만의 방정식이 생성됐어요 ✅</p>
+            <p class="mt-5 leading-normal text-slate-500">
+              AI가 조건에 딱 맞는 매물을 검색하고 있어요!<br />완료되면 바로 알려드릴게요 :)
+            </p>
+            <button
+              type="button"
+              class="mt-5 h-15 w-full rounded-full bg-brand-500 text-lg font-semibold text-white"
+              @click="started = false"
+            >
+              확인
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
-    <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
+    <!-- 화면을 통째로 덮는 레이어라 아래에서 올라온다 — 다른 화면으로 건너가는 느낌에 맞춘다. -->
+    <Transition name="layer">
+      <AnchorPickerLayer v-if="pickerOpen" @close="pickerOpen = false" />
+    </Transition>
 
     <!-- 첫 진입 안내. 뒤의 모달과 z-index 가 같아 DOM 순서상 이쪽이 위에 온다. -->
-    <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
+    <Transition name="fade">
+      <WelcomeOverlay v-if="!onboarded" @close="onboarded = true" />
+    </Transition>
 
     <BaseBottomSheet v-model="sheet.state" data-tour="sheet">
       <!--
@@ -437,7 +454,13 @@ function addPickedAnchor() {
         <FilterPanel :submitting="submitting" @submit="requestRecommendation" />
       </div>
       <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->
-      <ListingList v-else class="min-h-0 flex-1" :listings="listings" :loading="loading" />
+      <ListingList
+        v-else
+        class="min-h-0 flex-1"
+        :listings="listings"
+        :loading="loading"
+        :scored-when-loaded="anchors.hasAnchors"
+      />
     </BaseBottomSheet>
   </main>
 </template>
