@@ -300,12 +300,20 @@ onBeforeUnmount(() => {
       <style> 이 카카오가 만든 path 의 fill 을 이 id 로 돌린다. 원 자체는 그대로 벡터
       오버레이라 줌·드래그 동작이 달라지지 않는다.
 
-      size-0 로 접어 둔다 — display:none 으로 숨기면 참조가 끊기는 브라우저가 있다.
+      1px 로 접어 둔다. display:none 이나 0 크기로 숨기면 렌더 트리에서 빠지면서 참조가
+      끊기는 브라우저가 있다 — 그릴 게 <defs> 뿐이라 1px 라도 화면에는 아무것도 안 나온다.
     -->
-    <svg class="absolute size-0" aria-hidden="true">
+    <svg class="absolute h-px w-px overflow-hidden" aria-hidden="true">
       <defs>
-        <!-- 원의 경계상자 비율이라(기본 objectBoundingBox) 반경이 변해도 결이 같다. -->
-        <linearGradient id="jb-ring-fill" x1="0" y1="1" x2="1" y2="0">
+        <!--
+          원의 경계상자 비율이라(기본 objectBoundingBox) 반경이 변해도 결이 같다.
+
+          양 끝이 0·1 이 아닌 건 **원이 경계상자의 모서리에 닿지 않기** 때문이다. 대각선을
+          0~1 로 잡으면 색의 양 끝은 상자 모서리, 즉 원 바깥에 놓이고 원에는 가운데 71%
+          구간만 걸린다 — 그만큼 두 색이 서로에게 다가가 그라데이션이 죽는다.
+          (1-1/√2)/2 = 0.146 만큼 안쪽으로 당겨 원이 색 전부를 쓰게 한다.
+        -->
+        <linearGradient id="jb-ring-fill" x1="0.146" y1="0.854" x2="0.854" y2="0.146">
           <stop class="jb-ring-from" offset="0" />
           <stop class="jb-ring-to" offset="1" />
         </linearGradient>
@@ -347,20 +355,24 @@ onBeforeUnmount(() => {
     남아, 이 규칙이 통째로 빠져도 지금까지의 단색 원으로 돌아간다.
   */
   fill: url(#jb-ring-fill) var(--color-brand-500) !important;
-  fill-opacity: 0.3 !important;
+  fill-opacity: 0.35 !important;
 }
 
 /*
   시안의 채움은 왼쪽 아래 민트에서 오른쪽 위 초록으로 가고, 가면서 진해진다.
-  시안 캡처의 픽셀에서 역산한 값이다 — 흰 바탕 위에서 왼쪽 #d7f6f3, 오른쪽 #b6e6c9 로
-  앉는다. 초록은 팔레트에 없는 색이라 토큰이 아니라 여기 적는다.
+  흰 바탕 위에서 왼쪽 #dbf7f4, 오른쪽 #b8e4ba 로 앉는다 — 시안 캡처에서 잰 값과 같다.
+
+  **두 끝의 차이가 이 값들의 전부다.** 한번 민트에 가까운 초록으로 좁게 잡았다가
+  (#2fb864, 진하기 0.3) 화면에서 그라데이션으로 안 읽혔다. 옅은 쪽은 더 옅게, 진한
+  쪽은 더 초록으로 벌려야 원 하나 안에서 번지는 게 보인다.
+  초록은 팔레트에 없는 색이라 토큰이 아니라 여기 적는다.
 */
 .jb-ring-from {
   stop-color: var(--color-brand-500);
-  stop-opacity: 0.45;
+  stop-opacity: 0.4;
 }
 
 .jb-ring-to {
-  stop-color: #2fb864;
+  stop-color: #35b13a;
 }
 </style>
