@@ -244,8 +244,16 @@ export const useAnchorsStore = defineStore('anchors', () => {
     () => auth.canUseApi,
     (usable, was) => {
       if (usable) void syncFromServer()
+      // `was` 는 immediate 첫 호출에서 undefined 다 — 그때는 비울 것도 없다.
       else if (was) anchors.value = []
     },
+    /*
+     * 이 스토어는 지도·검색 화면이 처음 열릴 때 만들어진다. 그때 이미 로그인이 끝나
+     * 있으면 **전이가 없어 watch 가 돌지 않는다** — 로그인한 채로 /my 를 새로고침하고
+     * 지도로 넘어오는 경로가 그렇다. 그러면 서버 목록을 영영 안 부르고 localStorage 의
+     * 낡은 값만 보인다(다른 기기에서 추가한 거점이 안 보인다).
+     */
+    { immediate: true },
   )
 
   return {
