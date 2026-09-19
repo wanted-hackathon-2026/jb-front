@@ -190,8 +190,20 @@ function split(text: string) {
       </div>
     </div>
 
-    <ul v-if="keyword.trim()" class="min-h-0 flex-1 overflow-y-auto bg-white">
-      <li v-for="p in results" :key="p.id" class="border-b border-slate-100">
+    <!--
+      결과는 흰 판을 깔지 않는다 — 위의 '등록한 거점' 블록이 흰색이라, 결과까지 흰색이면
+      둘이 한 덩어리로 붙어 버린다. 시안도 결과 영역은 페이지 바탕색이다.
+    -->
+    <ul v-if="keyword.trim()" class="min-h-0 flex-1 overflow-y-auto">
+      <!--
+        구분선은 글자가 시작하는 자리에서 긋는다(시안). 행 전체가 탭 대상이라 안쪽 여백을
+        줄일 수 없어서, 선은 padding 안쪽에 가상 요소로 그린다.
+      -->
+      <li
+        v-for="p in results"
+        :key="p.id"
+        class="relative after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-slate-100 last:after:hidden"
+      >
         <button type="button" class="w-full px-5 py-3 text-left" @click="pick(p)">
           <p class="font-semibold text-slate-900">
             <template v-for="(part, i) in split(p.name)" :key="i">
@@ -217,7 +229,7 @@ function split(text: string) {
         <li
           v-for="i in 5"
           :key="i"
-          class="flex flex-col gap-2 border-b border-slate-100 px-5 py-3.5"
+          class="relative flex flex-col gap-2 px-5 py-3.5 after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-slate-100 last:after:hidden"
           aria-hidden="true"
         >
           <BaseSkeleton class="h-4 w-1/2" />
@@ -232,7 +244,8 @@ function split(text: string) {
 
     <div v-else class="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
       <section v-for="s in sections" :key="s.key" class="pt-4">
-        <div class="mb-2 flex items-center justify-between px-1">
+        <!-- 제목과 전체삭제는 아래 카드의 모서리에 맞춘다 — 시안도 같은 선에 선다. -->
+        <div class="mb-2 flex items-center justify-between">
           <p class="flex items-center gap-1.5 font-bold text-slate-900">
             <svg
               viewBox="0 0 24 24"
@@ -268,7 +281,7 @@ function split(text: string) {
           <li
             v-for="row in s.rows"
             :key="row.label"
-            class="flex items-center gap-1 border-b border-slate-100 px-4 last:border-0"
+            class="relative flex items-center gap-1 px-5 after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-slate-100 last:after:hidden"
           >
             <button
               type="button"
