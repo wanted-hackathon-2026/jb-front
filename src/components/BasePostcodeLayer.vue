@@ -53,13 +53,13 @@ onMounted(async () => {
         <h2 class="pl-3 font-bold text-slate-900">{{ title }}</h2>
         <button
           type="button"
-          class="grid size-10 place-items-center text-slate-600"
+          class="grid size-11 place-items-center text-slate-600"
           aria-label="닫기"
           @click="emit('close')"
         >
           <svg
             viewBox="0 0 24 24"
-            class="size-5"
+            class="size-6"
             fill="none"
             stroke="currentColor"
             stroke-width="2"

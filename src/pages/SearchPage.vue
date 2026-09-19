@@ -108,7 +108,7 @@ function split(text: string) {
       <div class="flex items-center gap-1">
         <button
           type="button"
-          class="grid size-10 shrink-0 place-items-center text-slate-700"
+          class="grid size-11 shrink-0 place-items-center text-slate-700"
           aria-label="뒤로"
           @click="router.back()"
         >
@@ -149,7 +149,7 @@ function split(text: string) {
         순간 사라지는데, 정작 결과를 보며 '이걸 누르면?' 이 궁금해지는 건 그 다음이다.
         '거점'은 서비스 용어라 여기서 한 번 풀어 쓴다.
       -->
-      <p class="mt-2 pl-15 text-xs text-slate-500">누르면 자주 가는 곳(거점)으로 등록돼요</p>
+      <p class="mt-2 pl-16 text-xs text-slate-500">누르면 자주 가는 곳(거점)으로 등록돼요</p>
     </div>
 
     <!--

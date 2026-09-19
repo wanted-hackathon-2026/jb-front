@@ -167,7 +167,7 @@ watch(
 <template>
   <main class="flex flex-1 flex-col overflow-hidden bg-white">
     <!-- 프로필. 시안은 여기까지가 옅은 회색 판이고 그 아래부터 흰 바탕이다. -->
-    <header class="safe-top shrink-0 bg-slate-100 pb-5">
+    <header class="safe-top shrink-0 bg-slate-100 px-2 pb-5">
       <button
         type="button"
         class="grid size-11 place-items-center text-slate-700"

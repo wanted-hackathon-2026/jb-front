@@ -117,6 +117,9 @@ ListingCard  FilterPanel  MapView  WelcomeOverlay  …      ← 도메인을 안
 - 노치 대응: `safe-top` / `safe-bottom` 유틸리티 (`env(safe-area-inset-*)`)
 - iOS 확대 방지를 위해 폼 컨트롤 최소 폰트 16px, 터치 타깃 최소 높이 44px
 - `sm:` `md:` `lg:` 접두사는 사용하지 않는다
+- 화면 좌상단 아이콘 버튼(뒤로·닫기)은 **헤더 `px-2` + `size-11` + `size-6` 아이콘** —
+  터치 타깃 44px 을 지키면서 아이콘의 광학 왼쪽 여백이 지도 상단 바와 같은 18px 이 된다.
+  화면마다 다른 값을 쓰면 화면을 옮길 때 뒤로 화살표가 좌우로 튄다
 
 ### 대응 화면 폭
 

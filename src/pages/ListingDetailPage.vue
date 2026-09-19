@@ -189,7 +189,7 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         -->
         <button
           type="button"
-          class="safe-top absolute left-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
+          class="safe-top absolute left-2 top-3 grid size-11 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
           aria-label="뒤로"
           @click="router.back()"
         >
@@ -211,7 +211,7 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         -->
         <button
           type="button"
-          class="safe-top absolute right-3 top-3 grid size-10 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
+          class="safe-top absolute right-2 top-3 grid size-11 place-items-center text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.45)]"
           aria-label="이 매물 공유하기"
           @click="share"
         >

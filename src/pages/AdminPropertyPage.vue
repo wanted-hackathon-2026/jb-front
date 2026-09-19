@@ -178,7 +178,7 @@ function messageOf(e: unknown): string {
     >
       <button
         type="button"
-        class="grid size-10 shrink-0 place-items-center text-slate-700"
+        class="grid size-11 shrink-0 place-items-center text-slate-700"
         aria-label="뒤로"
         @click="router.back()"
       >
@@ -186,7 +186,7 @@ function messageOf(e: unknown): string {
           <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <h1 class="pl-1 font-bold text-slate-900">매물 등록</h1>
+      <h1 class="font-bold text-slate-900">매물 등록</h1>
     </header>
 
     <form class="min-h-0 flex-1 overflow-y-auto px-4 pb-10" @submit.prevent="submit">

@@ -42,7 +42,7 @@ onMounted(async () => {
     <header class="safe-top flex items-center gap-1 border-b border-slate-100 px-2 py-3">
       <button
         type="button"
-        class="grid size-10 shrink-0 place-items-center text-slate-700"
+        class="grid size-11 shrink-0 place-items-center text-slate-700"
         aria-label="뒤로"
         @click="router.back()"
       >
