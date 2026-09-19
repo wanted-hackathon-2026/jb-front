@@ -7,6 +7,7 @@ import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
+import { formatDay } from '@/lib/format'
 import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginPromptStore } from '@/stores/login-prompt'
@@ -123,6 +124,20 @@ const filteredHistory = computed(() => {
 })
 
 /** 같은 말을 두 번 담지 않는다 — 칩이 늘어도 결과가 그대로라 사용자만 헷갈린다. */
+/**
+ * 날짜를 그날의 첫 장에만 남긴다(시안 172-522) — 같은 날 두 번 돌리면 카드마다
+ * 같은 날짜가 연달아 찍힌다.
+ *
+ * 앞 장과만 비교하므로 **목록이 날짜순으로 와야** 한다 — 기록 API 도 최신순으로 준다
+ * (lib/api/me.ts). 뒤섞여 오면 같은 날짜가 여러 번 나올 뿐 깨지지는 않는다.
+ */
+const datedHistory = computed(() =>
+  filteredHistory.value.map((entry, i, list) => ({
+    entry,
+    showDate: i === 0 || formatDay(entry.createdAt) !== formatDay(list[i - 1].createdAt),
+  })),
+)
+
 function commitDraft() {
   const word = draft.value.trim()
   if (word && !keywords.value.includes(word)) keywords.value.push(word)
@@ -250,8 +265,13 @@ watch(
       -->
       <template v-if="loading">
         <p class="sr-only" role="status">목록을 불러오는 중</p>
-        <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
-          <li v-for="i in skeletonCount" :key="i">
+        <!-- 구분도 탭을 따라간다 — 기록은 두툼한 띠, 매물은 여백뿐(아래 목록과 같은 모양). -->
+        <ul
+          class="divide-slate-100"
+          :class="tab === 'history' ? 'divide-y-[1.125rem]' : 'px-5 pt-4'"
+          aria-hidden="true"
+        >
+          <li v-for="i in skeletonCount" :key="i" :class="tab === 'history' && 'px-5'">
             <!-- 기록 카드: 날짜 + 거점 줄 + 조건 줄(py-5) -->
             <div v-if="tab === 'history'" class="flex flex-col gap-3 py-5">
               <BaseSkeleton class="h-5 w-32" />
@@ -362,9 +382,14 @@ watch(
             action-label="검색 조건 지우기"
             @action="clearSearch"
           />
-          <ul v-else class="divide-y divide-slate-100 px-5">
-            <li v-for="h in filteredHistory" :key="h.id">
-              <SearchHistoryCard :entry="h" />
+          <!--
+            기록 사이는 실선이 아니라 두툼한 회색 띠다(시안 실측 18px). 카드 한 장이
+            날짜·거점·조건 3줄·가중치 4줄이라 1px 선으로는 어디까지가 한 번의 추천인지
+            읽히지 않는다. 띠는 화면 폭을 가로지르므로 좌우 여백은 항목이 가진다.
+          -->
+          <ul v-else class="divide-y-[1.125rem] divide-slate-100">
+            <li v-for="h in datedHistory" :key="h.entry.id" class="px-5">
+              <SearchHistoryCard :entry="h.entry" :show-date="h.showDate" />
             </li>
           </ul>
         </template>

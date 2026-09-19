@@ -2,7 +2,7 @@
 import BaseSpinner from './BaseSpinner.vue'
 import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
 import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
-import { formatMoney } from '@/lib/format'
+import { formatDeposit } from '@/lib/format'
 import { LIFESTYLE_AXES } from '@/lib/lifestyle'
 import { TRANSPORTS } from '@/lib/transport'
 import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
@@ -49,7 +49,7 @@ const DEALS: { value: DealType; label: string }[] = [
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">보증금</h3>
         <span class="text-sm font-semibold text-brand-500">
-          {{ formatMoney(filters.deposit[0]) }} ~ {{ formatMoney(filters.deposit[1]) }}
+          {{ formatDeposit(filters.deposit[0]) }} ~ {{ formatDeposit(filters.deposit[1]) }}
         </span>
       </div>
       <BaseRangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />

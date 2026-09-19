@@ -15,11 +15,18 @@ export async function getMockRecentlyViewed(): Promise<Listing[]> {
   return [all[3], all[0], all[7], all[1], all[9], all[4]].filter(Boolean)
 }
 
+/**
+ * 최신순으로 준다 — 목록이 날짜를 '그날의 첫 장'에만 찍으므로(MyPage 의 datedHistory)
+ * 순서가 뒤섞이면 같은 날짜가 여러 번 나온다.
+ *
+ * **9월 16일이 두 건인 것은 일부러다.** 같은 날 두 번 돌린 기록이 어떻게 묶이는지
+ * (날짜 머리글 한 번 + 카드 두 장) 목으로도 보이게 하려고 남겨 둔다.
+ */
 export async function getMockSearchHistory(): Promise<SearchHistoryEntry[]> {
   await new Promise((r) => setTimeout(r, 180))
   return [
     {
-      id: 'h2',
+      id: 'h3',
       createdAt: '2026-09-16T10:12:00+09:00',
       anchorNames: ['신도림역'],
       deposit: [5000, 10000],
@@ -27,6 +34,17 @@ export async function getMockSearchHistory(): Promise<SearchHistoryEntry[]> {
       transport: 'transit',
       maxMinutes: 30,
       lifestyle: { sunlight: 45, quietness: 62, safety: 73, infrastructure: 93 },
+      recommendationId: null,
+    },
+    {
+      id: 'h2',
+      createdAt: '2026-09-16T08:00:00+09:00',
+      anchorNames: ['홍대입구역'],
+      deposit: [3000, 8000],
+      rent: [0, 50],
+      transport: 'transit',
+      maxMinutes: 40,
+      lifestyle: { sunlight: 75, quietness: 87, safety: 48, infrastructure: 93 },
       recommendationId: null,
     },
     {

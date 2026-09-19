@@ -1,36 +1,40 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatMoney } from '@/lib/format'
+import { formatDay, formatDeposit } from '@/lib/format'
 import { LIFESTYLE_AXES } from '@/lib/lifestyle'
 import { transportLabel } from '@/lib/transport'
 import type { SearchHistoryEntry } from '@/types/domain'
 
 /** 시안 172-522 — 그때 어떤 조건으로 돌렸는지를 한 장에 담는다. */
-const props = defineProps<{ entry: SearchHistoryEntry }>()
+const props = defineProps<{
+  entry: SearchHistoryEntry
+  /**
+   * 날짜를 이 장에 찍을지. 시안은 날짜가 카드마다가 아니라 **그날의 머리글**이라,
+   * 같은 날 두 번 돌린 기록에서는 둘째 장부터 날짜가 없다. 판정은 목록이 한다
+   * (앞 장과 같은 날인지 알아야 하는데, 카드는 제 것만 안다).
+   */
+  showDate?: boolean
+}>()
 
-/** 시안은 "2026. 8. 21" 형태다. */
-const date = computed(() =>
-  new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(
-    new Date(props.entry.createdAt),
-  ),
-)
+const date = computed(() => formatDay(props.entry.createdAt))
 
 const depositText = computed(
-  () => `${formatMoney(props.entry.deposit[0])} ~ ${formatMoney(props.entry.deposit[1])}`,
+  () => `${formatDeposit(props.entry.deposit[0])} ~ ${formatDeposit(props.entry.deposit[1])}`,
 )
-const rentText = computed(() => `${props.entry.rent[0]}원 ~ ${props.entry.rent[1]}만원`)
+// 앞 숫자에도 단위를 붙인다 — '원' 이면 10 이 들어왔을 때 "10원 ~ 40만원" 이 된다.
+const rentText = computed(() => `${props.entry.rent[0]}만원 ~ ${props.entry.rent[1]}만원`)
 </script>
 
 <template>
   <article class="py-5">
-    <h3 class="font-bold text-slate-900">{{ date }}</h3>
+    <h3 v-if="showDate" class="font-bold text-slate-900">{{ date }}</h3>
 
     <!--
       거점: 여럿이면 몇 번째였는지가 순위라서 번호를 붙인다. 지금은 거점이 하나뿐이라
       (stores/anchors.ts 의 MAX_ANCHORS) 번호가 붙을 일이 없지만, 한도가 1 이 되기 전에
       남은 기록은 여전히 여럿을 들고 있어서 분기를 남겨 둔다. MapView 의 이름표와 같은 규칙.
     -->
-    <ul class="mt-3 flex flex-col gap-1.5">
+    <ul class="flex flex-col gap-1.5" :class="showDate && 'mt-3'">
       <li v-for="(name, i) in entry.anchorNames" :key="name" class="flex items-center gap-2">
         <span class="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">
           거점<template v-if="entry.anchorNames.length > 1"> {{ i + 1 }}</template>
@@ -41,17 +45,19 @@ const rentText = computed(() => `${props.entry.rent[0]}원 ~ ${props.entry.rent[
 
     <dl class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
       <div class="flex items-center gap-2">
-        <dt class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">보증금</dt>
+        <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">보증금</dt>
         <dd class="text-sm text-slate-700">{{ depositText }}</dd>
       </div>
       <div class="flex items-center gap-2">
-        <dt class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">월세</dt>
+        <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">월세</dt>
         <dd class="text-sm text-slate-700">{{ rentText }}</dd>
       </div>
       <div class="flex items-center gap-2">
-        <dt class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">거점 이동시간</dt>
+        <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">거점 이동시간</dt>
+        <!-- 시안은 수단보다 '최대 N분' 을 굵게 둔다 — 조건을 좁힌 쪽이 그 값이다. -->
         <dd class="text-sm text-slate-700">
-          {{ transportLabel(entry.transport) }} | 최대 {{ entry.maxMinutes }}분
+          {{ transportLabel(entry.transport) }} |
+          <span class="font-semibold">최대 {{ entry.maxMinutes }}분</span>
         </dd>
       </div>
     </dl>
@@ -62,7 +68,9 @@ const rentText = computed(() => `${props.entry.rent[0]}원 ~ ${props.entry.rent[
     -->
     <ul class="mt-3 flex flex-col gap-1.5">
       <li v-for="axis in LIFESTYLE_AXES" :key="axis.key" class="flex items-center gap-2">
-        <span class="w-12 shrink-0 rounded bg-slate-100 py-0.5 text-center text-xs text-slate-500">
+        <span
+          class="w-12 shrink-0 rounded-full bg-slate-100 py-0.5 text-center text-xs text-slate-500"
+        >
           {{ axis.label }}
         </span>
         <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">

@@ -8,6 +8,31 @@ export function formatMoney(manwon: number): string {
   return `${eok}억 ${rest.toLocaleString('ko-KR')}`
 }
 
+/**
+ * 조건으로 읽는 보증금 — 필터 시트의 범위, 기록 카드의 "그때 이랬다".
+ *
+ * formatMoney 와 달리 단위를 붙인다. 매물 카드의 "월세 3,500/35" 는 부동산 관례라
+ * 단위 없이 읽히지만, 범위는 "0 ~ 2억 5,000" 처럼 뒤 숫자가 만원인지 알 수 없다.
+ * 시안(필터 시트·기록 카드)도 "5,000만원 ~ 1억" 으로 적는다.
+ */
+export function formatDeposit(manwon: number): string {
+  if (manwon === 0) return '0원'
+  const eok = Math.floor(manwon / 10000)
+  const rest = manwon % 10000
+  if (eok === 0) return `${rest.toLocaleString('ko-KR')}만원`
+  if (rest === 0) return `${eok}억`
+  return `${eok}억 ${rest.toLocaleString('ko-KR')}만원`
+}
+
+/**
+ * "2026. 8. 21" — 기록 목록의 날짜. ko-KR 의 기본 숫자 표기가 그 모양이라(시안과 같다)
+ * 끝에 붙는 마침표만 떼어낸다('2026. 8. 21.').
+ *
+ * 카드와 목록이 같은 함수를 봐야 한다 — 목록은 이 문자열이 같은지로 같은 날을 가른다.
+ */
+export const formatDay = (iso: string) =>
+  new Intl.DateTimeFormat('ko-KR').format(new Date(iso)).replace(/\.$/, '')
+
 /** 1평 = 3.3058㎡ (한국 표준). 백엔드는 ㎡ 로 주고 화면은 평으로 쓴다. */
 const SQM_PER_PYEONG = 3.305785
 
