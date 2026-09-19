@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useElementSize } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
@@ -51,6 +52,19 @@ const error = ref<string | null>(null)
 const history = ref<SearchHistoryEntry[]>([])
 const favorites = ref<Listing[]>([])
 const recent = ref<Listing[]>([])
+
+/**
+ * 로딩 골격의 개수. 목록이 들어갈 칸 높이를 재서 채운다 — 고정하면 그보다 긴 화면에서
+ * 아래가 비고, 셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다.
+ * 높이 상수는 아래 골격 마크업과 짝이다(기록 py-5+3줄, 매물 py-4+썸네일 80).
+ */
+const listBox = ref<HTMLElement | null>(null)
+const { height: listBoxHeight } = useElementSize(listBox)
+const skeletonCount = computed(() => {
+  const cardHeight = tab.value === 'history' ? 125 : 113
+  // 재기 전(0) 에는 가장 좁은 화면 기준으로 깔고, 실측이 오면 늘어난다.
+  return Math.max(3, Math.ceil(listBoxHeight.value / cardHeight))
+})
 
 /**
  * 관심 매물은 서버에 있고 로그인이 필요하다. 로그인하지 않았으면 호출해 봐야 401 이라
@@ -222,15 +236,22 @@ watch(
       </button>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto">
+    <!-- 골격은 마지막 한 장이 잘리게 두는 쪽이 자연스럽다 — 스크롤바만 잠깐 뜨는 걸 막는다. -->
+    <div
+      ref="listBox"
+      class="min-h-0 flex-1"
+      :class="loading ? 'overflow-hidden' : 'overflow-y-auto'"
+    >
       <!--
         로딩 골격은 탭마다 다르다 — 기록 카드와 매물 카드는 높이가 아예 달라서,
-        한 모양으로 때우면 도착하는 순간 목록이 통째로 밀린다.
+        한 모양으로 때우면 도착하는 순간 목록이 통째로 밀린다. 개수는 고정하지 않는다:
+        셸 높이가 dvh 라 상한이 없어서, 몇 개든 고정하면 그보다 긴 화면에서 아래가 빈다
+        (skeletonCount 가 남은 높이를 카드 높이로 나눈다).
       -->
       <template v-if="loading">
         <p class="sr-only" role="status">목록을 불러오는 중</p>
         <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
-          <li v-for="i in 3" :key="i">
+          <li v-for="i in skeletonCount" :key="i">
             <!-- 기록 카드: 날짜 + 거점 줄 + 조건 줄(py-5) -->
             <div v-if="tab === 'history'" class="flex flex-col gap-3 py-5">
               <BaseSkeleton class="h-5 w-32" />

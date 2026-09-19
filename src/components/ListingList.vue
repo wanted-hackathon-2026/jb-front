@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue'
-import { useIntersectionObserver } from '@vueuse/core'
+import { useElementSize, useIntersectionObserver } from '@vueuse/core'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
+import { LISTING_PAGE_SIZE } from '@/lib/listing-paging'
 import { SORT_LABELS, type SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
@@ -74,6 +75,17 @@ function choose(key: SortKey) {
  * rootMargin 은 바닥에 닿기 200px 전에 미리 부르려고 둔다.
  */
 const scroller = useTemplateRef<HTMLElement>('scroller')
+
+/**
+ * 첫 로딩 골격의 개수. 스크롤 칸 높이를 재서 채운다 — 개수를 고정하면 그보다 긴
+ * 화면에서 아래가 빈다(셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다).
+ * 한 페이지(12건)는 넘기지 않는다 — 실제로 그보다 많이 도착하지 않으니
+ * 더 깔아 봐야 없는 걸 약속하는 셈이다. 113 = py-4 32 + 썸네일 80 + 구분선 1.
+ */
+const { height: scrollerHeight } = useElementSize(scroller)
+const skeletonCount = computed(() =>
+  Math.min(LISTING_PAGE_SIZE, Math.max(4, Math.ceil(scrollerHeight.value / 113))),
+)
 const sentinel = useTemplateRef<HTMLElement>('sentinel')
 
 useIntersectionObserver(
@@ -131,17 +143,22 @@ useIntersectionObserver(
       </button>
     </div>
 
-    <div ref="scroller" class="min-h-0 flex-1 overflow-y-auto">
+    <div
+      ref="scroller"
+      class="min-h-0 flex-1"
+      :class="loading ? 'overflow-hidden' : 'overflow-y-auto'"
+    >
       <!--
         로딩은 카드와 **같은 골격**으로 깐다(divide-y·px-5·py-4·썸네일 80·도넛 72).
         글자 한 줄로 두면 목록이 도착하는 순간 높이가 달라져 화면이 튄다.
+        개수는 칸 높이에서 나온다(skeletonCount) — 고정하면 긴 화면에서 아래가 빈다.
         폭은 비율로 준다 — 320px 에서 본문에 남는 폭이 104px 뿐이라(README) 고정폭을
         박으면 그 칸을 넘는다.
       -->
       <template v-if="loading">
         <p class="sr-only" role="status">매물을 불러오는 중</p>
         <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
-          <li v-for="i in 4" :key="i" class="flex gap-3 py-4">
+          <li v-for="i in skeletonCount" :key="i" class="flex gap-3 py-4">
             <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
             <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
               <BaseSkeleton class="h-4 w-2/3" />
