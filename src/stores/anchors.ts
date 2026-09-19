@@ -73,6 +73,20 @@ export const useAnchorsStore = defineStore('anchors', () => {
    * 다시 등록할 때 검색 없이 꺼내 쓴다. 그래서 좌표까지 통째로 들고 있는다.
    */
   const recentAnchors = useStorage<PlaceSuggestion[]>('jb:recent-anchors:v1', [])
+  /**
+   * **지웠는데 서버에는 아직 남아 있는 거점의 id.**
+   *
+   * `DELETE /api/workplaces/{id}` 가 백엔드에 없다 — WorkplaceController 에는
+   * POST·GET 둘뿐이다(jb-backend e11ac1a). 그래서 삭제 요청은 미매핑 경로의 404 로
+   * 떨어지고, 서버 목록에는 지운 거점이 그대로 남는다. 다음 앱 시작 때
+   * syncFromServer 가 그 목록으로 로컬을 덮으면서 **지운 거점이 되살아난다.**
+   *
+   * 되살아나는 걸 막으려고 지운 id 를 여기 적어 두고 동기화 결과에서 걸러낸다.
+   * 서버가 DELETE 를 구현하면 삭제가 204 로 끝나 묘비가 더는 쌓이지 않고, 이미 쌓인
+   * 것도 서버 목록에서 사라지는 순간 syncFromServer 가 지운다 — 그때 이 저장소와
+   * 아래 걸러내기를 통째로 지우면 된다.
+   */
+  const removedIds = useStorage<string[]>('jb:anchors-removed:v1', [])
 
   const syncing = ref(false)
 
@@ -84,7 +98,10 @@ export const useAnchorsStore = defineStore('anchors', () => {
     if (!auth.canUseApi) return
     syncing.value = true
     try {
-      anchors.value = await listWorkplaces()
+      const rows = await listWorkplaces()
+      // 서버에서 사라진 id 의 묘비는 같이 치운다 — 남겨두면 영영 자라기만 한다.
+      removedIds.value = removedIds.value.filter((id) => rows.some((r) => r.id === id))
+      anchors.value = rows.filter((r) => !removedIds.value.includes(r.id))
     } catch (e) {
       notice.error(reasonOf(e, '거점을 불러오지 못했어요'))
     } finally {
@@ -167,9 +184,10 @@ export const useAnchorsStore = defineStore('anchors', () => {
    * syncFromServer 가 서버 목록으로 덮으며 **지운 거점이 되살아났다.**
    *
    * 404 는 성공으로 친다. 이미 서버에 없다면 목적은 달성된 것이고, 되돌려 놓으면
-   * 영영 지울 수 없는 거점이 된다. 백엔드에 DELETE 가 구현되기 전인 지금은 미매핑
-   * 경로라 항상 여기로 떨어진다 — 즉 구현 전까지는 예전과 똑같이 로컬 삭제로 끝나고,
-   * 구현되는 순간 조용히 진짜 삭제가 된다(lib/api/workplaces.ts).
+   * 영영 지울 수 없는 거점이 된다. 다만 **화면에서 지웠다고 서버에서 지워진 건
+   * 아니다** — 백엔드에 DELETE 가 아직 없어서(jb-backend e11ac1a) 모든 삭제가 미매핑
+   * 404 로 떨어지고 서버 목록에는 그대로 남는다. 그래서 지운 id 를 `removedIds` 에
+   * 적어 두고 다음 동기화에서 걸러낸다 — 그 설명은 선언부에 있다.
    */
   async function remove(id: string) {
     const at = anchors.value.findIndex((a) => a.id === id)
@@ -182,7 +200,16 @@ export const useAnchorsStore = defineStore('anchors', () => {
     try {
       await deleteWorkplace(id)
     } catch (e) {
-      if (e instanceof NotFoundError) return
+      if (e instanceof NotFoundError) {
+        /*
+         * 404 는 두 가지다 — '이미 지워졌다'(목적 달성)와 'DELETE 경로 자체가 없다'
+         * (지금의 백엔드). 둘을 구분할 방법이 없으므로 안전한 쪽으로 기록해 둔다:
+         * 전자라면 다음 동기화에서 서버 목록에 없어 묘비가 곧 치워지고, 후자라면
+         * 이 한 줄이 되살아남을 막는다.
+         */
+        if (!removedIds.value.includes(id)) removedIds.value = [...removedIds.value, id]
+        return
+      }
       // 실패를 삼키면 화면에서만 사라졌다가 다음 로그인에 되살아난다 — 고치려던 바로
       // 그 증상이다. 지운 자리에 되돌려 놓고 실패를 말한다.
       anchors.value.splice(Math.min(at, anchors.value.length), 0, removed)
