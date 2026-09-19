@@ -377,7 +377,8 @@ function addPickedAnchor() {
 
       <!-- 지도에서 찍은 위치의 주소 확인 -->
       <Transition name="rise">
-        <div v-if="picked" class="pointer-events-auto rounded-xl bg-white p-4 shadow-lg">
+        <!-- 라운드는 지도 위 카드 공통값(--radius-card)이다 — 진행 표시·완료 배너와 같은 모서리. -->
+        <div v-if="picked" class="pointer-events-auto rounded-card bg-white p-4 shadow-lg">
           <p class="text-xs text-slate-500">선택한 위치</p>
           <p class="mt-0.5 flex items-center gap-2 font-semibold text-slate-900">
             <!-- 역지오코딩은 한 번의 왕복이다. 글자만 바뀌면 멈춘 것처럼 보인다. -->
@@ -433,7 +434,7 @@ function addPickedAnchor() {
             </p>
             <button
               type="button"
-              class="mt-5 h-15 w-full rounded-full bg-brand-500 text-lg font-semibold text-white"
+              class="mt-5 h-14 w-full rounded-full bg-brand-500 text-lg font-semibold text-white"
               @click="started = false"
             >
               확인

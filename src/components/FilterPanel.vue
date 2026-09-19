@@ -55,7 +55,7 @@ const DEALS: { value: DealType; label: string }[] = [
       <BaseRangeSlider v-model="filters.deposit" v-bind="DEPOSIT_RANGE" label="보증금" />
     </section>
 
-    <section data-tour="conditions" v-if="filters.hasRent">
+    <section v-if="filters.hasRent" data-tour="conditions">
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">월세</h3>
         <span class="text-sm font-semibold text-brand-500">
@@ -97,9 +97,7 @@ const DEALS: { value: DealType; label: string }[] = [
     </section>
 
     <section data-tour="conditions">
-      <div class="mb-3 flex items-baseline justify-between">
-        <h3 class="font-bold text-slate-900">라이프스타일</h3>
-      </div>
+      <h3 class="mb-3 font-bold text-slate-900">라이프스타일</h3>
       <div class="flex flex-col gap-4">
         <BaseWeightSlider
           v-for="item in LIFESTYLE_AXES"

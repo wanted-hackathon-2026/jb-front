@@ -45,7 +45,9 @@ const onInput = (e: Event) =>
         class="flex w-24 shrink-0 items-center gap-1 text-sm font-medium text-slate-700"
       >
         <span v-if="icon" aria-hidden="true">{{ icon }}</span
-        >{{ label }}
+        ><!-- 라벨 칸에 최소 폭을 준다. 시안의 축 이름은 전부 두 글자라 물음표가 저절로
+             한 줄에 서지만, 여기는 '조용함' 이 섞여 있어 그냥 두면 그 줄만 튀어나온다. -->
+        <span class="min-w-11">{{ label }}</span>
         <!--
           설명 아이콘 + 아이콘 오른쪽에 붙는 말풍선.
           눌러야 뜻이 나오는 자리라 장식이 아니라 버튼이다 — 모바일에는 hover 가 없어서

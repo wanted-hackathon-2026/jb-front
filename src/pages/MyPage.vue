@@ -62,7 +62,8 @@ const recent = ref<Listing[]>([])
 const listBox = ref<HTMLElement | null>(null)
 const { height: listBoxHeight } = useElementSize(listBox)
 const skeletonCount = computed(() => {
-  const cardHeight = tab.value === 'history' ? 125 : 113
+  // 기록은 카드(124) + 사이 띠(18), 매물은 카드(100) — 매물 사이에는 선이 없다.
+  const cardHeight = tab.value === 'history' ? 142 : 100
   // 재기 전(0) 에는 가장 좁은 화면 기준으로 깔고, 실측이 오면 늘어난다.
   return Math.max(3, Math.ceil(listBoxHeight.value / cardHeight))
 })
@@ -123,7 +124,6 @@ const filteredHistory = computed(() => {
     : history.value
 })
 
-/** 같은 말을 두 번 담지 않는다 — 칩이 늘어도 결과가 그대로라 사용자만 헷갈린다. */
 /**
  * 날짜를 그날의 첫 장에만 남긴다(시안 172-522) — 같은 날 두 번 돌리면 카드마다
  * 같은 날짜가 연달아 찍힌다.
@@ -138,6 +138,7 @@ const datedHistory = computed(() =>
   })),
 )
 
+/** 같은 말을 두 번 담지 않는다 — 칩이 늘어도 결과가 그대로라 사용자만 헷갈린다. */
 function commitDraft() {
   const word = draft.value.trim()
   if (word && !keywords.value.includes(word)) keywords.value.push(word)
@@ -311,12 +312,16 @@ watch(
         @action="router.push({ name: 'nickname', query: { redirect: '/my?tab=favorites' } })"
       />
 
-      <!-- 실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다. -->
+      <!--
+        실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다.
+        조판은 매물 상세·추천 결과의 실패 화면과 같다 — 세 곳이 같은 사고를 말한다.
+      -->
       <div v-else-if="error" class="px-5 py-16 text-center">
-        <p class="text-sm text-slate-400">{{ error }}</p>
+        <p class="font-semibold text-slate-900">{{ error }}</p>
+        <p class="mt-1 text-sm text-slate-500">잠시 후 다시 시도해 주세요</p>
         <button
           type="button"
-          class="mt-3 min-h-11 px-4 text-sm font-semibold text-brand-500"
+          class="mt-5 h-11 rounded-full bg-brand-500 px-6 text-sm font-semibold text-white"
           @click="load(tab)"
         >
           다시 시도
@@ -411,6 +416,7 @@ watch(
             </svg>
           </template>
         </BaseEmptyState>
+        <!-- 카드의 상하 여백이 10px 이라 탭 바로 아래에 붙는다 — 목록 머리에만 더 준다. -->
         <ul v-else class="px-5 pt-4">
           <li v-for="l in favorites" :key="l.id">
             <!-- 이 탭의 매물은 정의상 전부 찜한 것이라 하트가 채워져 있다. -->
@@ -427,7 +433,6 @@ watch(
           action-label="매물 보러 가기"
           @action="goMap"
         />
-        <!-- 카드의 상하 여백이 10px 이라 탭 바로 아래에 붙는다 — 목록 머리에만 더 준다. -->
         <ul v-else class="px-5 pt-4">
           <li v-for="l in recent" :key="l.id">
             <ListingCard :listing="l" />
