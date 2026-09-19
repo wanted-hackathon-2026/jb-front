@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue'
 import { useElementSize, useIntersectionObserver } from '@vueuse/core'
+import BaseEmptyState from './BaseEmptyState.vue'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
@@ -80,11 +81,11 @@ const scroller = useTemplateRef<HTMLElement>('scroller')
  * 첫 로딩 골격의 개수. 스크롤 칸 높이를 재서 채운다 — 개수를 고정하면 그보다 긴
  * 화면에서 아래가 빈다(셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다).
  * 한 페이지(12건)는 넘기지 않는다 — 실제로 그보다 많이 도착하지 않으니
- * 더 깔아 봐야 없는 걸 약속하는 셈이다. 113 = py-4 32 + 썸네일 80 + 구분선 1.
+ * 더 깔아 봐야 없는 걸 약속하는 셈이다. 100 = py-2.5 20 + 썸네일 80.
  */
 const { height: scrollerHeight } = useElementSize(scroller)
 const skeletonCount = computed(() =>
-  Math.min(LISTING_PAGE_SIZE, Math.max(4, Math.ceil(scrollerHeight.value / 113))),
+  Math.min(LISTING_PAGE_SIZE, Math.max(4, Math.ceil(scrollerHeight.value / 100))),
 )
 const sentinel = useTemplateRef<HTMLElement>('sentinel')
 
@@ -149,16 +150,16 @@ useIntersectionObserver(
       :class="loading ? 'overflow-hidden' : 'overflow-y-auto'"
     >
       <!--
-        로딩은 카드와 **같은 골격**으로 깐다(divide-y·px-5·py-4·썸네일 80·도넛 72).
+        로딩은 카드와 **같은 골격**으로 깐다(px-5·py-2.5·썸네일 80·도넛 64).
         글자 한 줄로 두면 목록이 도착하는 순간 높이가 달라져 화면이 튄다.
         개수는 칸 높이에서 나온다(skeletonCount) — 고정하면 긴 화면에서 아래가 빈다.
-        폭은 비율로 준다 — 320px 에서 본문에 남는 폭이 104px 뿐이라(README) 고정폭을
+        폭은 비율로 준다 — 320px 에서 본문에 남는 폭이 112px 뿐이라(README) 고정폭을
         박으면 그 칸을 넘는다.
       -->
       <template v-if="loading">
         <p class="sr-only" role="status">매물을 불러오는 중</p>
-        <ul class="divide-y divide-slate-100 px-5" aria-hidden="true">
-          <li v-for="i in skeletonCount" :key="i" class="flex gap-3 py-4">
+        <ul class="px-5" aria-hidden="true">
+          <li v-for="i in skeletonCount" :key="i" class="flex gap-3 py-2.5">
             <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
             <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
               <BaseSkeleton class="h-4 w-2/3" />
@@ -166,14 +167,19 @@ useIntersectionObserver(
               <BaseSkeleton class="h-3 w-4/5" />
               <BaseSkeleton class="h-3 w-1/2" />
             </div>
-            <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+            <BaseSkeleton class="size-16 shrink-0 rounded-full!" />
           </li>
         </ul>
       </template>
-      <p v-else-if="!listings.length" class="px-5 py-10 text-center text-sm text-slate-400">
-        조건에 맞는 매물이 없어요<br />검색 필터를 넓혀보세요
-      </p>
-      <ul v-else class="divide-y divide-slate-100 px-5">
+      <!-- 빈 목록의 조판은 마이페이지의 빈 탭과 같은 컴포넌트다 — 앱 안에서 '아직 없다'는
+           한 가지 모습으로만 말한다. -->
+      <BaseEmptyState
+        v-else-if="!listings.length"
+        title="조건에 맞는 매물이 없어요"
+        hint="검색 필터를 넓혀보세요"
+      />
+      <!-- 카드 사이에 선을 긋지 않는다 — 시안은 썸네일과 여백만으로 한 장을 가른다. -->
+      <ul v-else class="px-5">
         <li v-for="l in listings" :key="l.id">
           <!-- 첫 진입 안내가 점수 읽는 법을 설명할 때 이 중 하나를 골라 짚는다. -->
           <ListingCard :listing="l" :recommendation-id="recommendationId" data-tour="listing" />
@@ -185,7 +191,7 @@ useIntersectionObserver(
         -->
         <template v-if="loadingMore">
           <li class="sr-only" role="status">매물을 더 불러오는 중</li>
-          <li v-for="i in 2" :key="`more-${i}`" class="flex gap-3 py-4" aria-hidden="true">
+          <li v-for="i in 2" :key="`more-${i}`" class="flex gap-3 py-2.5" aria-hidden="true">
             <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
             <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
               <BaseSkeleton class="h-4 w-2/3" />
@@ -193,7 +199,7 @@ useIntersectionObserver(
               <BaseSkeleton class="h-3 w-4/5" />
               <BaseSkeleton class="h-3 w-1/2" />
             </div>
-            <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+            <BaseSkeleton class="size-16 shrink-0 rounded-full!" />
           </li>
         </template>
 

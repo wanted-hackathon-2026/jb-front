@@ -56,7 +56,7 @@ const recent = ref<Listing[]>([])
 /**
  * 로딩 골격의 개수. 목록이 들어갈 칸 높이를 재서 채운다 — 고정하면 그보다 긴 화면에서
  * 아래가 비고, 셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다.
- * 높이 상수는 아래 골격 마크업과 짝이다(기록 py-5+3줄, 매물 py-4+썸네일 80).
+ * 높이 상수는 아래 골격 마크업과 짝이다(기록 py-5+3줄, 매물 py-2.5+썸네일 80).
  */
 const listBox = ref<HTMLElement | null>(null)
 const { height: listBoxHeight } = useElementSize(listBox)
@@ -258,8 +258,8 @@ watch(
               <BaseSkeleton class="h-5 w-1/2 rounded-full!" />
               <BaseSkeleton class="h-5 w-2/3" />
             </div>
-            <!-- 매물 카드: 썸네일 80 + 본문 + 도넛 72(py-4) -->
-            <div v-else class="flex gap-3 py-4">
+            <!-- 매물 카드: 썸네일 80 + 본문 + 도넛 64(py-2.5) -->
+            <div v-else class="flex gap-3 py-2.5">
               <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
               <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
                 <BaseSkeleton class="h-4 w-2/3" />
@@ -267,7 +267,7 @@ watch(
                 <BaseSkeleton class="h-3 w-4/5" />
                 <BaseSkeleton class="h-3 w-1/2" />
               </div>
-              <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+              <BaseSkeleton class="size-16 shrink-0 rounded-full!" />
             </div>
           </li>
         </ul>
@@ -386,7 +386,7 @@ watch(
             </svg>
           </template>
         </BaseEmptyState>
-        <ul v-else class="divide-y divide-slate-100 px-5">
+        <ul v-else class="px-5 pt-4">
           <li v-for="l in favorites" :key="l.id">
             <!-- 이 탭의 매물은 정의상 전부 찜한 것이라 하트가 채워져 있다. -->
             <ListingCard :listing="l" saved />
@@ -402,7 +402,8 @@ watch(
           action-label="매물 보러 가기"
           @action="goMap"
         />
-        <ul v-else class="divide-y divide-slate-100 px-5">
+        <!-- 카드의 상하 여백이 10px 이라 탭 바로 아래에 붙는다 — 목록 머리에만 더 준다. -->
+        <ul v-else class="px-5 pt-4">
           <li v-for="l in recent" :key="l.id">
             <ListingCard :listing="l" />
           </li>

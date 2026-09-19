@@ -60,7 +60,14 @@ const detailRoute = computed(() =>
 </script>
 
 <template>
-  <article class="relative flex gap-3 py-4">
+  <!--
+    세로 가운데 정렬. 줄 높이의 합(72px)이 썸네일(80px)보다 낮아 그냥 두면 본문과
+    점수 도넛이 4px 씩 위로 뜬다 — 썸네일만 아래로 삐져나와 보인다.
+
+    상하 여백 10px 은 시안 실측이다(카드 100px = 썸네일 80 + 20). 카드 사이에는 선이
+    없고 이 여백만 있으므로, 줄이면 두 매물이 한 덩어리로 붙어 보인다.
+  -->
+  <article class="relative flex items-center gap-3 py-2.5">
     <!--
       카드 전체를 링크로 덮는다(stretched link). <a> 안에 <button> 을 넣으면 중첩된
       인터랙티브 요소가 되어 접근성이 깨지므로, 링크를 겹쳐 깔고 찜 버튼만 위로 올린다.

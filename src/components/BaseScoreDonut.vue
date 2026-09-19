@@ -9,7 +9,8 @@ const props = withDefaults(
     /** 링 안 숫자 위에 얹는 이름. 상세의 축별 평가처럼 무슨 점수인지 밝혀야 할 때 쓴다. */
     label?: string
   }>(),
-  { size: 72 },
+  // 시안 실측 64px(목록 카드). 상세처럼 더 큰 자리는 size 를 직접 넘긴다.
+  { size: 64 },
 )
 
 const R = 26
