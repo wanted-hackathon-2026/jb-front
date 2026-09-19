@@ -236,6 +236,19 @@ function ensureRingGradient() {
  * 깜빡인다.
  */
 const RING_DASHES = 64
+/**
+ * 파선 한 칸(선 + 공백)의 최소 길이(px).
+ *
+ * 둘레에 비례시키기만 하면 많이 축소했을 때 칸이 통째로 서브픽셀로 내려간다. 실측하면
+ * 지름 300px 에서 선 9.42 / 공백 5.30px 이고 한 단계 축소마다 정확히 절반이라,
+ * 지름 38px 에서는 공백이 0.67px 이다 — 안티앨리어싱에 묻혀 **실선으로 보인다.**
+ * 파선이 사라지는 게 아니라 '번진 선'으로 남아서 렌더가 깨진 것처럼 읽힌다.
+ *
+ * 그래서 아래로는 잠근다. 잠기면 칸 수가 대신 줄어드는데(지름 102px 밑부터), 작은
+ * 원에서는 그쪽이 맞다 — 64칸을 우겨넣어 뭉개느니 24칸이라도 파선으로 보이는 게 낫다.
+ * 5px 는 공백이 1.8px(5 × 0.36) 로 남는 값이다.
+ */
+const MIN_DASH_STEP = 5
 function syncRingDash() {
   if (!map || !circles.length || !el.value) return
   const projection = map.getProjection()
@@ -243,7 +256,7 @@ function syncRingDash() {
   const west = projection.containerPointFromCoords(bounds.getSouthWest()).x
   const east = projection.containerPointFromCoords(bounds.getNorthEast()).x
   // 원의 bounds 는 정사각형이라 x 폭이 곧 지름이다. 둘레 = π × 지름.
-  const step = (Math.PI * Math.abs(east - west)) / RING_DASHES
+  const step = Math.max(MIN_DASH_STEP, (Math.PI * Math.abs(east - west)) / RING_DASHES)
   el.value.style.setProperty('--ring-dash', `${step * 0.64} ${step * 0.36}`)
 }
 
