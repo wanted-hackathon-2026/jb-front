@@ -3,9 +3,9 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
+import { LISTING_PAGE_SIZE, useListingPages } from '@/lib/listing-paging'
 import { useRecommendationStore } from '@/stores/recommendation'
-import type { RecommendationStatus } from '@/lib/api/recommendation'
-import type { Listing } from '@/types/domain'
+import { SUCCESS_STATUS, type RecommendationStatus } from '@/lib/api/recommendation'
 
 /**
  * URL 의 id 로 서버에서 조회한다. 로그인이 없는 서비스라 결과 URL 을 북마크하거나
@@ -17,13 +17,18 @@ const router = useRouter()
 const reco = useRecommendationStore()
 
 const status = ref<RecommendationStatus | 'LOADING'>('LOADING')
-const items = ref<Listing[]>([])
+
+/** 무한 스크롤. 정렬이 바뀌면 이 안에서 알아서 첫 페이지부터 다시 받는다. */
+const { sort, items, total, loading, loadingMore, hasNext, reload, more } = useListingPages(
+  (page, sortKey) =>
+    reco.fetchPage(props.recommendationId, { page, size: LISTING_PAGE_SIZE, sort: sortKey }),
+)
 
 onMounted(async () => {
   try {
-    const res = await reco.fetchResult(props.recommendationId)
-    status.value = res.status
-    items.value = res.items
+    status.value = await reco.fetchStatus(props.recommendationId)
+    // 완료가 아니면 목록을 부를 이유가 없다 — 빈 페이지만 받아 온다.
+    if (status.value === SUCCESS_STATUS) await reload()
   } catch {
     // 만료·미존재 모두 여기로 온다. 사용자는 며칠 뒤 북마크로 들어올 수 있다(§4.3).
     status.value = 'FAILED'
@@ -80,9 +85,16 @@ onMounted(async () => {
 
     <ListingList
       v-else
+      v-model:sort="sort"
       class="min-h-0 flex-1 pt-4"
       :listings="items"
+      :loading="loading"
+      :total="total"
+      :has-next="hasNext"
+      :loading-more="loadingMore"
       :recommendation-id="recommendationId"
+      scored-when-loaded
+      @load-more="more"
     />
   </main>
 </template>

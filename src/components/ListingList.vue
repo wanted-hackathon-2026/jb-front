@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
+import { useIntersectionObserver } from '@vueuse/core'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
-import { SORT_LABELS, sortListings, type SortKey } from '@/lib/listing-sort'
+import { SORT_LABELS, type SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
+  /** 지금까지 받아온 매물. **이미 정렬된 상태로 온다** — 여기서 다시 줄 세우지 않는다. */
   listings: Listing[]
+  /** 첫 페이지를 기다리는 중. 다음 페이지는 `loadingMore` 다. */
   loading?: boolean
+  /** 조건에 맞는 전체 건수. 없으면 받아온 개수로 적는다(페이지를 안 쓰는 호출부). */
+  total?: number
+  /** 더 받아올 게 남았나. 바닥 감지를 켤지 가르는 값이다. */
+  hasNext?: boolean
+  loadingMore?: boolean
   /**
    * 로딩 중 '총 N건 · 정렬' 줄의 자리를 미리 잡을지.
    *
@@ -21,16 +29,17 @@ const props = defineProps<{
   recommendationId?: string
 }>()
 
+const emit = defineEmits<{ loadMore: [] }>()
+
 /**
- * 정렬은 이미 받아둔 목록을 프론트에서 다시 줄 세우는 것이다. 목록 API 가 생기면
- * 정렬 키를 서버로 넘기는 쪽으로 옮긴다(README '역할 분담' — 정렬은 백엔드 몫).
+ * 정렬 키. **고르기만 하고 줄 세우진 않는다** — 정렬은 페이지를 나눠 주는 서버가
+ * 하고(mocks/listings.ts), 바뀌면 부모가 목록을 처음부터 다시 받는다.
  */
+const sort = defineModel<SortKey>('sort', { default: 'score' })
+
 /** 점수가 붙어 있으면 추천 결과 목록, 없으면 그냥 매물 조회 목록이다. */
 const hasScores = computed(() => props.listings.some((l) => l.score !== null))
 const options: SortKey[] = ['score', 'commute', 'priceAsc', 'priceDesc']
-
-const active = ref<SortKey>('score')
-const sorted = computed(() => sortListings(props.listings, active.value))
 
 const picking = ref(false)
 const trigger = ref<HTMLButtonElement | null>(null)
@@ -42,9 +51,38 @@ function close() {
 }
 
 function choose(key: SortKey) {
-  active.value = key
+  if (key !== sort.value) {
+    /*
+     * 기준이 바뀌면 목록은 처음부터 다시 받는다(부모의 useListingPages). 스크롤을
+     * 그대로 두면 새 1페이지의 중간에 서 있게 되는데, 바뀐 순서의 1등을 못 보는 데다
+     * 바닥과 가까우면 그 자리에서 곧장 다음 장을 부른다. 맨 위로 돌려놓는다.
+     */
+    scroller.value?.scrollTo({ top: 0 })
+    sort.value = key
+  }
   close()
 }
+
+/*
+ * 바닥 감지.
+ *
+ * 스크롤 이벤트를 세는 대신 목록 끝의 빈 표식이 보이는지로 판단한다 — 스크롤 위치
+ * 계산은 카드 높이가 제각각이면 어긋나는데, 이건 '끝이 보이면'이라 어긋날 게 없다.
+ *
+ * root 를 명시하는 게 중요하다. 이 목록은 **자기 스크롤 영역** 안에서 움직이므로
+ * (아래 overflow-y-auto), 기본값인 뷰포트로 두면 바닥에 닿아도 울리지 않는다.
+ * rootMargin 은 바닥에 닿기 200px 전에 미리 부르려고 둔다.
+ */
+const scroller = useTemplateRef<HTMLElement>('scroller')
+const sentinel = useTemplateRef<HTMLElement>('sentinel')
+
+useIntersectionObserver(
+  sentinel,
+  ([entry]) => {
+    if (entry?.isIntersecting) emit('loadMore')
+  },
+  { root: scroller, rootMargin: '200px' },
+)
 </script>
 
 <template>
@@ -63,7 +101,7 @@ function choose(key: SortKey) {
         <BaseSkeleton class="h-4 w-16" />
         <span class="flex min-h-11 items-center"><BaseSkeleton class="h-4 w-20" /></span>
       </template>
-      <p v-else class="text-sm text-slate-500">총 {{ listings.length }}건</p>
+      <p v-else class="text-sm text-slate-500">총 {{ total ?? listings.length }}건</p>
       <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 시안의 오른쪽 정렬은 유지한다. -->
       <button
         v-if="listings.length && !loading"
@@ -89,11 +127,11 @@ function choose(key: SortKey) {
             stroke-linejoin="round"
           />
         </svg>
-        {{ SORT_LABELS[active] }}
+        {{ SORT_LABELS[sort] }}
       </button>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto">
+    <div ref="scroller" class="min-h-0 flex-1 overflow-y-auto">
       <!--
         로딩은 카드와 **같은 골격**으로 깐다(divide-y·px-5·py-4·썸네일 80·도넛 72).
         글자 한 줄로 두면 목록이 도착하는 순간 높이가 달라져 화면이 튄다.
@@ -119,9 +157,42 @@ function choose(key: SortKey) {
         조건에 맞는 매물이 없어요<br />검색 필터를 넓혀보세요
       </p>
       <ul v-else class="divide-y divide-slate-100 px-5">
-        <li v-for="l in sorted" :key="l.id">
+        <li v-for="l in listings" :key="l.id">
           <!-- 첫 진입 안내가 점수 읽는 법을 설명할 때 이 중 하나를 골라 짚는다. -->
           <ListingCard :listing="l" :recommendation-id="recommendationId" data-tour="listing" />
+        </li>
+
+        <!--
+          다음 페이지 자리. 카드와 같은 골격이라 목록이 이어지는 것처럼 보이고,
+          도착해도 높이가 바뀌지 않는다(위 첫 로딩과 같은 이유다).
+        -->
+        <template v-if="loadingMore">
+          <li class="sr-only" role="status">매물을 더 불러오는 중</li>
+          <li v-for="i in 2" :key="`more-${i}`" class="flex gap-3 py-4" aria-hidden="true">
+            <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
+            <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
+              <BaseSkeleton class="h-4 w-2/3" />
+              <BaseSkeleton class="h-3 w-full" />
+              <BaseSkeleton class="h-3 w-4/5" />
+              <BaseSkeleton class="h-3 w-1/2" />
+            </div>
+            <BaseSkeleton class="size-18 shrink-0 rounded-full!" />
+          </li>
+        </template>
+
+        <!--
+          바닥 표식. 높이가 0 이면 관측기가 못 잡는 브라우저가 있어 1px 을 준다.
+          더 받을 게 없으면 아예 그리지 않는다 — 끝에 닿아도 아무 일이 없어야 한다.
+        -->
+        <li v-else-if="hasNext" ref="sentinel" class="h-px" aria-hidden="true" />
+
+        <!-- 끝까지 봤다는 말. 목록이 갑자기 끊기면 덜 불러온 줄 안다. -->
+        <li
+          v-else-if="listings.length"
+          class="py-6 text-center text-sm text-slate-400"
+          aria-hidden="true"
+        >
+          매물을 모두 봤어요
         </li>
       </ul>
     </div>
@@ -129,7 +200,7 @@ function choose(key: SortKey) {
     <ListingSortSheet
       v-if="picking"
       :options="options"
-      :active="active"
+      :active="sort"
       @choose="choose"
       @close="close"
     />

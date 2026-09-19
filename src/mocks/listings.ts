@@ -1,5 +1,7 @@
 /** ⚠️ 가짜 매물 데이터. 백엔드 연동 시 이 파일을 통째로 삭제한다. */
 import { LIFESTYLE_AXES } from '@/lib/lifestyle'
+import type { ListingPage, ListingQuery } from '@/lib/api/listings-page'
+import type { SortKey } from '@/lib/listing-sort'
 import type { LifestyleInsight, Listing, RouteLeg } from '@/types/domain'
 
 const ROOM_TYPES = ['분리형 원룸', '오픈형 원룸', '복층 원룸', '1.5룸', '투룸']
@@ -14,10 +16,10 @@ const ROOM_TYPES = ['분리형 원룸', '오픈형 원룸', '복층 원룸', '1.
  * count 의 합은 아래 ALL 의 개수와 같아야 한다.
  */
 const HOTSPOTS = [
-  { dong: '역삼동', count: 10, x: 127.0364, y: 37.5008 },
-  { dong: '논현동', count: 6, x: 127.0214, y: 37.5109 },
-  { dong: '삼성동', count: 5, x: 127.0632, y: 37.5088 },
-  { dong: '대치동', count: 3, x: 127.0567, y: 37.4946 },
+  { dong: '역삼동', count: 22, x: 127.0364, y: 37.5008 },
+  { dong: '논현동', count: 16, x: 127.0214, y: 37.5109 },
+  { dong: '삼성동', count: 13, x: 127.0632, y: 37.5088 },
+  { dong: '대치동', count: 9, x: 127.0567, y: 37.4946 },
 ]
 
 /** i 번째 매물이 속한 지점. 앞에서부터 count 만큼 채운다. */
@@ -259,7 +261,15 @@ const OPTION_SETS = [
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
   const spot = HOTSPOTS[SPOT_OF[i]]
-  const score = [92, 68, 82, 74, 86, 61, 95, 78][i % 8]
+  /*
+   * 8개짜리 표만 돌리면 60건에서 같은 점수가 일곱 번씩 나온다 — 도넛이 죄다 같은
+   * 숫자라 정렬이 듣는지도 안 보인다. 서로 소인 주기(8·11)를 겹쳐 흩뜨린다.
+   * 결정적인 값인 건 그대로라 새로고침해도 같은 매물은 같은 점수다.
+   */
+  const score = Math.max(
+    55,
+    Math.min(99, [92, 68, 82, 74, 86, 61, 95, 78][i % 8] + ((i * 7) % 11) - 5),
+  )
   const deposit = [2000, 3000, 5000, 8000, 10000][i % 5]
   const rent = [35, 45, 55, 0, 40][i % 5]
   const areaPyeong = 6 + (i % 4)
@@ -306,19 +316,62 @@ function build(i: number): Listing {
 
 const ALL = Array.from({ length: SPOT_OF.length }, (_, i) => build(i))
 
-/** 거점이 등록된 상태 — 매칭 점수 내림차순 */
-export async function getScoredListings(): Promise<Listing[]> {
-  await new Promise((r) => setTimeout(r, 220))
-  // 순위는 매물의 성질이 아니라 '이 추천 안에서 몇 번째냐'다 — 정렬한 뒤에 매긴다.
-  return [...ALL]
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-    .map((l, i) => ({ ...l, rank: i + 1 }))
+/**
+ * 비교용 단일 가격. 전세와 월세를 한 축에 올리려면 환산이 필요해서 관행대로
+ * 환산보증금(보증금 + 월세×100)을 쓴다.
+ *
+ * ⚠️ **가격 축의 정의는 원래 백엔드 몫이다**(README '역할 분담'). 목이 서버 노릇을
+ * 하는 동안만 여기서 흉내 내는 임시 규칙이라, 이 파일과 함께 지워진다.
+ */
+const priceOf = (l: Listing) => l.deposit + l.rent * 100
+
+/** 첫 거점까지의 소요 시간. 이동 정보가 없는 매물은 항상 뒤로 보낸다. */
+const commuteOf = (l: Listing) => l.commutes[0]?.minutes ?? Number.POSITIVE_INFINITY
+
+const COMPARATORS: Record<SortKey, (a: Listing, b: Listing) => number> = {
+  // 점수 없는 매물(-1)은 뒤로 간다.
+  score: (a, b) => (b.score ?? -1) - (a.score ?? -1),
+  commute: (a, b) => commuteOf(a) - commuteOf(b),
+  priceAsc: (a, b) => priceOf(a) - priceOf(b),
+  priceDesc: (a, b) => priceOf(b) - priceOf(a),
 }
 
-/** 거점 미설정 상태 — 점수 없이 노선 배지만 */
-export async function getNearbyListings(): Promise<Listing[]> {
+/**
+ * 거점이 있으면 점수·순위가 붙고, 없으면 점수 없이 노선 배지만 남는다.
+ *
+ * 순위는 매물의 성질이 아니라 '이 추천 안에서 몇 번째냐'다 — **화면 정렬과 무관하게**
+ * 점수 내림차순으로 매긴다. 가격순으로 보더라도 카드의 '추천 3위'는 그대로여야 한다.
+ */
+const dataset = (scored: boolean): Listing[] =>
+  scored
+    ? [...ALL].sort(COMPARATORS.score).map((l, i) => ({ ...l, rank: i + 1 }))
+    : ALL.map((l) => ({ ...l, score: null, commutes: [] }))
+
+/**
+ * 지도가 쓰는 전체 목록. 핀과 클러스터에는 페이지 개념이 없다 — 보이는 영역의
+ * 매물이 전부 있어야 한다. 실제 API 가 붙으면 이쪽은 페이지가 아니라 **영역(bbox)
+ * 조회**가 되고, 목록만 아래 페이지 조회를 쓴다.
+ */
+export async function getAllListings(scored: boolean): Promise<Listing[]> {
   await new Promise((r) => setTimeout(r, 220))
-  return ALL.map((l) => ({ ...l, score: null, commutes: [] }))
+  return dataset(scored)
+}
+
+/**
+ * 목록 화면이 쓰는 한 페이지.
+ *
+ * **정렬을 여기서 한다.** 페이지를 나눠 주는 쪽이 정렬도 해야 순서가 맞는다 —
+ * 받은 페이지만 화면에서 다시 줄 세우면 다음 페이지가 붙을 때 그 사이에 끼어든다.
+ */
+export async function getListingPage(q: ListingQuery & { scored: boolean }): Promise<ListingPage> {
+  await new Promise((r) => setTimeout(r, 220))
+  const all = dataset(q.scored).sort(COMPARATORS[q.sort])
+  const from = q.page * q.size
+  return {
+    items: all.slice(from, from + q.size),
+    last: from + q.size >= all.length,
+    total: all.length,
+  }
 }
 
 /**
@@ -351,6 +404,6 @@ export async function getMockListing(id: string): Promise<Listing | null> {
  */
 export async function getMockRecommendedListing(id: string): Promise<Listing | null> {
   await new Promise((r) => setTimeout(r, 180))
-  const ranked = await getScoredListings()
+  const ranked = dataset(true)
   return ranked.find((l) => l.id === id) ?? null
 }

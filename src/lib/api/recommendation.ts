@@ -4,7 +4,14 @@
  * 백엔드와 미확정인 항목(docs/async-recommendation.md §4)의 기본값을 **이 파일 한 곳에**
  * 격리한다. 확정되면 여기만 고치면 되고 스토어·화면은 손대지 않는다.
  */
-import { getScoredListings } from '@/mocks/listings'
+import { getListingPage } from '@/mocks/listings'
+import {
+  listingQuery,
+  toListingPage,
+  type ListingPage,
+  type ListingQuery,
+  type SpringPage,
+} from './listings-page'
 import type { Listing } from '@/types/domain'
 import { hasListingApi, NotFoundError, request } from './http'
 import { createMockJob, readMockJob } from '@/mocks/recommendation'
@@ -54,14 +61,24 @@ export async function getRecommendation(id: string): Promise<RecommendationRespo
   return request<RecommendationResponse>(`/api/recommendations/${id}`)
 }
 
-/** 추천 매물 목록. 상태가 완료로 바뀐 뒤에 부른다. */
-export async function getRecommendedListings(id: string): Promise<Listing[]> {
+/**
+ * 추천 매물 목록 **한 페이지**. 상태가 완료로 바뀐 뒤에 부른다.
+ *
+ * 정렬과 페이지 나누기는 서버가 한다 — 화면은 키만 넘긴다(`lib/api/listings-page.ts`).
+ * 파라미터 이름과 봉투 모양은 그 파일의 주석에 근거와 함께 적어 뒀다.
+ */
+export async function getRecommendedListings(id: string, q: ListingQuery): Promise<ListingPage> {
   if (!hasListingApi) {
     const job = readMockJob(id)
     if (!job) throw new NotFoundError(404)
-    return job.status === SUCCESS_STATUS ? getScoredListings() : []
+    return job.status === SUCCESS_STATUS
+      ? getListingPage({ ...q, scored: true })
+      : { items: [], last: true, total: 0 }
   }
-  return request<Listing[]>(`/api/recommendations/${id}/properties`)
+  const page = await request<SpringPage<Listing>>(
+    `/api/recommendations/${id}/properties?${listingQuery(q)}`,
+  )
+  return toListingPage(page)
 }
 
 export { NotFoundError }

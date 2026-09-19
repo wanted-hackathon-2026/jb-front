@@ -1,5 +1,11 @@
-import type { Listing } from '@/types/domain'
-
+/**
+ * 목록 정렬 **키와 라벨**. 어떻게 줄 세우는지는 여기 없다 — 페이지를 나눠 주는 쪽,
+ * 즉 서버(지금은 `mocks/listings.ts`)가 정렬까지 한다. 받은 페이지만 화면에서 다시
+ * 줄 세우면 다음 페이지가 붙을 때 그 사이에 끼어들기 때문이다.
+ *
+ * 그래서 이 파일은 목록 API 가 붙어도 남는다. 사라지는 건 목 안의 비교 함수 쪽이고,
+ * 이 키는 그대로 서버 파라미터가 된다(`lib/api/listings-page.ts`).
+ */
 export type SortKey = 'score' | 'commute' | 'priceAsc' | 'priceDesc'
 
 export const SORT_LABELS: Record<SortKey, string> = {
@@ -8,26 +14,3 @@ export const SORT_LABELS: Record<SortKey, string> = {
   priceAsc: '가격 낮은순',
   priceDesc: '가격 높은순',
 }
-
-/**
- * 비교용 단일 가격. 전세와 월세를 한 축에 올리려면 환산이 필요해서 관행대로
- * 환산보증금(보증금 + 월세×100)을 쓴다.
- *
- * ⚠️ 화면 정렬 전용 임시 규칙이다. 가격 축을 어떻게 정의할지는 백엔드 몫이므로
- * (README '역할 분담') 목록 API 가 정렬을 지원하면 이 함수는 지우고 서버에 정렬 키를 넘긴다.
- */
-const priceOf = (l: Listing) => l.deposit + l.rent * 100
-
-/** 첫 거점까지의 소요 시간. 이동 정보가 없는 매물은 항상 뒤로 보낸다. */
-const commuteOf = (l: Listing) => l.commutes[0]?.minutes ?? Number.POSITIVE_INFINITY
-
-const COMPARATORS: Record<SortKey, (a: Listing, b: Listing) => number> = {
-  // 점수 없는 매물(-1)은 뒤로 간다.
-  score: (a, b) => (b.score ?? -1) - (a.score ?? -1),
-  commute: (a, b) => commuteOf(a) - commuteOf(b),
-  priceAsc: (a, b) => priceOf(a) - priceOf(b),
-  priceDesc: (a, b) => priceOf(b) - priceOf(a),
-}
-
-export const sortListings = (listings: Listing[], key: SortKey): Listing[] =>
-  [...listings].sort(COMPARATORS[key])

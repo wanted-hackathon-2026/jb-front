@@ -7,11 +7,11 @@
  * 추천 API 자체가 없다. 각각 엔드포인트가 생기면 하나씩 지운다.
  */
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
-import { getNearbyListings } from './listings'
+import { getAllListings } from './listings'
 
 /** 최근 본 매물 — 본 순서대로 섞어 둔다. */
 export async function getMockRecentlyViewed(): Promise<Listing[]> {
-  const all = await getNearbyListings()
+  const all = await getAllListings(false)
   return [all[3], all[0], all[7], all[1], all[9], all[4]].filter(Boolean)
 }
 
