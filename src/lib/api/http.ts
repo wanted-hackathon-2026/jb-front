@@ -16,17 +16,16 @@ import type { ProblemDetail, TokenResponse } from '@/types/backend'
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 /**
- * 매물·추천 API 가 백엔드에 존재하는가.
+ * 추천 API 가 백엔드에 존재하는가.
  *
- * **지금은 false 다.** jb-backend a2ee567 에는 `GET /api/properties/{id}` 도
- * `/api/recommendations/*` 도 없다(존재하는 건 `POST /api/properties` 뿐이고
- * 그것도 ADMIN 전용이다). 그래서 그쪽 호출부는 전부 mocks 로 떨어진다.
- * 엔드포인트가 생기면 이 한 줄만 true 로 바꾼다.
+ * **지금은 false 다.** `/api/recommendations/*` 는 아직 없다. 매물 목록·상세는
+ * 2026-09-20 에 생겼지만(jb-backend 663da20) 추천은 그대로라, 그쪽 호출부만 목으로
+ * 떨어진다. 엔드포인트가 생기면 이 한 줄을 true 로 바꾼다.
  *
  * 타입을 boolean 으로 못박아 둔 건 리터럴 narrowing 때문이다 — 안 그러면
- * 아래 실제 호출 코드가 '도달 불가'로 접혀서 타입 검사를 받지 못한다.
+ * 실제 호출 코드가 '도달 불가'로 접혀서 타입 검사를 받지 못한다.
  */
-export const hasListingApi: boolean = false
+export const hasRecommendationApi: boolean = false
 
 /**
  * problem+json 을 실어 나르는 오류. 분기는 **`code` 로만** 한다 — `detail` 은

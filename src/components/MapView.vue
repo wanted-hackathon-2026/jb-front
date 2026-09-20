@@ -23,10 +23,33 @@ const props = defineProps<{
   picked: { x: number; y: number } | null
 }>()
 
-const emit = defineEmits<{ pick: [{ x: number; y: number }] }>()
+const emit = defineEmits<{
+  pick: [{ x: number; y: number }]
+  /**
+   * 지금 보이는 영역. 매물 목록이 이 값으로 조회된다(`GET /api/properties/map`).
+   *
+   * `idle` 로 받는다 — 드래그·줌 중에는 계속 울려서 한 번 움직일 때마다 수십 번
+   * 부르게 된다. `idle` 은 움직임이 멎은 뒤 한 번만 온다.
+   */
+  bounds: [{ minLat: number; maxLat: number; minLng: number; maxLng: number }]
+}>()
 
 const el = ref<HTMLElement>()
 const failed = ref(false)
+
+/** 지금 보이는 영역을 남서·북동 모서리로 풀어 알린다. */
+function emitBounds() {
+  if (!map) return
+  const b = map.getBounds()
+  const sw = b.getSouthWest()
+  const ne = b.getNorthEast()
+  emit('bounds', {
+    minLat: sw.getLat(),
+    maxLat: ne.getLat(),
+    minLng: sw.getLng(),
+    maxLng: ne.getLng(),
+  })
+}
 
 /**
  * 카카오는 level 이 작을수록 확대다(1 이 가장 가까이). 범위 밖 값을 넣으면 SDK 가 조용히
@@ -334,6 +357,8 @@ onMounted(async () => {
     level.value = map!.getLevel()
     syncRingDash()
   })
+  // 움직임이 멎을 때마다 보이는 영역을 알린다. 첫 화면도 여기서 한 번 울린다.
+  kakao.maps.event.addListener(map, 'idle', emitBounds)
   clusterer = new kakao.maps.MarkerClusterer({
     map,
     averageCenter: true,

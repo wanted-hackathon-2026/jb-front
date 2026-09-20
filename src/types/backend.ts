@@ -6,8 +6,9 @@
  * 스키마와도 대조했다. 백엔드에 springdoc 이 이미 붙어 있으므로, 타입이 늘어나
  * 손으로 관리하기 벅차지면 OpenAPI → 타입 생성으로 갈아탄다(CLAUDE.md).
  *
- * ⚠️ 매물·추천은 여기 없다. `GET /api/properties/{id}` 도 `/api/recommendations/*` 도
- *    백엔드에 존재하지 않는다 — 그쪽은 여전히 `domain.ts` + `mocks/` 가 굴린다.
+ * ⚠️ **추천은 여기 없다.** `/api/recommendations/*` 는 아직 백엔드에 없어서
+ *    `domain.ts` + `mocks/recommendation.ts` 가 굴린다. 매물 목록·상세는 2026-09-20 에
+ *    실재하게 됐다(jb-backend 663da20).
  */
 
 /** 서버 시각. Jackson 기본 직렬화라 오프셋 없는 ISO-8601 이다("2026-09-17T00:59:56.548"). */
@@ -161,7 +162,11 @@ export interface PropertyCreateRequest {
   monthlyRent: number
   /** 전용면적(**㎡**), 0보다 큼. 정수 6자리·소수 2자리까지 */
   exclusiveArea?: number | null
+  /** 공급면적(**㎡**). 전용면적과 같은 제약 (jb-backend 663da20, V8) */
+  supplyArea?: number | null
   floor?: number | null
+  /** 욕실 수. 0보다 큼 (jb-backend 663da20, V8) */
+  bathroomCount?: number | null
   /** 0보다 큼 */
   totalFloors?: number | null
   /** 0보다 큼 */
@@ -254,6 +259,103 @@ export interface FavoriteCreated {
   createdAt: LocalDateTime
 }
 
+/* ── 매물 조회(공개) ───────────────────────────────────────────────────── */
+
+/**
+ * 매물 사진 한 장. 출처: PropertyImageResponse.Image (jb-backend 663da20)
+ *
+ * `url` 은 **경로**다(`/api/property-images/…`). 같은 오리진으로 프록시되므로
+ * 그대로 `<img src>` 에 넣으면 된다.
+ */
+export interface PropertyImage {
+  id: string
+  url: string
+  /** 0 이 대표 사진. 상세 응답은 이 순서대로 온다. */
+  displayOrder: number
+}
+
+/**
+ * 지도 영역 안의 매물 한 건. 출처: PropertyMapResponse.Item (jb-backend 663da20)
+ *
+ * 상세보다 **얇다** — 도로명주소·공급면적·욕실 수·사진 전체·지표가 없다.
+ * 명세가 "상세 화면에서만 제공"이라고 정했다(property-listing-and-detail.md).
+ */
+export interface PropertyMapItem {
+  id: string
+  latitude: number
+  longitude: number
+  /** 대표 사진(`displayOrder = 0`). 사진이 한 장도 없으면 **null** 이다. */
+  thumbnailUrl: string | null
+  name: string
+  propertyType: string
+  leaseType: LeaseType
+  /** 만원 */
+  deposit: number
+  monthlyRent: number
+  /** ㎡. 등록 시 선택이라 null 일 수 있다. */
+  exclusiveArea: number | null
+  floor: number | null
+  /** 지번 주소. 목록에는 도로명이 오지 않는다. */
+  address: string
+  /** 비로그인이면 전부 false — 선택적 인증이다. */
+  favorite: boolean
+}
+
+/** 출처: PropertyMapResponse (jb-backend 663da20) */
+export interface PropertyMapResponse {
+  properties: PropertyMapItem[]
+}
+
+/**
+ * 지도 영역 조회 조건.
+ *
+ * **페이지가 없다.** 명세가 "전통적인 페이지네이션을 사용하지 않는다"고 못박았고,
+ * 영역 안 매물이 `limit` 보다 많으면 **최근 등록순으로 잘라서** 준다(잘렸는지 알려주는
+ * 필드도 없다). 정렬 파라미터도 받지 않는다 — 정렬은 화면 몫이다.
+ */
+export interface PropertyMapQuery {
+  minLat: number
+  maxLat: number
+  minLng: number
+  maxLng: number
+  /** 1~200. 서버 기본값 100. */
+  limit?: number
+}
+
+/**
+ * 매물 상세. 출처: PropertyDetailResponse (jb-backend 663da20)
+ *
+ * 관리자 등록 응답(`PropertyResponse`)과 **다른 DTO** 다 — 이쪽은 공개용이라
+ * `sggCode`·`umdName`·`createdAt`·`updatedAt` 이 없다.
+ *
+ * ⚠️ 치안·소음·인프라·채광 지표는 **여기 오지 않는다.** 저장은 되지만 응답에 싣지
+ * 않기로 했고(추천 단계 몫), 점수·순위·이동시간·AI 요약도 마찬가지다.
+ */
+export interface PropertyDetailResponse {
+  id: string
+  name: string
+  address: string
+  roadAddress: string
+  latitude: number
+  longitude: number
+  propertyType: string
+  leaseType: LeaseType
+  deposit: number
+  monthlyRent: number
+  /** ㎡ */
+  exclusiveArea: number | null
+  supplyArea: number | null
+  floor: number | null
+  bathroomCount: number | null
+  totalFloors: number | null
+  buildYear: number | null
+  direction: string | null
+  description: string | null
+  /** `displayOrder` 오름차순. 사진이 없으면 빈 배열이다. */
+  images: PropertyImage[]
+  favorite: boolean
+}
+
 /* ── 오류 ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -298,8 +400,10 @@ export const ERROR_CODE = {
   PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
   /** 409. 다른 사용자가 쓰는 닉네임. 자기 닉네임을 다시 저장하는 건 성공한다. */
   NICKNAME_ALREADY_EXISTS: 'NICKNAME_ALREADY_EXISTS',
-  /** 404. 찜하려는 매물이 없다. */
+  /** 404. 매물이 없다 — 찜 등록과 상세 조회가 같은 코드를 쓴다. */
   PROPERTY_NOT_FOUND: 'PROPERTY_NOT_FOUND',
+  /** 400. 지도 영역이 잘못됐다(위경도 범위 밖, min > max). */
+  INVALID_MAP_BOUNDS: 'INVALID_MAP_BOUNDS',
   /** 404. 내가 찜한 적 없는 매물이다. */
   FAVORITE_NOT_FOUND: 'FAVORITE_NOT_FOUND',
   /** 409. 이미 찜했다. 동시 요청도 한 건만 저장되고 나머지가 이걸 받는다. */

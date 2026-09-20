@@ -6,7 +6,7 @@
  */
 import { getListings } from '@/mocks/listings'
 import type { Listing } from '@/types/domain'
-import { hasListingApi, NotFoundError, request } from './http'
+import { hasRecommendationApi, NotFoundError, request } from './http'
 import { createMockJob, readMockJob } from '@/mocks/recommendation'
 
 export type RecommendationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
@@ -33,7 +33,7 @@ export interface RecommendationResponse {
 export async function createRecommendation(
   payload: RecommendRequest,
 ): Promise<RecommendationResponse> {
-  if (!hasListingApi) return createMockJob()
+  if (!hasRecommendationApi) return createMockJob()
   return request<RecommendationResponse>('/api/recommendations', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -46,7 +46,7 @@ export async function createRecommendation(
  * 3초마다 도는 폴링이 목록까지 끌고 오지 않는다는 뜻이기도 하다.
  */
 export async function getRecommendation(id: string): Promise<RecommendationResponse> {
-  if (!hasListingApi) {
+  if (!hasRecommendationApi) {
     const job = readMockJob(id)
     if (!job) throw new NotFoundError(404)
     return { recommendationId: id, status: job.status }
@@ -63,7 +63,7 @@ export async function getRecommendation(id: string): Promise<RecommendationRespo
  * 정렬은 화면이 한다(`lib/listing-sort.ts`).
  */
 export async function getRecommendedListings(id: string): Promise<Listing[]> {
-  if (!hasListingApi) {
+  if (!hasRecommendationApi) {
     const job = readMockJob(id)
     if (!job) throw new NotFoundError(404)
     return job.status === SUCCESS_STATUS ? getListings(true) : []

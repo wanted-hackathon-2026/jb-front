@@ -69,6 +69,8 @@ const leaseType = ref<LeaseType>('MONTHLY')
 const deposit = ref<number | null>(null)
 const monthlyRent = ref<number | null>(null)
 const exclusiveArea = ref<number | null>(null)
+const supplyArea = ref<number | null>(null)
+const bathroomCount = ref<number | null>(null)
 const floor = ref<number | null>(null)
 const totalFloors = ref<number | null>(null)
 const buildYear = ref<number | null>(null)
@@ -114,6 +116,8 @@ function reset() {
   deposit.value = null
   monthlyRent.value = isJeonse.value ? 0 : null
   exclusiveArea.value = null
+  supplyArea.value = null
+  bathroomCount.value = null
   floor.value = null
   totalFloors.value = null
   buildYear.value = null
@@ -139,7 +143,9 @@ async function submit() {
     deposit: deposit.value!,
     monthlyRent: monthlyRent.value!,
     exclusiveArea: exclusiveArea.value,
+    supplyArea: supplyArea.value,
     floor: floor.value,
+    bathroomCount: bathroomCount.value,
     totalFloors: totalFloors.value,
     buildYear: buildYear.value,
     direction: orNull(direction.value),
@@ -328,10 +334,36 @@ function messageOf(e: unknown): string {
             />
           </div>
           <div class="min-w-0 flex-1">
+            <label class="block text-sm text-slate-500" for="supply-area">공급면적(㎡)</label>
+            <input
+              id="supply-area"
+              v-model.number="supplyArea"
+              type="number"
+              min="0"
+              step="0.01"
+              inputmode="decimal"
+              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+            />
+          </div>
+        </div>
+
+        <div class="mt-3 flex gap-3">
+          <div class="min-w-0 flex-1">
             <label class="block text-sm text-slate-500" for="build-year">준공년도</label>
             <input
               id="build-year"
               v-model.number="buildYear"
+              type="number"
+              min="1"
+              inputmode="numeric"
+              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <label class="block text-sm text-slate-500" for="bathroom-count">욕실 수</label>
+            <input
+              id="bathroom-count"
+              v-model.number="bathroomCount"
               type="number"
               min="1"
               inputmode="numeric"

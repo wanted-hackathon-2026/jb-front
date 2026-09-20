@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
@@ -20,7 +20,8 @@ import { useFiltersStore } from '@/stores/filters'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
-import { getListings } from '@/mocks/listings'
+import { getListingsInBounds } from '@/lib/api/listings'
+import type { PropertyMapQuery } from '@/types/backend'
 import { useListingList } from '@/lib/listing-list'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
@@ -75,18 +76,22 @@ function openFavorites() {
   loginPrompt.require({ redirect: '/my?tab=favorites', then: goFavorites })
 }
 
-/** 점수가 붙어 오는 상태인가 — 거점이 있거나, 안내가 '추천 받은 뒤'를 흉내 내는 중. */
-const scored = computed(() => anchors.hasAnchors || sheet.previewScored)
+/**
+ * 조회할 지도 영역. 지도가 움직임을 멈출 때마다 갱신된다.
+ *
+ * 처음엔 비어 있다. 카카오 키가 없어 자리표시자로 도는 환경에서는 **영영 안 온다** —
+ * 그때도 목록은 보여야 하므로 서울 전역을 기본값으로 둔다.
+ */
+const DEFAULT_BOUNDS = { minLat: 37.41, maxLat: 37.72, minLng: 126.76, maxLng: 127.19 }
+const bounds = ref<PropertyMapQuery>(DEFAULT_BOUNDS)
 
 /**
  * 목록 한 벌로 **지도 핀과 시트 목록을 함께** 그린다.
  *
- * 예전엔 둘을 따로 받았다 — 핀은 전부, 시트는 한 페이지씩. 실제 API 가 영역(bbox)
- * 조회로 한 번에 다 주고 페이지를 쓰지 않아(property-listing-and-detail.md) 나눌
- * 이유가 없어졌다. 두 번 받으면 같은 순간에 지도와 목록이 서로 다른 매물을 보여줄
- * 수도 있다.
- *
+ * 둘로 나눠 받으면 같은 순간에 지도와 목록이 서로 다른 매물을 보여줄 수 있다.
  * 정렬은 화면이 하고 핀은 순서를 따지지 않으므로, 정렬된 `items` 를 양쪽이 같이 쓴다.
+ *
+ * `limit` 을 상한(200)으로 둔다 — 잘려도 알려주지 않으므로 받을 수 있는 만큼 받는다.
  */
 const {
   sort: sheetSort,
@@ -94,16 +99,32 @@ const {
   total: sheetTotal,
   loading,
   reload: reloadListings,
-} = useListingList(() => getListings(scored.value))
+} = useListingList(() => getListingsInBounds({ ...bounds.value, limit: 200 }))
 
 /** 목록이 한 벌이라 한 번만 부르면 지도와 시트가 같이 갱신된다. */
 const reloadAll = () => void reloadListings()
 
+/**
+ * 지도가 멎으면 그 영역으로 다시 받는다.
+ *
+ * 영역이 실제로 달라졌을 때만 부른다 — `idle` 은 클릭·아주 작은 이동에도 울린다.
+ * 소수 4자리(약 10m)까지만 비교하면 사람이 못 알아볼 움직임은 무시된다.
+ */
+const key = (b: PropertyMapQuery) =>
+  [b.minLat, b.maxLat, b.minLng, b.maxLng].map((n) => n.toFixed(4)).join()
+
+function onBounds(next: PropertyMapQuery) {
+  if (key(next) === key(bounds.value)) return
+  bounds.value = next
+  reloadAll()
+}
+
 onMounted(reloadAll)
-// 거점이 바뀌면 점수 유무가 달라진다 — 지도와 목록을 다시 받는다.
-watch(() => anchors.anchors.length, reloadAll)
-// 안내가 '추천 받은 뒤'를 설명하는 동안에는 점수가 붙은 목록으로 바꿔 보여준다.
-watch(() => sheet.previewScored, reloadAll)
+/*
+ * 거점이 바뀌어도 목록은 다시 받지 않는다. 예전에는 거점 유무로 점수가 붙고 안 붙고가
+ * 갈려서 다시 받았는데, **실제 매물 API 는 점수를 주지 않는다**(추천 단계 몫).
+ * 목록이 달라지는 건 지도 영역이 바뀔 때뿐이다.
+ */
 
 /** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
@@ -186,6 +207,7 @@ function addPickedAnchor() {
     <!-- 키가 없으면 자리표시자로 돈다. 키를 넣는 순간 실제 지도로 바뀐다. -->
     <MapView
       v-if="hasKakaoKey"
+      @bounds="onBounds"
       ref="mapView"
       :listings="listings"
       :anchors="anchors.anchors"
