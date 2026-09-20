@@ -2,6 +2,7 @@
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseChevron from '@/components/BaseChevron.vue'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
 import { searchPlaces } from '@/lib/api/places'
@@ -133,15 +134,7 @@ function split(text: string) {
           aria-label="뒤로"
           @click="router.back()"
         >
-          <svg
-            viewBox="0 0 24 24"
-            class="size-6"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <BaseChevron />
         </button>
         <div class="flex flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
           <input

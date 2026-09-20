@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseChevron from '@/components/BaseChevron.vue'
 import BasePostcodeLayer from '@/components/BasePostcodeLayer.vue'
 import { ApiError } from '@/lib/api/http'
 import { createProperty, uploadPropertyImages } from '@/lib/api/properties'
@@ -309,9 +310,7 @@ function messageOf(e: unknown): string {
         aria-label="뒤로"
         @click="router.back()"
       >
-        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <BaseChevron />
       </button>
       <h1 class="font-bold text-slate-900">매물 등록</h1>
     </header>

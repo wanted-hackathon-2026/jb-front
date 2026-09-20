@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseChevron from '@/components/BaseChevron.vue'
 import type { Job } from '@/stores/recommendation'
 
 /**
@@ -23,15 +24,6 @@ defineEmits<{ open: [] }>()
       <span class="block text-lg font-bold">방정식 풀이 완료</span>
       <span class="block truncate text-sm text-white/90">AI가 조건에 맞는 매물을 찾았어요</span>
     </span>
-    <svg
-      viewBox="0 0 24 24"
-      class="size-6 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
+    <BaseChevron direction="right" />
   </button>
 </template>

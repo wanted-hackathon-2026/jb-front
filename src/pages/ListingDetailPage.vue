@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseChevron from '@/components/BaseChevron.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
@@ -203,15 +204,7 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
           aria-label="뒤로"
           @click="router.back()"
         >
-          <svg
-            viewBox="0 0 24 24"
-            class="size-6"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <BaseChevron />
         </button>
 
         <!--

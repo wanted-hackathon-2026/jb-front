@@ -2,6 +2,7 @@
 import { onActivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseErrorState from '@/components/BaseErrorState.vue'
+import BaseChevron from '@/components/BaseChevron.vue'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
 import { useListingList } from '@/lib/listing-list'
@@ -88,9 +89,7 @@ onActivated(() => {
         aria-label="뒤로"
         @click="router.back()"
       >
-        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <BaseChevron />
       </button>
       <h1 class="font-bold text-slate-900">추천 결과</h1>
     </header>

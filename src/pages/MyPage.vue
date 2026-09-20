@@ -2,6 +2,7 @@
 import { useElementSize } from '@vueuse/core'
 import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import BaseChevron from '@/components/BaseChevron.vue'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
@@ -283,9 +284,7 @@ watch(
         aria-label="뒤로"
         @click="router.back()"
       >
-        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <BaseChevron />
       </button>
 
       <div class="flex flex-col items-center">
@@ -312,16 +311,7 @@ watch(
             ><span class="text-brand-500">{{ auth.user?.nickname ?? '내 정보' }}</span
             ><span v-if="auth.user?.nickname">님</span></span
           >
-          <svg
-            viewBox="0 0 24 24"
-            class="size-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <BaseChevron direction="right" />
         </button>
         <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
 
@@ -356,16 +346,7 @@ watch(
       <span class="text-sm text-slate-500">관리자 계정입니다</span>
       <span class="flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
         매물 등록
-        <svg
-          viewBox="0 0 24 24"
-          class="size-4 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <BaseChevron direction="right" />
       </span>
     </button>
 
