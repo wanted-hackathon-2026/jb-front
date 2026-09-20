@@ -16,8 +16,13 @@ import { computed, ref } from 'vue'
 import { sortListings, type SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
-export function useListingList(fetchAll: () => Promise<Listing[]>) {
-  const sort = ref<SortKey>('score')
+/**
+ * `initialSort` 는 목록마다 다르다. 추천 결과는 매칭점수순이 기본이지만, 점수가 없는
+ * 목록(지도의 '주변 매물')에서 그 기준은 아무것도 하지 않는다 — 그런 목록은 가격을
+ * 기본으로 연다.
+ */
+export function useListingList(fetchAll: () => Promise<Listing[]>, initialSort: SortKey = 'score') {
+  const sort = ref<SortKey>(initialSort)
   const raw = ref<Listing[]>([])
   const loading = ref(true)
   /**

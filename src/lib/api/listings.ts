@@ -119,7 +119,14 @@ function detailToListing(p: PropertyDetailResponse): Listing {
  * ⚠️ **잘려도 알 수 없다.** 영역 안 매물이 `limit`(기본 100, 최대 200)보다 많으면
  * 최근 등록순으로 잘라서 주고, 잘렸는지 알려주는 필드가 없다. 명세가 "지도에서는
  * 영역을 좁히거나 확대하는 것으로 충분하다"고 본 결과다.
+ *
+ * 그래서 부르는 쪽은 받아온 개수가 MAP_LIMIT 과 같으면 **잘렸다고 보고** 화면에
+ * '이상' 을 붙인다(ListingList 의 capped). 정확히 200건인 경우를 '이상' 으로
+ * 적게 되지만, 200건이 전부라고 단정하는 것보다 그쪽이 덜 틀린다.
  */
+/** 서버가 받는 최대치. 잘렸는지 판단할 때 화면도 같은 수를 봐야 한다. */
+export const MAP_LIMIT = 200
+
 export async function getListingsInBounds(q: PropertyMapQuery): Promise<Listing[]> {
   const params = new URLSearchParams({
     minLat: String(q.minLat),

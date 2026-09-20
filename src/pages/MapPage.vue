@@ -23,7 +23,7 @@ import { useFiltersStore } from '@/stores/filters'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
-import { getListingsInBounds } from '@/lib/api/listings'
+import { getListingsInBounds, MAP_LIMIT } from '@/lib/api/listings'
 import type { PropertyMapQuery } from '@/types/backend'
 import type { SearchHistoryEntry } from '@/types/domain'
 import { useListingList } from '@/lib/listing-list'
@@ -115,11 +115,19 @@ const {
   failed: listingsFailed,
   reload: reloadListings,
 } = useListingList(async () => {
-  const got = await getListingsInBounds({ ...bounds.value, limit: 200 })
+  const got = await getListingsInBounds({ ...bounds.value, limit: MAP_LIMIT })
   // 서버가 알려준 찜 여부를 하트에 반영한다 — 안 하면 늘 빈 하트로 보인다.
   favorites.sync(got)
   return got
-})
+  // 이 목록에는 점수가 없다(영역 조회 응답에 매칭 점수가 없다) — 매칭점수순으로 열면
+  // 아무것도 안 하는 기준으로 시작하게 된다. 가격을 기본으로 둔다.
+}, 'priceAsc')
+
+/**
+ * 상한에 걸렸나. 서버가 잘랐다고 알려주지 않으므로 받아온 개수로 가늠한다
+ * (lib/api/listings.ts 의 MAP_LIMIT 주석).
+ */
+const listingsCapped = computed(() => listings.value.length >= MAP_LIMIT)
 
 /** 목록이 한 벌이라 한 번만 부르면 지도와 시트가 같이 갱신된다. */
 const reloadAll = () => void reloadListings()
@@ -677,7 +685,6 @@ function addPickedAnchor() {
             :failed="reco.resultFailed"
             :total="reco.resultTotal"
             :recommendation-id="resultId ?? undefined"
-            scored-when-loaded
             @retry="reco.reloadResult"
           />
         </div>
@@ -759,7 +766,7 @@ function addPickedAnchor() {
         :loading="loading"
         :failed="listingsFailed"
         :total="sheetTotal"
-        :scored-when-loaded="anchors.hasAnchors"
+        :capped="listingsCapped"
         @retry="reloadAll"
       />
     </BaseBottomSheet>

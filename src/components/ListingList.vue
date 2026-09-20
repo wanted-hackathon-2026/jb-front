@@ -22,13 +22,13 @@ const props = defineProps<{
   /** 머리말의 '총 N건'. 없으면 받아온 개수로 적는다. */
   total?: number
   /**
-   * 로딩 중 '총 N건 · 정렬' 줄의 자리를 미리 잡을지.
+   * 서버가 상한에서 잘라 준 목록인가.
    *
-   * 그 줄은 점수가 있을 때만 뜨는데(아래 hasScores), 빈 배열로 기다리는 동안에는
-   * 점수가 붙어 올지 알 수 없다. 아는 건 부르는 쪽이다 — 거점이 있으면 점수가 온다.
-   * 안 넘기면 목록이 도착하는 순간 그 줄이 생겨 목록 전체가 한 줄만큼 내려앉는다.
+   * 지도 영역 조회는 `limit` 을 넘으면 최근 등록순으로 자르는데 **잘렸다고 알려주는
+   * 필드가 없다**(lib/api/listings.ts). 그대로 '총 200건' 이라 적으면 그 영역에 딱
+   * 200건 있다는 거짓말이 되므로, 아는 쪽이 넘겨 주면 '이상' 을 붙인다.
    */
-  scoredWhenLoaded?: boolean
+  capped?: boolean
   /** 추천 결과 목록이면 그 추천의 id — 카드가 어느 상세로 갈지 정한다. */
   recommendationId?: string
 }>()
@@ -43,7 +43,23 @@ const sort = defineModel<SortKey>('sort', { default: 'score' })
 
 /** 점수가 붙어 있으면 추천 결과 목록, 없으면 그냥 매물 조회 목록이다. */
 const hasScores = computed(() => props.listings.some((l) => l.score !== null))
-const options: SortKey[] = ['score', 'commute', 'priceAsc', 'priceDesc']
+
+/**
+ * 고를 수 있는 기준.
+ *
+ * 점수가 없는 목록(지도의 '주변 매물')에서는 매칭점수순·이동효율순이 둘 다 제자리걸음이다
+ * — 점수도 이동 정보도 없어 모든 매물이 같은 값으로 비교된다. 눌러도 아무 일이 없는
+ * 선택지를 목록에 두지 않는다.
+ */
+const options = computed<SortKey[]>(() =>
+  hasScores.value ? ['score', 'commute', 'priceAsc', 'priceDesc'] : ['priceAsc', 'priceDesc'],
+)
+
+/** 상한에 걸린 목록은 '총' 을 뗀다 — 그 영역의 전부가 아니라 받아온 만큼이다. */
+const countLabel = computed(() => {
+  const n = props.total ?? props.listings.length
+  return props.capped ? `${n}건 이상` : `총 ${n}건`
+})
 
 const picking = ref(false)
 const trigger = ref<HTMLButtonElement | null>(null)
@@ -106,12 +122,14 @@ const skeletonCount = computed(() =>
 <template>
   <div class="flex flex-col">
     <!--
-      집계·정렬 줄은 점수가 있을 때만 둔다.
-      시안이 그렇게 나뉜다 — 추천 결과 화면(39-2654)에는 '총 34건 / 매칭점수순' 이 있고,
-      거점 없이 보는 매물 조회 화면(39-3373)에는 탭 바로 아래가 카드다.
+      집계·정렬 줄.
+      **시안과 다르다.** 시안은 추천 결과(39-2654)에만 이 줄을 두고 매물 조회
+      화면(39-3373)에는 탭 바로 아래가 카드인데, 그쪽 목록은 지도를 축소할수록 늘어난다
+      (영역 조회라 200건까지 온다). 몇 건인지도 모르고 줄 세울 수도 없는 목록은 스크롤
+      말고 할 수 있는 게 없어서, 두 목록 모두에 둔다.
     -->
     <div
-      v-if="hasScores || (loading && scoredWhenLoaded)"
+      v-if="!(failed && !listings.length)"
       class="flex shrink-0 items-center justify-between px-5"
     >
       <!-- 로딩 중에도 같은 높이를 차지해야 한다. 높이를 정하는 건 오른쪽 버튼(min-h-11)이다. -->
@@ -119,7 +137,7 @@ const skeletonCount = computed(() =>
         <BaseSkeleton class="h-4 w-16" />
         <span class="flex min-h-11 items-center"><BaseSkeleton class="h-4 w-20" /></span>
       </template>
-      <p v-else class="text-sm text-slate-500">총 {{ total ?? listings.length }}건</p>
+      <p v-else class="text-sm text-slate-500">{{ countLabel }}</p>
       <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 시안의 오른쪽 정렬은 유지한다. -->
       <button
         v-if="listings.length && !loading"
