@@ -25,18 +25,18 @@ const loginPrompt = useLoginPromptStore()
  * 하는 곳이다. 스무 장을 넘겨 본 뒤 한 장을 열었다 닫으면 처음 열두 장으로 돌아가
  * 맨 위에 서 있었다.
  *
- * 살려 두면 그 사이 목록이 달라져도 모른다는 문제가 따라온다. 두 화면이 각자
- * onActivated 에서 처리한다 — 추천 결과는 끝나지 않은 추천만 다시 묻고(결과는 그
- * 추천에 고정된 값이다), 마이페이지는 세 탭 모두 조용히 다시 받는다(찜·기록·조회는
- * 상세를 다녀오는 사이에 바뀔 수 있다).
+ * 살려 두면 그 사이 목록이 달라져도 모른다는 문제가 따라온다. 마이페이지가
+ * onActivated 에서 세 탭 모두 조용히 다시 받는다 — 찜·기록·조회는 상세를 다녀오는
+ * 사이에 바뀔 수 있다.
  *
  * 이름은 컴포넌트의 파일명에서 온다(Vue 가 <script setup> 에 붙여 준다). 그래도
- * 양쪽에 defineOptions 로 한 번 더 박아 뒀다 — 파일을 옮기면 조용히 안 맞는다.
+ * defineOptions 로 한 번 더 박아 뒀다 — 파일을 옮기면 조용히 안 맞는다.
  *
  * 지도는 일부러 뺐다. 살려 두면 지도 SDK 인스턴스까지 같이 남아서, 되살아날 때
- * 무엇이 다시 그려지고 무엇이 남는지부터 따져야 한다.
+ * 무엇이 다시 그려지고 무엇이 남는지부터 따져야 한다. 대신 지도가 들고 있던 값 중
+ * 다시 받기 아까운 것(추천 결과 한 벌)만 스토어에 둔다(stores/recommendation.ts).
  */
-const KEPT_ALIVE = ['RecommendationResultPage', 'MyPage']
+const KEPT_ALIVE = ['MyPage']
 
 /**
  * 완료 배너가 앉을 자리.
@@ -51,9 +51,18 @@ const bannerBottom = computed(() =>
     : 'calc(1rem + env(safe-area-inset-bottom))',
 )
 
+/**
+ * 결과를 연다. **다른 화면으로 건너뛰지 않고** 지도 시트의 'AI 추천' 탭을 그 결과로
+ * 바꾼다 — 목록을 훑으면서 같은 매물을 시트 뒤 지도에서 바로 짚을 수 있어야 한다.
+ *
+ * 여는 길이 주소(`?reco=`)인 이유는 둘이다. 상세를 다녀와도(뒤로) 결과가 그대로
+ * 열려 있고, 예전 결과 링크(`/recommendations/:id`)가 같은 자리로 들어온다(router).
+ */
 function open(id: string) {
   reco.arrived = null
-  router.push({ name: 'recommendation-result', params: { recommendationId: id } })
+  sheet.tab = 'filters'
+  sheet.state = 'full'
+  router.push({ name: 'map', query: { reco: id } })
 }
 </script>
 

@@ -14,6 +14,12 @@ const props = defineProps<{
    * (앞 장과 같은 날인지 알아야 하는데, 카드는 제 것만 안다).
    */
   showDate?: boolean
+  /**
+   * 그때 고른 매물유형. **서버 기록에는 없는 값**이라(`SearchHistoryEntry`) 넘기는
+   * 쪽에서만 채운다 — 지도 시트가 되읽는 추천 조건에는 있다.
+   * 빈 배열은 '안 골랐다' = 전체다(lib/recommendation-request.ts 와 같은 약속).
+   */
+  roomTypes?: readonly string[]
 }>()
 
 const date = computed(() => formatDay(props.entry.createdAt))
@@ -51,6 +57,12 @@ const rentText = computed(() => `${props.entry.rent[0]}만원 ~ ${props.entry.re
       <div class="flex items-center gap-2">
         <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">월세</dt>
         <dd class="text-sm text-slate-700">{{ rentText }}</dd>
+      </div>
+      <div v-if="roomTypes" class="flex items-center gap-2">
+        <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">매물유형</dt>
+        <dd class="text-sm text-slate-700">
+          {{ roomTypes.length ? roomTypes.join(' · ') : '전체' }}
+        </dd>
       </div>
       <div class="flex items-center gap-2">
         <dt class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">거점 이동시간</dt>

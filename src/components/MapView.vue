@@ -21,6 +21,17 @@ const props = defineProps<{
    * 명령형으로 찍어두면 주소 팝업을 닫아도 핀만 지도에 남는다.
    */
   picked: { x: number; y: number } | null
+  /**
+   * 화면을 맞출 기준이 **이 목록**인지. 추천 결과를 보는 동안 참이다.
+   *
+   * 평소에는 도달권 원이 기준인데(아래 fitToContent) 원은 동네 스케일이라
+   * (METERS_PER_MINUTE) 원 밖에 있는 추천 매물이 화면에 안 들어온다. 결과 목록을
+   * 훑는데 지도에 핀이 하나도 없으면 '지도가 안 그려진' 것으로 읽힌다.
+   *
+   * 목록이 바뀔 때마다 다시 맞추는 것도 이때뿐이다. 영역 조회 목록은 지도를 옮길
+   * 때마다 바뀌므로 그때마다 맞추면 사용자가 옮긴 지도를 계속 끌어온다.
+   */
+  fitListings?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -153,7 +164,9 @@ function drawListings() {
     ),
   )
   // 거점이 없으면 맞출 원도 없다. 그때는 매물이 화면을 잡는다(위 fitToContent).
-  if (!circles.length && !fitted) fitToContent()
+  if (props.fitListings) {
+    if (props.listings.length) fitToContent()
+  } else if (!circles.length && !fitted) fitToContent()
 }
 
 function drawAnchors(fit = false) {
@@ -297,12 +310,18 @@ function fitToContent() {
   if (!map) return
   const bounds = new kakao.maps.LatLngBounds()
   let has = false
-  circles.forEach((c) => {
-    const b = c.getBounds()
-    bounds.extend(b.getSouthWest())
-    bounds.extend(b.getNorthEast())
-    has = true
-  })
+  // 추천 결과를 볼 때는 원을 빼고 그 매물에 맞춘다(fitListings). 거점은 원이 아니라
+  // 점으로만 넣는다 — 어느 거점 기준인지는 보이되 화면을 원 크기에 묶지 않는다.
+  if (props.fitListings) {
+    props.anchors.forEach((a) => bounds.extend(new kakao.maps.LatLng(a.y, a.x)))
+  } else {
+    circles.forEach((c) => {
+      const b = c.getBounds()
+      bounds.extend(b.getSouthWest())
+      bounds.extend(b.getNorthEast())
+      has = true
+    })
+  }
   // 거점이 있으면 거점이 기준이다. 매물까지 넣으면 먼 매물 하나가 화면을 넓혀
   // 도달권 원이 점만 해진다.
   if (!has) {

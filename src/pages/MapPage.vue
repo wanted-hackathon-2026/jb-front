@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
@@ -10,6 +10,8 @@ import BaseSpinner from '@/components/BaseSpinner.vue'
 import BaseSegmentedControl from '@/components/BaseSegmentedControl.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import ListingList from '@/components/ListingList.vue'
+import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
+import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import RecommendationProgress from '@/components/RecommendationProgress.vue'
 import WelcomeOverlay from '@/components/WelcomeOverlay.vue'
 import AnchorPickerLayer from '@/components/AnchorPickerLayer.vue'
@@ -23,6 +25,7 @@ import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
 import { getListingsInBounds } from '@/lib/api/listings'
 import type { PropertyMapQuery } from '@/types/backend'
+import type { SearchHistoryEntry } from '@/types/domain'
 import { useListingList } from '@/lib/listing-list'
 import { toRecommendationRequest } from '@/lib/recommendation-request'
 import { ApiError } from '@/lib/api/http'
@@ -33,6 +36,7 @@ import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import { useNoticeStore } from '@/stores/notice'
 
+const route = useRoute()
 const router = useRouter()
 const anchors = useAnchorsStore()
 const auth = useAuthStore()
@@ -136,6 +140,77 @@ function onBounds(next: PropertyMapQuery) {
 }
 
 onMounted(reloadAll)
+
+/**
+ * 지금 펼쳐 볼 추천 결과. **주소가 정한다**(`/?reco=<id>`) — 상세를 다녀와도(뒤로)
+ * 같은 결과가 열려 있고, 예전 결과 링크도 이리로 들어온다(router/index.ts).
+ *
+ * 목록 자체는 스토어가 들고 있다. 이 화면은 KeepAlive 대상이 아니라서 상세를 여닫을
+ * 때마다 언마운트되는데, 여기 두면 그때마다 같은 결과를 다시 받는다.
+ */
+const resultId = computed(() => (typeof route.query.reco === 'string' ? route.query.reco : null))
+// 주소에서 결과를 떼도 스토어는 그 한 벌을 들고 있는다 — '결과 다시 보기'가 다시
+// 받지 않고 여는 근거다(stores/recommendation.ts).
+watch(resultId, (id) => id && void reco.show(id), { immediate: true })
+
+/**
+ * 추천 하나를 열어 두고 있나. 탭까지 따진다 — '주변 매물' 탭으로 넘어가면 그 탭이
+ * 그리는 것이 지도에도 그려져야 한다. 시트와 지도가 서로 다른 매물을 보여주지 않는
+ * 규칙은 한 벌짜리 목록에서만이 아니라 두 벌 사이에서도 같다.
+ */
+const resultOpen = computed(() => resultId.value !== null && sheet.tab === 'filters')
+
+/**
+ * 그 추천의 **조건**을 보고 있나. 결과와 같은 추천 안이라 지도는 그대로 두고 시트만
+ * 바뀐다 — 주소의 `view` 가 가른다.
+ */
+const showingCriteria = computed(() => resultOpen.value && route.query.view === 'conditions')
+const showingResult = computed(() => resultOpen.value && !showingCriteria.value)
+
+/** 지도에 찍을 매물 — 지금 시트가 열어 둔 그 추천의 한 벌이다. */
+const mapListings = computed(() => (resultOpen.value ? reco.result : listings.value))
+
+/**
+ * 그 추천에 **실제로 보낸** 조건. 지금 필터 값이 아니다 — 결과를 받은 뒤 슬라이더를
+ * 만졌다면 그건 그 결과를 만든 조건이 아니다(stores/recommendation.ts).
+ *
+ * 마이페이지 '이전 기록'과 같은 카드로 그리려고 그 모양으로 맞춰 준다.
+ */
+const criteriaOf = computed(() => (resultId.value ? reco.criteriaOf(resultId.value) : null))
+const criteria = computed<SearchHistoryEntry | null>(() => {
+  const id = resultId.value
+  const got = criteriaOf.value
+  if (!id || !got) return null
+  const job = reco.jobs.find((j) => j.id === id)
+  return {
+    id,
+    createdAt: new Date(job?.createdAt ?? Date.now()).toISOString(),
+    recommendationId: id,
+    anchorNames: got.anchorNames,
+    deposit: got.deposit,
+    rent: got.rent,
+    transport: got.transport,
+    maxMinutes: got.maxMinutes,
+    lifestyle: got.lifestyle,
+  }
+})
+
+/**
+ * 'AI 추천' 탭의 세 얼굴을 오간다 — 결과 · 그때의 조건 · 새 조건 입력.
+ *
+ * **어느 얼굴이든 되돌아갈 버튼이 같은 자리에 있다.** 한 번 넘어가면 못 돌아오는
+ * 자리가 생기면 사용자는 추천을 다시 돌리는 수밖에 없다.
+ *
+ * replace 가 아니라 push 다. 기기의 뒤로가기도 같은 길을 되짚어야 한다.
+ */
+const openCriteria = () =>
+  resultId.value &&
+  router.push({ name: 'map', query: { reco: resultId.value, view: 'conditions' } })
+const backToResult = () =>
+  reco.activeId && router.push({ name: 'map', query: { reco: reco.activeId } })
+/** 처음 플로우로. 주소에서 추천을 통째로 떼면 이 탭이 빈 조건 폼으로 돌아간다. */
+const startOver = () => router.push({ name: 'map' })
+
 /*
  * 거점이 바뀌어도 목록은 다시 받지 않는다. 예전에는 거점 유무로 점수가 붙고 안 붙고가
  * 갈려서 다시 받았는데, **실제 매물 API 는 점수를 주지 않는다**(추천 단계 몫).
@@ -238,6 +313,11 @@ async function requestRecommendation() {
 
   submitting.value = true
   try {
+    /*
+     * 조건을 **보내는 그 순간** 같이 박아 둔다. 결과 화면의 '검색 조건 다시 보기'가
+     * 나중에 필터 스토어를 읽으면, 그 사이 슬라이더를 만진 사람에게는 그게 그 결과를
+     * 만든 조건이 아니다.
+     */
     await reco.request(
       toRecommendationRequest({
         workplace,
@@ -248,6 +328,15 @@ async function requestRecommendation() {
         rent: filters.rent,
         roomTypes: filters.roomTypes,
       }),
+      {
+        anchorNames: anchors.anchors.map((a) => a.name),
+        transport: filters.transport,
+        maxMinutes: filters.maxMinutes,
+        lifestyle: { ...filters.lifestyle },
+        deposit: [...filters.deposit],
+        rent: [...filters.rent],
+        roomTypes: [...filters.roomTypes],
+      },
     )
     started.value = true
     sheet.state = 'peek'
@@ -276,7 +365,8 @@ function addPickedAnchor() {
       v-if="hasKakaoKey"
       @bounds="onBounds"
       ref="mapView"
-      :listings="listings"
+      :listings="mapListings"
+      :fit-listings="showingResult"
       :anchors="anchors.anchors"
       :max-minutes="filters.maxMinutes"
       :picked="picked"
@@ -560,13 +650,106 @@ function addPickedAnchor() {
         </BaseSegmentedControl>
       </div>
 
-      <div v-if="sheet.tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
-        <FilterPanel
-          :submitting="submitting"
-          @submit="requestRecommendation"
-          @pick-anchor="openAnchorPicker"
-        />
-      </div>
+      <!--
+        'AI 추천' 탭은 두 얼굴이다 — 조건을 세우는 폼과, 그 조건으로 받은 결과.
+        결과를 따로 선 화면으로 두지 않는 이유는 시트 뒤 지도다. 목록을 훑으면서
+        같은 매물이 어디에 박혀 있는지 바로 짚을 수 있어야 한다.
+      -->
+      <template v-if="sheet.tab === 'filters'">
+        <div v-if="showingResult" class="flex min-h-0 flex-1 flex-col">
+          <!-- 돌아가는 길. 같은 탭 안에서 갈리므로 여기 말고는 조건으로 돌아갈 길이 없다. -->
+          <div class="flex shrink-0 items-center justify-between gap-2 px-5">
+            <p class="min-w-0 truncate font-bold text-slate-900">AI 추천 결과</p>
+            <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 오른쪽 정렬은 유지한다. -->
+            <button
+              type="button"
+              class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
+              @click="openCriteria"
+            >
+              검색 조건 다시 보기
+            </button>
+          </div>
+          <ListingList
+            v-model:sort="reco.resultSort"
+            class="min-h-0 flex-1"
+            :listings="reco.result"
+            :loading="reco.resultLoading"
+            :failed="reco.resultFailed"
+            :total="reco.resultTotal"
+            :recommendation-id="resultId ?? undefined"
+            scored-when-loaded
+            @retry="reco.reloadResult"
+          />
+        </div>
+        <!--
+          그 추천에 보낸 조건. **읽기 전용이다** — 여기서 슬라이더를 만지게 두면 화면에
+          보이는 값과 결과를 만든 값이 어긋난다. 고치려면 '다시 추천 받기'로 빈 조건
+          폼(이 탭의 처음 화면)에서 새로 세운다.
+        -->
+        <div v-else-if="showingCriteria" class="flex min-h-0 flex-1 flex-col">
+          <div class="flex shrink-0 items-center justify-between gap-2 px-5">
+            <p class="min-w-0 truncate font-bold text-slate-900">검색했던 조건</p>
+            <button
+              type="button"
+              class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
+              @click="backToResult"
+            >
+              결과 다시 보기
+            </button>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
+            <!-- 마이페이지 '이전 기록'과 같은 카드다 — 조건을 읽는 그림은 앱에 한 벌만 둔다. -->
+            <SearchHistoryCard
+              v-if="criteria"
+              :entry="criteria"
+              :room-types="criteriaOf?.roomTypes"
+              show-date
+            />
+            <!--
+              조건을 안 남기던 때 받은 추천이거나, 남의 링크로 들어왔으면 알 길이 없다.
+              지금 필터 값을 대신 보여주면 그 추천의 조건인 척하는 거짓말이 된다 —
+              모른다고 말한다.
+            -->
+            <BaseEmptyState
+              v-else
+              title="검색 조건을 알 수 없어요"
+              hint="예전에 받은 추천이거나, 다른 기기에서 만든 링크예요"
+            />
+            <button
+              type="button"
+              class="mt-2 h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white"
+              @click="startOver"
+            >
+              다시 추천 받기
+            </button>
+          </div>
+        </div>
+        <div v-else class="flex min-h-0 flex-1 flex-col">
+          <!--
+            받아둔 결과로 돌아가는 길. 결과 쪽 '검색 조건 다시 보기'와 **같은 자리·같은
+            모양**이라, 한 버튼이 다른 버튼을 되돌린다는 걸 자리로 말한다.
+            받아둔 결과가 없으면(첫 추천 전) 이 줄 자체가 없다.
+          -->
+          <div v-if="reco.activeId" class="flex shrink-0 items-center justify-between gap-2 px-5">
+            <!-- '검색했던 조건'(읽기 전용)과 헷갈리지 않게 새로 세우는 쪽임을 밝힌다. -->
+            <p class="min-w-0 truncate font-bold text-slate-900">새 추천 조건</p>
+            <button
+              type="button"
+              class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
+              @click="backToResult"
+            >
+              결과 다시 보기
+            </button>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <FilterPanel
+              :submitting="submitting"
+              @submit="requestRecommendation"
+              @pick-anchor="openAnchorPicker"
+            />
+          </div>
+        </div>
+      </template>
       <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->
       <ListingList
         v-else

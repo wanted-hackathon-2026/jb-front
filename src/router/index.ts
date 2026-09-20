@@ -27,11 +27,16 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '매물 상세' },
   },
   {
+    /**
+     * 예전 결과 화면의 주소. 결과는 이제 따로 선 화면이 아니라 **지도 바텀시트의
+     * 'AI 추천' 탭**에서 열린다 — 결과를 보면서 그 매물을 시트 뒤 지도에서 바로
+     * 짚을 수 있어야 해서다.
+     *
+     * 주소를 지우지 않고 지도로 넘긴다. 공유·북마크된 결과 링크가 살아 있고(§5.3),
+     * 열리는 자리만 달라진다.
+     */
     path: '/recommendations/:recommendationId',
-    name: 'recommendation-result',
-    component: () => import('@/pages/RecommendationResultPage.vue'),
-    props: true,
-    meta: { title: '추천 결과' },
+    redirect: (to) => ({ name: 'map', query: { reco: String(to.params.recommendationId) } }),
   },
   {
     path: '/my',
