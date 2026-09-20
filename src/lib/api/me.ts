@@ -1,4 +1,3 @@
-import { getMockSearchHistory } from '@/mocks/me'
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
 import type { FavoritePropertySummary } from '@/types/backend'
 import { listFavorites } from './favorites'
@@ -91,10 +90,25 @@ export async function getFavorites(): Promise<Listing[]> {
 }
 
 /**
- * 이전 추천 기록. 비로그인 사용자는 이 목록이 브라우저에만 있으므로, 승계 설계가
- * 붙으면 localStorage 의 recommendationId 를 서버에 넘긴다
- * (docs/async-recommendation.md §8).
+ * 이전 추천 기록 — **항상 빈 목록이다.**
+ *
+ * 백엔드에 *내가 요청했던 추천들*을 주는 엔드포인트가 없다. 지금 있는 넷은 모두
+ * id 를 이미 알아야 부를 수 있어서(`GET /api/recommendations/{id}` …), 서버만으로는
+ * 목록을 만들 수 없다.
+ *
+ * 그래서 목을 지웠다. 가짜 기록을 띄우면 사용자가 자기 기록이라고 믿고, 눌러 들어간
+ * 결과가 실제와 다르다. **비어 보이는 게 사실에 가깝다** — 화면은 '아직 추천받은
+ * 기록이 없어요'로 뜬다.
+ *
+ * 채우는 길은 둘이다.
+ * 1. `stores/recommendation.ts` 가 이미 쌓아 둔 `jb:reco-jobs:v1` 의 id 로 상태를
+ *    조회한다. 값은 진짜지만 **기기를 바꾸면 사라지고**, 카드에 띄울 조건(거점·예산)은
+ *    요청할 때 같이 저장해 둬야 한다
+ * 2. 백엔드가 목록 API 를 준다. 서버는 이미 조건을 `recommendation_criteria` 에
+ *    스냅샷으로 복사해 두므로 데이터는 다 있다
+ *
+ * 어느 쪽이든 **이 함수 하나만 갈아끼우면 된다** — 화면은 손대지 않는다.
  */
 export async function getSearchHistory(): Promise<SearchHistoryEntry[]> {
-  return getMockSearchHistory()
+  return []
 }
