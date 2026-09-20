@@ -446,7 +446,7 @@ watch(
           v-if="!history.length"
           title="아직 추천받은 기록이 없어요"
           hint="거점과 조건을 정하면 AI가 맞는 매물을 찾아드려요"
-          action-label="방정식 풀러 가기"
+          action-label="추천 받으러 가기"
           @action="goMap"
         />
         <template v-else>
