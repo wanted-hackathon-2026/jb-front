@@ -66,6 +66,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/SearchPage.vue'),
     meta: { title: '거점 검색' },
   },
+  {
+    /**
+     * 없는 주소. **맨 뒤에 둬야 한다** — 먼저 두면 이 규칙이 모든 주소를 먹는다.
+     *
+     * 이게 없으면 RouterView 가 그릴 것을 못 찾아 흰 화면이 된다. 오타·낡은 링크·예전
+     * 형식의 북마크로 쉽게 닿는 자리다.
+     */
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/pages/NotFoundPage.vue'),
+    meta: { title: '없는 주소' },
+  },
 ]
 
 export const router = createRouter({
