@@ -97,7 +97,7 @@ const logout = () => auth.logout()
 
 <template>
   <main class="flex flex-1 flex-col bg-slate-50">
-    <header class="safe-top shrink-0 px-2">
+    <header class="safe-top shrink-0 px-2 pt-3">
       <!--
         처음 정하는 중이면 뒤로 갈 곳이 없다. 로그인은 끝났는데 닉네임이 없는 상태로
         빠져나가면 다른 화면이 전부 막히므로(PROFILE_INCOMPLETE) 되돌아가는 길을 두지 않는다.
