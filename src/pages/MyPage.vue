@@ -309,7 +309,7 @@ watch(
         <button
           v-if="auth.isAuthenticated"
           type="button"
-          class="mt-1 flex min-h-11 items-center gap-1 font-bold text-slate-900"
+          class="mt-1 flex min-h-11 items-center gap-[7px] font-bold text-slate-900"
           @click="router.push({ name: 'nickname', query: { redirect: '/my' } })"
         >
           <!-- 닉네임이 없을 수 있다(가입 직후). 그때도 자리가 무너지지 않게 대체 문구를 둔다. -->
@@ -317,7 +317,7 @@ watch(
             ><span class="text-brand-500">{{ auth.user?.nickname ?? '내 정보' }}</span
             ><span v-if="auth.user?.nickname">님</span></span
           >
-          <BaseChevron direction="right" />
+          <BaseChevron direction="right" :size="10" />
         </button>
         <p v-else class="mt-1 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
 
@@ -352,7 +352,7 @@ watch(
       <span class="text-sm text-slate-500">관리자 계정입니다</span>
       <span class="flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
         매물 등록
-        <BaseChevron direction="right" />
+        <BaseChevron direction="right" :size="10" />
       </span>
     </button>
 

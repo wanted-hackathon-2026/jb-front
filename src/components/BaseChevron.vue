@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 /**
  * 꺾쇠. 시안 에셋 그대로다(8×15, 선 1.3).
  *
@@ -12,15 +14,29 @@
  * 다음에 한쪽만 고쳐질 자리가 생긴다.
  *
  * 색만 currentColor 를 따른다 — 헤더에서는 검정, 사진 위·완료 배너에서는 흰색이다.
+ *
+ * 크기는 높이로 받는다(기본 15px = 뒤로 가기 에셋). 글자 옆에 붙는 자리는 더 작다 —
+ * 마이페이지의 이름 줄은 시안이 5×10 이라 `:size="10"` 으로 부른다. 폭은 에셋 비율
+ * (8:15)로 따라가므로 부르는 쪽이 두 수를 맞출 일이 없다.
  */
-withDefaults(defineProps<{ direction?: 'left' | 'right' }>(), { direction: 'left' })
+const props = withDefaults(defineProps<{ direction?: 'left' | 'right'; size?: number }>(), {
+  direction: 'left',
+  size: 15,
+})
+
+/** 에셋 비율 8:15 를 지킨다 — 높이만 주면 폭이 따라온다. */
+const box = computed(() => ({
+  height: `${props.size}px`,
+  width: `${(props.size * 8) / 15}px`,
+}))
 </script>
 
 <template>
   <svg
     viewBox="0 0 8 15"
-    class="h-[15px] w-2 shrink-0"
+    class="shrink-0"
     :class="direction === 'right' && 'rotate-180'"
+    :style="box"
     fill="none"
     aria-hidden="true"
   >
