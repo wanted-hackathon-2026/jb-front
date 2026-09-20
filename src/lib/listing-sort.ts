@@ -11,11 +11,12 @@
  */
 import type { Listing } from '@/types/domain'
 
-export type SortKey = 'score' | 'commute' | 'priceAsc' | 'priceDesc'
+export type SortKey = 'score' | 'commute' | 'saved' | 'priceAsc' | 'priceDesc'
 
 export const SORT_LABELS: Record<SortKey, string> = {
   score: '매칭점수순',
   commute: '이동효율순',
+  saved: '최근 저장순',
   priceAsc: '가격 낮은순',
   priceDesc: '가격 높은순',
 }
@@ -36,6 +37,15 @@ const commuteOf = (l: Listing) => l.commutes[0]?.minutes ?? Number.POSITIVE_INFI
 const COMPARATORS: Record<SortKey, (a: Listing, b: Listing) => number> = {
   // 점수 없는 매물(-1)은 뒤로 간다.
   score: (a, b) => (b.score ?? -1) - (a.score ?? -1),
+  /*
+   * 최근 저장순 = **받아온 순서 그대로.**
+   *
+   * 찜 목록은 서버가 이미 최신순으로 준다(FavoriteServiceImpl: createdAt DESC, id DESC).
+   * 응답에 저장 시각이 안 실려 오므로 화면이 다시 줄 세울 근거가 없고, 그럴 이유도 없다.
+   * 아무것도 하지 않는 비교자를 두는 건 Array#sort 가 안정 정렬이라 **원래 순서가
+   * 그대로 남기** 때문이다.
+   */
+  saved: () => 0,
   commute: (a, b) => commuteOf(a) - commuteOf(b),
   priceAsc: (a, b) => priceOf(a) - priceOf(b),
   priceDesc: (a, b) => priceOf(b) - priceOf(a),

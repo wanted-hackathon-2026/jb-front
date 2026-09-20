@@ -16,7 +16,7 @@ import { sqmToPyeong } from '@/lib/format'
  * 더 보기 UI 가 없어서, 상한치(100)로 한 장만 받아 사실상 전부를 보여준다.
  * 100개를 넘기는 사용자가 생기면 그때 무한 스크롤을 붙이고 이 상수를 지운다.
  */
-const PAGE_SIZE = 100
+export const FAVORITES_PAGE_SIZE = 100
 
 /**
  * 백엔드 매물 → 프론트 `Listing`.
@@ -85,7 +85,7 @@ function toListing(p: FavoritePropertySummary): Listing {
  * 호출 전에 로그인 여부를 확인하는 건 화면 몫이다(MyPage 가 그렇게 한다).
  */
 export async function getFavorites(): Promise<Listing[]> {
-  const page = await listFavorites(0, PAGE_SIZE)
+  const page = await listFavorites(0, FAVORITES_PAGE_SIZE)
   return page.content.map((item) => toListing(item.property))
 }
 

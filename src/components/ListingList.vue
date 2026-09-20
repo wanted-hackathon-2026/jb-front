@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onActivated, ref, useTemplateRef, watch } from 'vue'
+import { computed, onActivated, useTemplateRef, watch } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseErrorState from './BaseErrorState.vue'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
-import ListingSortSheet from './ListingSortSheet.vue'
-import { SORT_LABELS, type SortKey } from '@/lib/listing-sort'
+import ListingSortBar from './ListingSortBar.vue'
+import type { SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -55,30 +55,6 @@ const options = computed<SortKey[]>(() =>
   hasScores.value ? ['score', 'commute', 'priceAsc', 'priceDesc'] : ['priceAsc', 'priceDesc'],
 )
 
-/** 상한에 걸린 목록은 '총' 을 뗀다 — 그 영역의 전부가 아니라 받아온 만큼이다. */
-const countLabel = computed(() => {
-  const n = props.total ?? props.listings.length
-  return props.capped ? `${n}건 이상` : `총 ${n}건`
-})
-
-const picking = ref(false)
-const trigger = ref<HTMLButtonElement | null>(null)
-
-/** 시트를 닫을 땐 열었던 버튼으로 포커스를 돌려준다. */
-function close() {
-  picking.value = false
-  trigger.value?.focus()
-}
-
-function choose(key: SortKey) {
-  if (key !== sort.value) {
-    // 순서가 통째로 바뀌므로 중간에 서 있으면 바뀐 1등을 못 본다. 맨 위로 돌려놓는다.
-    scroller.value?.scrollTo({ top: 0 })
-    sort.value = key
-  }
-  close()
-}
-
 /** 이 목록은 **자기 스크롤 영역** 안에서 움직인다(아래 overflow-y-auto). */
 const scroller = useTemplateRef<HTMLElement>('scroller')
 
@@ -122,50 +98,20 @@ const skeletonCount = computed(() =>
 <template>
   <div class="flex flex-col">
     <!--
-      집계·정렬 줄.
-      **시안과 다르다.** 시안은 추천 결과(39-2654)에만 이 줄을 두고 매물 조회
+      집계·정렬 줄(ListingSortBar). 시안은 추천 결과(39-2654)에만 이 줄을 두고 매물 조회
       화면(39-3373)에는 탭 바로 아래가 카드인데, 그쪽 목록은 지도를 축소할수록 늘어난다
       (영역 조회라 200건까지 온다). 몇 건인지도 모르고 줄 세울 수도 없는 목록은 스크롤
       말고 할 수 있는 게 없어서, 두 목록 모두에 둔다.
     -->
-    <div
+    <ListingSortBar
       v-if="!(failed && !listings.length)"
-      class="flex shrink-0 items-center justify-between px-5"
-    >
-      <!-- 로딩 중에도 같은 높이를 차지해야 한다. 높이를 정하는 건 오른쪽 버튼(min-h-11)이다. -->
-      <template v-if="loading">
-        <BaseSkeleton class="h-4 w-16" />
-        <span class="flex min-h-11 items-center"><BaseSkeleton class="h-4 w-20" /></span>
-      </template>
-      <p v-else class="text-sm text-slate-500">{{ countLabel }}</p>
-      <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 시안의 오른쪽 정렬은 유지한다. -->
-      <button
-        v-if="listings.length && !loading"
-        ref="trigger"
-        data-tour="sort"
-        type="button"
-        class="-mr-2 flex min-h-11 items-center gap-1.5 px-2 text-sm text-slate-500"
-        @click="picking = true"
-      >
-        <svg
-          viewBox="0 0 20 20"
-          class="size-[18px] shrink-0"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          aria-hidden="true"
-        >
-          <rect x="2.2" y="2.2" width="6.6" height="6.6" rx="1.4" />
-          <rect x="2.2" y="11.2" width="6.6" height="6.6" rx="1.4" />
-          <path
-            d="M14 2.6v14.8M14 17.4l-2.6-2.8M14 17.4l2.6-2.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        {{ SORT_LABELS[sort] }}
-      </button>
-    </div>
+      v-model:sort="sort"
+      :count="total ?? listings.length"
+      :capped="capped"
+      :options="listings.length && !loading ? options : []"
+      :loading="loading"
+      @change="scroller?.scrollTo({ top: 0 })"
+    />
 
     <div
       ref="scroller"
@@ -241,13 +187,5 @@ const skeletonCount = computed(() =>
         </li>
       </ul>
     </div>
-
-    <ListingSortSheet
-      v-if="picking"
-      :options="options"
-      :active="sort"
-      @choose="choose"
-      @close="close"
-    />
   </div>
 </template>

@@ -9,9 +9,11 @@ import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import ListingCard from '@/components/ListingCard.vue'
+import ListingSortBar from '@/components/ListingSortBar.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { formatDay } from '@/lib/format'
-import { getFavorites, getSearchHistory } from '@/lib/api/me'
+import { FAVORITES_PAGE_SIZE, getFavorites, getSearchHistory } from '@/lib/api/me'
+import { sortListings, type SortKey } from '@/lib/listing-sort'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useRecentlyViewedStore } from '@/stores/recently-viewed'
@@ -60,6 +62,40 @@ defineOptions({ name: 'MyPage' })
 const toTab = (q: unknown): Tab => (TABS.some((t) => t.value === q) ? (q as Tab) : 'history')
 
 const tab = ref<Tab>(toTab(route.query.tab))
+
+/**
+ * 관심 매물의 정렬.
+ *
+ * 찜은 **비교하려고 모아 둔 목록**이라 가격으로 줄 세울 일이 있다. 기본은 받아온
+ * 순서(최근 저장순) 그대로다 — 서버가 최신순으로 준다(lib/listing-sort.ts 의 saved).
+ *
+ * 매칭점수순·이동효율순은 두지 않는다. 찜 목록에는 점수도 이동 정보도 없어 모든 매물이
+ * 같은 값으로 비교되므로, 눌러도 순서가 그대로인 선택지가 된다.
+ */
+const FAVORITE_SORTS: SortKey[] = ['saved', 'priceAsc', 'priceDesc']
+const favoritesSort = ref<SortKey>('saved')
+const sortedFavorites = computed(() => sortListings(favorites.value, favoritesSort.value))
+
+/**
+ * 찜 목록도 상한에서 잘린다 — 한 장(100건)만 받고 더 보기가 없다(lib/api/me.ts).
+ * 서버가 잘렸다고 알려주지 않으므로 받아온 개수로 가늠한다.
+ */
+const favoritesCapped = computed(() => favorites.value.length >= FAVORITES_PAGE_SIZE)
+
+/**
+ * 관심 매물 머리 줄을 띄울 때. 로그인 안내·오류·빈 목록 위에는 두지 않는다 —
+ * 셀 것이 없는 자리에 '총 0건' 을 적을 이유가 없다.
+ *
+ * 로딩 중에도 띄운다(골격으로). 목록이 도착한 뒤에 줄이 생기면 그만큼 아래로 밀린다.
+ */
+const showFavoriteBar = computed(
+  () =>
+    tab.value === 'favorites' &&
+    !needsLogin.value &&
+    !needsNickname.value &&
+    !error.value &&
+    (loading.value || favorites.value.length > 0),
+)
 
 /** 빈 화면의 다음 행동은 셋 다 지도다 — 매물도 추천도 거기서 시작한다. */
 const goMap = () => router.push({ name: 'map' })
@@ -416,6 +452,39 @@ watch(
     </div>
 
     <!-- 골격은 마지막 한 장이 잘리게 두는 쪽이 자연스럽다 — 스크롤바만 잠깐 뜨는 걸 막는다. -->
+    <!--
+      목록 머리 줄. 스크롤 영역 **밖**에 둔다 — 백 건까지 오는 목록에서 정렬을 바꾸려고
+      맨 위까지 되돌아갈 이유가 없다(ListingList 도 같은 자리에 둔다).
+    -->
+    <ListingSortBar
+      v-if="showFavoriteBar"
+      v-model:sort="favoritesSort"
+      :count="favorites.length"
+      :capped="favoritesCapped"
+      :options="FAVORITE_SORTS"
+      :loading="loading"
+      @change="listBox?.scrollTo({ top: 0 })"
+    />
+    <!--
+      최근 본 매물에는 정렬을 두지 않는다 — **순서가 곧 의미인** 목록이라 줄 세우는
+      순간 '최근 본' 이 아니게 된다. 대신 그 자리에 지울 길을 둔다. 남에게 보여주기
+      싫은 기록이 쌓이는 자리인데 지금까지 비울 방법이 없었다(검색 화면에는 있다).
+    -->
+    <ListingSortBar
+      v-else-if="tab === 'recent' && recentlyViewed.count"
+      :count="recentlyViewed.count"
+    >
+      <template #action>
+        <button
+          type="button"
+          class="-mr-2 min-h-11 px-2 text-xs text-slate-400"
+          @click="recentlyViewed.clear()"
+        >
+          전체삭제
+        </button>
+      </template>
+    </ListingSortBar>
+
     <div
       ref="listBox"
       class="min-h-0 flex-1"
@@ -571,8 +640,8 @@ watch(
           </template>
         </BaseEmptyState>
         <!-- 카드의 상하 여백이 10px 이라 탭 바로 아래에 붙는다 — 목록 머리에만 더 준다. -->
-        <ul v-else class="px-5 pt-4">
-          <li v-for="l in favorites" :key="l.id">
+        <ul v-else class="px-5 pt-1">
+          <li v-for="l in sortedFavorites" :key="l.id">
             <!-- 이 탭의 매물은 정의상 전부 찜한 것이라 하트가 채워져 있다. -->
             <ListingCard :listing="l" />
           </li>
@@ -587,7 +656,7 @@ watch(
           action-label="매물 보러 가기"
           @action="goMap"
         />
-        <ul v-else class="px-5 pt-4">
+        <ul v-else class="px-5 pt-1">
           <li v-for="l in recentlyViewed.items" :key="l.id">
             <ListingCard :listing="l" />
           </li>
