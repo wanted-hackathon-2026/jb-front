@@ -664,67 +664,83 @@ function addPickedAnchor() {
         같은 매물이 어디에 박혀 있는지 바로 짚을 수 있어야 한다.
       -->
       <template v-if="sheet.tab === 'filters'">
-        <div v-if="showingResult" class="flex min-h-0 flex-1 flex-col">
-          <!-- 돌아가는 길. 같은 탭 안에서 갈리므로 여기 말고는 조건으로 돌아갈 길이 없다. -->
-          <div class="flex shrink-0 items-center justify-between gap-2 px-5">
-            <p class="min-w-0 truncate font-bold text-slate-900">AI 추천 결과</p>
-            <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 오른쪽 정렬은 유지한다. -->
-            <button
-              type="button"
-              class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
-              @click="openCriteria"
-            >
-              검색 조건 다시 보기
-            </button>
-          </div>
-          <ListingList
-            v-model:sort="reco.resultSort"
-            class="min-h-0 flex-1"
-            :listings="reco.result"
-            :loading="reco.resultLoading"
-            :failed="reco.resultFailed"
-            :total="reco.resultTotal"
-            :recommendation-id="resultId ?? undefined"
-            @retry="reco.reloadResult"
-          />
-        </div>
         <!--
-          그 추천에 보낸 조건. **읽기 전용이다** — 여기서 슬라이더를 만지게 두면 화면에
-          보이는 값과 결과를 만든 값이 어긋난다. 고치려면 '다시 추천 받기'로 빈 조건
-          폼(이 탭의 처음 화면)에서 새로 세운다.
+          열어 둔 추천 하나 — 결과와 그때의 조건은 그 한 추천의 두 면이다. 아래
+          '다시 추천 받기' 는 두 면의 **공통 바닥**이라 바깥에 한 번만 그린다.
+          두 벌로 두면 한쪽만 고쳐진 채 남는다.
         -->
-        <div v-else-if="showingCriteria" class="flex min-h-0 flex-1 flex-col">
-          <div class="flex shrink-0 items-center justify-between gap-2 px-5">
-            <p class="min-w-0 truncate font-bold text-slate-900">검색했던 조건</p>
+        <div v-if="resultOpen" class="flex min-h-0 flex-1 flex-col">
+          <template v-if="showingResult">
+            <!-- 돌아가는 길. 같은 탭 안에서 갈리므로 여기 말고는 조건으로 돌아갈 길이 없다. -->
+            <div class="flex shrink-0 items-center justify-between gap-2 px-5">
+              <p class="min-w-0 truncate font-bold text-slate-900">AI 추천 결과</p>
+              <!-- 여백(-mr-2 px-2)으로 터치 표적을 44px 로 넓히고 오른쪽 정렬은 유지한다. -->
+              <button
+                type="button"
+                class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
+                @click="openCriteria"
+              >
+                검색 조건 다시 보기
+              </button>
+            </div>
+            <ListingList
+              v-model:sort="reco.resultSort"
+              class="min-h-0 flex-1"
+              :listings="reco.result"
+              :loading="reco.resultLoading"
+              :failed="reco.resultFailed"
+              :total="reco.resultTotal"
+              :recommendation-id="resultId ?? undefined"
+              @retry="reco.reloadResult"
+            />
+          </template>
+
+          <!--
+            그 추천에 보낸 조건. **읽기 전용이다** — 여기서 슬라이더를 만지게 두면 화면에
+            보이는 값과 결과를 만든 값이 어긋난다. 고치려면 아래 '다시 추천 받기'로
+            빈 조건 폼(이 탭의 처음 화면)에서 새로 세운다.
+          -->
+          <template v-else>
+            <div class="flex shrink-0 items-center justify-between gap-2 px-5">
+              <p class="min-w-0 truncate font-bold text-slate-900">검색했던 조건</p>
+              <button
+                type="button"
+                class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
+                @click="backToResult"
+              >
+                결과 다시 보기
+              </button>
+            </div>
+            <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+              <!-- 마이페이지 '이전 기록'과 같은 카드다 — 조건을 읽는 그림은 앱에 한 벌만 둔다. -->
+              <SearchHistoryCard
+                v-if="criteria"
+                :entry="criteria"
+                :room-types="criteriaOf?.roomTypes"
+                show-date
+              />
+              <!--
+                조건을 안 남기던 때 받은 추천이거나, 남의 링크로 들어왔으면 알 길이 없다.
+                지금 필터 값을 대신 보여주면 그 추천의 조건인 척하는 거짓말이 된다 —
+                모른다고 말한다.
+              -->
+              <BaseEmptyState
+                v-else
+                title="검색 조건을 알 수 없어요"
+                hint="예전에 받은 추천이거나, 다른 기기에서 만든 링크예요"
+              />
+            </div>
+          </template>
+
+          <!--
+            새로 받으러 가는 길. 스크롤 영역 **밖에** 고정한다 — 목록이나 조건 끝에
+            붙이면 끝까지 스크롤한 사람만 만나는데, 결과가 마음에 안 들어 다시 돌리려는
+            사람일수록 끝까지 보지 않는다. 선·여백은 매물 상세의 아래 바와 같은 값이다.
+          -->
+          <div class="safe-bottom shrink-0 border-t border-slate-100 px-5 py-3">
             <button
               type="button"
-              class="-mr-2 flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-brand-500"
-              @click="backToResult"
-            >
-              결과 다시 보기
-            </button>
-          </div>
-          <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
-            <!-- 마이페이지 '이전 기록'과 같은 카드다 — 조건을 읽는 그림은 앱에 한 벌만 둔다. -->
-            <SearchHistoryCard
-              v-if="criteria"
-              :entry="criteria"
-              :room-types="criteriaOf?.roomTypes"
-              show-date
-            />
-            <!--
-              조건을 안 남기던 때 받은 추천이거나, 남의 링크로 들어왔으면 알 길이 없다.
-              지금 필터 값을 대신 보여주면 그 추천의 조건인 척하는 거짓말이 된다 —
-              모른다고 말한다.
-            -->
-            <BaseEmptyState
-              v-else
-              title="검색 조건을 알 수 없어요"
-              hint="예전에 받은 추천이거나, 다른 기기에서 만든 링크예요"
-            />
-            <button
-              type="button"
-              class="mt-2 h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white"
+              class="h-14 w-full rounded-full bg-brand-500 text-base font-bold text-white"
               @click="startOver"
             >
               다시 추천 받기
