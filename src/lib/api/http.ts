@@ -92,7 +92,11 @@ function send(path: string, init?: RequestInit): Promise<Response> {
     credentials: 'include',
     headers: {
       // 본문이 있을 때만 붙인다. GET 에 붙이면 교차 오리진에서 불필요한 preflight 가 뜬다.
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      // FormData 는 **직접 붙이면 안 된다** — 브라우저가 boundary 를 포함해 써야 하는데
+      // 우리가 덮으면 서버가 파트를 못 가른다(사진 업로드).
+      ...(init?.body && !(init.body instanceof FormData)
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...init?.headers,
     },

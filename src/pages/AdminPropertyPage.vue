@@ -3,12 +3,16 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BasePostcodeLayer from '@/components/BasePostcodeLayer.vue'
 import { ApiError } from '@/lib/api/http'
-import { createProperty } from '@/lib/api/properties'
+import { createProperty, uploadPropertyImages } from '@/lib/api/properties'
 import { resolveAddress } from '@/lib/postcode'
 import { useAuthStore } from '@/stores/auth'
 import {
   ERROR_CODE,
   PROPERTY_DIRECTIONS,
+  PROPERTY_IMAGE_MAX_BYTES,
+  PROPERTY_IMAGE_MAX_COUNT,
+  PROPERTY_IMAGE_TYPES,
+  type PropertyImage,
   type LeaseType,
   type PropertyCreateRequest,
 } from '@/types/backend'
@@ -155,6 +159,8 @@ async function submit() {
   try {
     const created = await createProperty(body)
     saved.value = { id: created.id, latitude: created.latitude, longitude: created.longitude }
+    images.value = []
+    imageError.value = null
     reset()
   } catch (e) {
     // 서버 detail 은 개발·운영 확인용이라 그대로 띄우지 않는다. code 로만 분기한다.
@@ -162,6 +168,86 @@ async function submit() {
   } finally {
     saving.value = false
   }
+}
+
+/* ── 사진 ─────────────────────────────────────────────────────────────── */
+
+/**
+ * 사진은 **등록이 끝난 뒤**에만 올릴 수 있다. 경로에 매물 id 가 들어가서
+ * (`POST /api/properties/{id}/images`) 한 번에 보낼 방법이 없다.
+ *
+ * 그래서 이 화면은 두 걸음이다 — 등록하면 폼이 비워지고, 그 자리에 방금 만든 매물의
+ * 사진 칸이 뜬다. 사진 없이 끝내도 되고(목록에서 썸네일이 비어 보일 뿐이다),
+ * '새 매물 등록'을 누르면 다음 매물로 넘어간다.
+ */
+const images = ref<PropertyImage[]>([])
+const uploading = ref(false)
+const imageError = ref<string | null>(null)
+
+const remaining = computed(() => PROPERTY_IMAGE_MAX_COUNT - images.value.length)
+
+/** 서버가 거절할 게 뻔한 파일을 먼저 걸러 준다 — 왕복을 기다릴 이유가 없다. */
+function rejectReason(files: File[]): string | null {
+  if (!files.length) return null
+  if (files.length > remaining.value) {
+    return `사진은 매물당 ${PROPERTY_IMAGE_MAX_COUNT}장까지예요. ${remaining.value}장 더 올릴 수 있어요`
+  }
+  const big = files.find((f) => f.size > PROPERTY_IMAGE_MAX_BYTES)
+  if (big) return `"${big.name}" 이 10MB 를 넘어요`
+  const wrong = files.find((f) => !PROPERTY_IMAGE_TYPES.includes(f.type as never))
+  if (wrong) return `"${wrong.name}" 은 JPEG·PNG·WEBP 가 아니에요`
+  return null
+}
+
+async function onFiles(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = [...(input.files ?? [])]
+  // 같은 파일을 다시 고를 수 있게 비운다 — 안 그러면 change 가 안 울린다.
+  input.value = ''
+  if (!files.length || !saved.value) return
+
+  const reason = rejectReason(files)
+  if (reason) {
+    imageError.value = reason
+    return
+  }
+
+  uploading.value = true
+  imageError.value = null
+  try {
+    // 응답은 방금 올린 것만이 아니라 그 매물의 사진 전체다 — 그대로 덮으면 된다.
+    images.value = (await uploadPropertyImages(saved.value.id, files)).images
+  } catch (e) {
+    imageError.value = imageMessageOf(e)
+  } finally {
+    uploading.value = false
+  }
+}
+
+function imageMessageOf(e: unknown): string {
+  if (!(e instanceof ApiError)) return '사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요'
+  if (e.code === ERROR_CODE.PROPERTY_IMAGE_TOO_LARGE) return '10MB 가 넘는 사진이 있어요'
+  if (e.code === ERROR_CODE.UNSUPPORTED_PROPERTY_IMAGE_TYPE) {
+    // 확장자만 바꾼 파일이 여기로 온다 — 서버는 내용을 본다.
+    return 'JPEG·PNG·WEBP 만 올릴 수 있어요. 확장자만 바꾼 파일도 거절돼요'
+  }
+  if (e.code === ERROR_CODE.INVALID_PROPERTY_IMAGE) {
+    return `사진은 매물당 ${PROPERTY_IMAGE_MAX_COUNT}장까지예요`
+  }
+  if (e.code === ERROR_CODE.PROPERTY_IMAGE_STORAGE_FAILED) {
+    return '서버가 사진을 저장하지 못했어요. 잠시 후 다시 시도해 주세요'
+  }
+  if (e.code === ERROR_CODE.PROFILE_INCOMPLETE) return '닉네임을 먼저 설정해 주세요'
+  if (e.status === 403) return '이 계정에는 매물 등록 권한이 없어요'
+  return '사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요'
+}
+
+/** 다음 매물로. 사진 칸을 접고 폼을 처음 상태로 되돌린다. */
+function startNew() {
+  saved.value = null
+  images.value = []
+  imageError.value = null
+  error.value = null
 }
 
 function messageOf(e: unknown): string {
@@ -426,10 +512,78 @@ function messageOf(e: unknown): string {
       <p v-if="error" class="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
         {{ error }}
       </p>
-      <p v-if="saved" class="mt-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-500">
-        등록됐어요 · 좌표 {{ saved.latitude.toFixed(5) }}, {{ saved.longitude.toFixed(5) }}
-        <span class="block text-xs text-brand-500/70">{{ saved.id }}</span>
-      </p>
+      <!--
+        등록이 끝나야 사진을 올릴 수 있다 — 경로에 매물 id 가 들어가서(POST
+        /api/properties/{id}/images) 한 번에 보낼 방법이 없다. 그래서 두 걸음이다.
+      -->
+      <section v-if="saved" class="mt-3 rounded-2xl bg-brand-50 p-4">
+        <p class="text-sm font-semibold text-brand-500">
+          등록됐어요 · 좌표 {{ saved.latitude.toFixed(5) }}, {{ saved.longitude.toFixed(5) }}
+        </p>
+        <p class="mt-0.5 text-xs break-all text-brand-500/70">{{ saved.id }}</p>
+
+        <h2 class="mt-4 text-sm font-bold text-slate-900">
+          사진
+          <span class="font-normal text-slate-400">
+            {{ images.length }} / {{ PROPERTY_IMAGE_MAX_COUNT }}
+          </span>
+        </h2>
+
+        <!-- 올린 순서가 곧 표시 순서다. 첫 장이 목록의 대표 사진이 된다. -->
+        <ul v-if="images.length" class="mt-2 flex flex-wrap gap-2">
+          <li v-for="(img, i) in images" :key="img.id" class="relative">
+            <img
+              :src="img.url"
+              :alt="`사진 ${i + 1}`"
+              class="size-20 rounded-xl bg-slate-200 object-cover"
+            />
+            <span
+              v-if="i === 0"
+              class="absolute bottom-1 left-1 rounded-full bg-slate-900/70 px-1.5 text-[11px] text-white"
+            >
+              대표
+            </span>
+          </li>
+        </ul>
+
+        <!--
+          input 을 label 로 감싼다 — 파일 선택 버튼의 기본 모양은 브라우저마다 달라서
+          터치 타깃(44px)을 맞출 수 없다.
+        -->
+        <label
+          class="mt-3 flex h-12 w-full items-center justify-center rounded-full border border-brand-500/40 bg-white text-sm font-semibold text-brand-500"
+          :class="(uploading || remaining <= 0) && 'pointer-events-none opacity-40'"
+        >
+          <input
+            type="file"
+            class="sr-only"
+            multiple
+            :accept="PROPERTY_IMAGE_TYPES.join(',')"
+            :disabled="uploading || remaining <= 0"
+            @change="onFiles"
+          />
+          {{
+            uploading
+              ? '올리는 중…'
+              : remaining <= 0
+                ? '사진을 다 채웠어요'
+                : `사진 추가 (${remaining}장 더)`
+          }}
+        </label>
+
+        <p v-if="imageError" class="mt-2 text-sm text-red-500">{{ imageError }}</p>
+        <p v-else class="mt-2 text-xs text-slate-400">
+          JPEG · PNG · WEBP, 한 장에 10MB 까지. 사진 없이 끝내도 돼요.
+        </p>
+
+        <button
+          type="button"
+          class="mt-3 h-11 w-full text-sm font-semibold text-slate-500"
+          @click="startNew"
+        >
+          새 매물 등록
+        </button>
+      </section>
 
       <button
         type="submit"

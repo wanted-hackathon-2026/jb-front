@@ -301,6 +301,20 @@ export interface PropertyMapItem {
   favorite: boolean
 }
 
+/** 사진 업로드 응답. 출처: PropertyImageResponse (jb-backend 663da20) */
+export interface PropertyImageUploadResponse {
+  propertyId: string
+  /** 방금 올린 것만이 아니라 **그 매물의 사진 전체**가 순서대로 온다. */
+  images: PropertyImage[]
+}
+
+/** 매물 한 건에 저장할 수 있는 사진 수. 기존 것을 포함한 상한이다. */
+export const PROPERTY_IMAGE_MAX_COUNT = 10
+/** 한 장의 최대 크기(바이트). */
+export const PROPERTY_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+/** 허용 형식. 서버는 확장자가 아니라 **파일 시그니처**로 확인한다. */
+export const PROPERTY_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
 /** 출처: PropertyMapResponse (jb-backend 663da20) */
 export interface PropertyMapResponse {
   properties: PropertyMapItem[]
@@ -404,6 +418,14 @@ export const ERROR_CODE = {
   PROPERTY_NOT_FOUND: 'PROPERTY_NOT_FOUND',
   /** 400. 지도 영역이 잘못됐다(위경도 범위 밖, min > max). */
   INVALID_MAP_BOUNDS: 'INVALID_MAP_BOUNDS',
+  /** 400. 파일이 없거나 비었거나, 기존 것까지 합쳐 10장을 넘었다. */
+  INVALID_PROPERTY_IMAGE: 'INVALID_PROPERTY_IMAGE',
+  /** 413. 한 장이 10MB 를 넘었다. */
+  PROPERTY_IMAGE_TOO_LARGE: 'PROPERTY_IMAGE_TOO_LARGE',
+  /** 415. JPEG·PNG·WEBP 가 아니거나, 확장자와 실제 내용이 다르다(시그니처 검사). */
+  UNSUPPORTED_PROPERTY_IMAGE_TYPE: 'UNSUPPORTED_PROPERTY_IMAGE_TYPE',
+  /** 500. 볼륨에 저장하지 못했다. */
+  PROPERTY_IMAGE_STORAGE_FAILED: 'PROPERTY_IMAGE_STORAGE_FAILED',
   /** 404. 내가 찜한 적 없는 매물이다. */
   FAVORITE_NOT_FOUND: 'FAVORITE_NOT_FOUND',
   /** 409. 이미 찜했다. 동시 요청도 한 건만 저장되고 나머지가 이걸 받는다. */
