@@ -99,6 +99,7 @@ const valid = computed(() => {
   if (!name.value.trim() || !propertyType.value.trim()) return false
   if (deposit.value === null || deposit.value < 0) return false
   if (monthlyRent.value === null || monthlyRent.value < 0) return false
+
   // 서버의 교차 검증과 같은 규칙이다.
   return isJeonse.value ? monthlyRent.value === 0 : monthlyRent.value > 0
 })
@@ -112,6 +113,34 @@ const saved = ref<{ id: string; latitude: number; longitude: number } | null>(nu
 
 /** 빈 문자열을 null 로 접는다 — direction 은 공백만 있는 값을 서버가 거절한다. */
 const orNull = (v: string) => (v.trim() ? v.trim() : null)
+
+/**
+ * 숫자 칸 입력. **`v-model.number` 를 쓰지 않는다.**
+ *
+ * Vue 의 `.number` 는 `parseFloat` 가 NaN 이면 **원본 문자열을 그대로 둔다**
+ * (`@vue/shared` 의 `looseToNumber`). 그래서 값을 지우면 `number | null` 이라고
+ * 적어 둔 ref 에 `''` 가 앉는데, 타입이 거짓말을 하니 컴파일러도 못 잡는다.
+ *
+ * 그대로 보내면 서버가 400 이다 — 금액·층은 정수 토큰만 받는다
+ * (PropertyIntegerDeserializer.java: 문자열이면 handleUnexpectedToken).
+ * 빈 칸은 '값을 안 넣었다'는 뜻이므로 여기서 null 로 접는다.
+ */
+const numberFields = {
+  deposit,
+  monthlyRent,
+  exclusiveArea,
+  supplyArea,
+  floor,
+  bathroomCount,
+  totalFloors,
+  buildYear,
+}
+
+function onNumber(field: keyof typeof numberFields, e: Event) {
+  const raw = (e.target as HTMLInputElement).value.trim()
+  const n = Number(raw)
+  numberFields[field].value = raw === '' || Number.isNaN(n) ? null : n
+}
 
 function reset() {
   picked.value = null
@@ -377,7 +406,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="deposit">보증금(만원)</label>
             <input
               id="deposit"
-              v-model.number="deposit"
+              :value="deposit"
+              @input="onNumber('deposit', $event)"
               type="number"
               min="0"
               inputmode="numeric"
@@ -388,7 +418,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="rent">월세(만원)</label>
             <input
               id="rent"
-              v-model.number="monthlyRent"
+              :value="monthlyRent"
+              @input="onNumber('monthlyRent', $event)"
               type="number"
               min="0"
               inputmode="numeric"
@@ -411,7 +442,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="area">전용면적(㎡)</label>
             <input
               id="area"
-              v-model.number="exclusiveArea"
+              :value="exclusiveArea"
+              @input="onNumber('exclusiveArea', $event)"
               type="number"
               min="0"
               step="0.01"
@@ -423,7 +455,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="supply-area">공급면적(㎡)</label>
             <input
               id="supply-area"
-              v-model.number="supplyArea"
+              :value="supplyArea"
+              @input="onNumber('supplyArea', $event)"
               type="number"
               min="0"
               step="0.01"
@@ -438,7 +471,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="build-year">준공년도</label>
             <input
               id="build-year"
-              v-model.number="buildYear"
+              :value="buildYear"
+              @input="onNumber('buildYear', $event)"
               type="number"
               min="1"
               inputmode="numeric"
@@ -449,7 +483,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="bathroom-count">욕실 수</label>
             <input
               id="bathroom-count"
-              v-model.number="bathroomCount"
+              :value="bathroomCount"
+              @input="onNumber('bathroomCount', $event)"
               type="number"
               min="1"
               inputmode="numeric"
@@ -463,7 +498,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="floor">층</label>
             <input
               id="floor"
-              v-model.number="floor"
+              :value="floor"
+              @input="onNumber('floor', $event)"
               type="number"
               inputmode="numeric"
               class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
@@ -473,7 +509,8 @@ function messageOf(e: unknown): string {
             <label class="block text-sm text-slate-500" for="total-floors">총 층수</label>
             <input
               id="total-floors"
-              v-model.number="totalFloors"
+              :value="totalFloors"
+              @input="onNumber('totalFloors', $event)"
               type="number"
               min="1"
               inputmode="numeric"
