@@ -36,6 +36,20 @@ const favoriteIds = useFavoritesStore()
 const recentlyViewed = useRecentlyViewedStore()
 
 /**
+ * 서버는 JWT 가 아니라 **DB 의 현재 role** 을 매 요청 다시 읽는다
+ * (PropertyAdminAuthorizationManager). 그래서 이 값은 링크를 보일지 정하는 용도지
+ * 권한 그 자체가 아니다 — 방금 권한이 바뀌었다면 `GET /api/me` 를 다시 받아야
+ * (새로고침·재로그인) 여기에 반영된다.
+ */
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+
+async function logout() {
+  await auth.logout()
+  // 마이페이지는 로그인한 사람의 화면이다. 나가면 지도로 돌려보낸다.
+  goMap()
+}
+
+/**
  * 이 화면도 KeepAlive 로 살려 둔다(App.vue) — 매물 상세를 다녀와도 목록과 스크롤이
  * 남아야 한다. include 가 이름으로 고르므로 파일명에 기대지 않고 박아 둔다.
  */
@@ -314,6 +328,24 @@ watch(
           </svg>
         </button>
         <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
+
+        <!--
+          로그인한 사람만 보는 줄. 관리자 링크는 **role 이 ADMIN 일 때만** 끼워 넣는다 —
+          서비스 동선이 아니라 데이터를 넣는 도구라 일반 사용자에게 보이면 눌러도 튕긴다.
+          여기 없으면 관리자가 주소를 외워야 한다(화면 어디에도 링크가 없었다).
+        -->
+        <div v-if="auth.isAuthenticated" class="flex items-center gap-1 text-sm text-slate-500">
+          <button
+            v-if="isAdmin"
+            type="button"
+            class="min-h-11 px-3 font-medium"
+            @click="router.push({ name: 'admin-property-new' })"
+          >
+            매물 등록
+          </button>
+          <span v-if="isAdmin" class="text-slate-300" aria-hidden="true">·</span>
+          <button type="button" class="min-h-11 px-3 font-medium" @click="logout">로그아웃</button>
+        </div>
       </div>
     </header>
 
