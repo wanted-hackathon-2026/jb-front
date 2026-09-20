@@ -10,6 +10,7 @@ import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { formatDay } from '@/lib/format'
 import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
 import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
 
@@ -25,6 +26,8 @@ const TABS: { value: Tab; label: string }[] = [
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+/** 하트가 보는 스토어. 화면 변수 `favorites`(목록)와 이름이 겹쳐 따로 부른다. */
+const favoriteIds = useFavoritesStore()
 
 /**
  * 이 화면도 KeepAlive 로 살려 둔다(App.vue) — 매물 상세를 다녀와도 목록과 스크롤이
@@ -111,8 +114,11 @@ async function load(which: Tab, quiet = false) {
   }
   try {
     if (which === 'history') history.value = await getSearchHistory()
-    else if (which === 'favorites') favorites.value = await getFavorites()
-    else recent.value = await getRecentlyViewed()
+    else if (which === 'favorites') {
+      favorites.value = await getFavorites()
+      // 이 목록은 정의상 전부 찜한 것이다 — 하트가 채워지도록 스토어에 심는다.
+      favoriteIds.sync(favorites.value)
+    } else recent.value = await getRecentlyViewed()
   } catch {
     // 서버 문구를 그대로 띄우지 않는다 — 개발·운영 확인용이라 사용자에게 쓸 말이 아니다.
     // 조용한 갱신이 실패하면 보던 목록을 그대로 둔다 — 멀쩡한 화면을 오류로 덮지 않는다.
@@ -493,7 +499,7 @@ watch(
         <ul v-else class="px-5 pt-4">
           <li v-for="l in favorites" :key="l.id">
             <!-- 이 탭의 매물은 정의상 전부 찜한 것이라 하트가 채워져 있다. -->
-            <ListingCard :listing="l" saved />
+            <ListingCard :listing="l" />
           </li>
         </ul>
       </template>

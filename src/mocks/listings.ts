@@ -276,6 +276,8 @@ function build(i: number): Listing {
   const lines = LINE_SETS[i % LINE_SETS.length]
   return {
     id: `l${i + 1}`,
+    // 목에는 '내가 찜했나'가 없다 — 서버만 아는 값이다.
+    favorite: false,
     dealType: rent === 0 ? 'jeonse' : 'monthly',
     deposit,
     rent,

@@ -59,6 +59,7 @@ function toListing(p: PropertyMapItem): Listing {
   return {
     ...ABSENT,
     id: p.id,
+    favorite: p.favorite,
     dealType: dealTypeOf(p.leaseType),
     deposit: p.deposit,
     rent: p.monthlyRent,
@@ -84,6 +85,7 @@ function detailToListing(p: PropertyDetailResponse): Listing {
   return {
     ...ABSENT,
     id: p.id,
+    favorite: p.favorite,
     dealType: dealTypeOf(p.leaseType),
     deposit: p.deposit,
     rent: p.monthlyRent,

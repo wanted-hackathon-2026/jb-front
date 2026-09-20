@@ -28,6 +28,8 @@ const PAGE_SIZE = 100
 function toListing(p: FavoritePropertySummary): Listing {
   return {
     id: p.id,
+    // 이 목록은 정의상 전부 찜한 것이다.
+    favorite: true,
     // 서버 LeaseType 에는 매매가 없다 — 전세·월세뿐이다(types/domain.ts 의 DealType 주석).
     dealType: p.leaseType === 'JEONSE' ? 'jeonse' : 'monthly',
     // 둘 다 만원 단위라 환산이 필요 없다.

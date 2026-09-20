@@ -25,6 +25,7 @@ import type { PropertyMapQuery } from '@/types/backend'
 import { useListingList } from '@/lib/listing-list'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 
 const router = useRouter()
@@ -60,6 +61,7 @@ const TABS = [
  * **코드가 로그인 창을 바로 열 수 없기 때문**이다(lib/google.ts).
  */
 const loginPrompt = useLoginPromptStore()
+const favorites = useFavoritesStore()
 
 const goMyPage = () => router.push({ name: 'my' })
 const goFavorites = () => router.push({ name: 'my', query: { tab: 'favorites' } })
@@ -99,7 +101,12 @@ const {
   total: sheetTotal,
   loading,
   reload: reloadListings,
-} = useListingList(() => getListingsInBounds({ ...bounds.value, limit: 200 }))
+} = useListingList(async () => {
+  const got = await getListingsInBounds({ ...bounds.value, limit: 200 })
+  // 서버가 알려준 찜 여부를 하트에 반영한다 — 안 하면 늘 빈 하트로 보인다.
+  favorites.sync(got)
+  return got
+})
 
 /** 목록이 한 벌이라 한 번만 부르면 지도와 시트가 같이 갱신된다. */
 const reloadAll = () => void reloadListings()

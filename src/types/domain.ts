@@ -99,6 +99,14 @@ export interface Listing {
   x: number
   /** 위도(lat) */
   y: number
+  /**
+   * 내가 찜했나. **서버가 알려준 값**이다(목록·상세 응답의 `favorite`).
+   * 비로그인이면 서버가 전부 false 로 준다 — 선택적 인증이다.
+   *
+   * 화면은 이 값을 직접 보지 않고 `stores/favorites.ts` 를 본다. 거기가 낙관적 토글까지
+   * 반영한 **지금 값**이고, 이 필드는 **받아온 순간의 값**이다.
+   */
+  favorite: boolean
   /** 매칭 점수 1~100. 거점 미설정 상태에서는 null */
   score: number | null
   commutes: CommuteInfo[]

@@ -45,11 +45,10 @@ const saved = computed(() => favorites.has(props.id))
  * 로그인이 끝나면 사용자가 원래 누른 대로 저장까지 이어간다 — 팝업을 닫고 다시
  * 누르게 하면 같은 동작을 두 번 시키는 것이다.
  *
- * ⚠️ 아직 서버에 보내지 않는다. 이 기기에만 남는다(stores/favorites.ts).
  */
 function toggleSave() {
   if (!auth.isAuthenticated) {
-    loginPrompt.require({ redirect: route.fullPath, then: () => favorites.add(props.id) })
+    loginPrompt.require({ redirect: route.fullPath, then: () => favorites.toggle(props.id) })
     return
   }
   favorites.toggle(props.id)
@@ -147,9 +146,13 @@ async function load() {
   failed.value = false
   try {
     // 맥락이 있으면 점수·순위·이동 동선이 함께 오는 쪽으로 묻는다.
-    listing.value = props.recommendationId
+    const got = props.recommendationId
       ? await getRecommendedListing(props.recommendationId, props.id)
       : await getListing(props.id)
+    listing.value = got
+    // 서버가 알려준 찜 여부를 반영한다. 목록을 거치지 않고 바로 들어온 경우
+    // (링크 공유·새로고침) 스토어가 이 매물을 모르기 때문이다.
+    favorites.sync([got])
   } catch {
     failed.value = true
   }
