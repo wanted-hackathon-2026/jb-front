@@ -7,7 +7,7 @@ import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
-import { lifestyleLabel } from '@/lib/lifestyle'
+import { lifestyleHint, lifestyleLabel } from '@/lib/lifestyle'
 import { formatCommute, formatMoney, formatPrice } from '@/lib/format'
 import { shareLink } from '@/lib/share'
 import { useAuthStore } from '@/stores/auth'
@@ -449,9 +449,17 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
           <ul class="mt-4 flex flex-col gap-6">
             <li v-for="item in listing.lifestyleInsights" :key="item.key" class="flex gap-4">
               <BaseScoreDonut :score="item.score" :label="lifestyleLabel(item.key)" :size="76" />
+              <!--
+                문구는 서버에 출처가 없어 대개 비어 온다(types/domain.ts). 그때는 그 축이
+                무엇을 재는지라도 적는다 — 점수만 덩그러니 두면 70점이 뭘 뜻하는지 모른다.
+              -->
               <div class="min-w-0 flex-1 pt-1.5">
-                <p class="font-bold text-slate-900">{{ item.title }}</p>
-                <p class="mt-1 text-sm leading-relaxed text-slate-500">{{ item.body }}</p>
+                <p class="font-bold text-slate-900">
+                  {{ item.title ?? lifestyleLabel(item.key) }}
+                </p>
+                <p class="mt-1 text-sm leading-relaxed text-slate-500">
+                  {{ item.body ?? lifestyleHint(item.key) }}
+                </p>
               </div>
             </li>
           </ul>

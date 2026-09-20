@@ -23,6 +23,7 @@ import { coordToAddress } from '@/lib/api/places'
 import { getListingsInBounds } from '@/lib/api/listings'
 import type { PropertyMapQuery } from '@/types/backend'
 import { useListingList } from '@/lib/listing-list'
+import { toRecommendationRequest } from '@/lib/recommendation-request'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
@@ -193,13 +194,30 @@ const submitting = ref(false)
 const started = ref(false)
 
 async function requestRecommendation() {
+  /*
+   * 서버는 좌표가 아니라 **거점 id** 를 받는다 — 요청 시점의 조건을 스냅샷으로 복사해
+   * 두기 때문이다(property-recommendation.md). 그래서 서버에 등록되지 않은 거점으로는
+   * 추천을 받을 수 없다. 비로그인으로 찍었거나 등록이 실패한 거점이 그렇다.
+   */
+  const workplaceId = anchors.anchors[0]?.id
+  if (!workplaceId || !anchors.isServerAnchor(workplaceId)) {
+    notice.error('거점을 먼저 등록해 주세요')
+    return
+  }
+
   submitting.value = true
   try {
-    await reco.request({
-      anchors: anchors.anchors.map(({ name, address, x, y }) => ({ name, address, x, y })),
-      weights: { ...filters.lifestyle },
-      maxMinutes: filters.maxMinutes,
-    })
+    await reco.request(
+      toRecommendationRequest({
+        workplaceId,
+        transport: filters.transport,
+        maxMinutes: filters.maxMinutes,
+        lifestyle: filters.lifestyle,
+        deposit: filters.deposit,
+        rent: filters.rent,
+        roomTypes: filters.roomTypes,
+      }),
+    )
     started.value = true
     sheet.state = 'peek'
   } catch {

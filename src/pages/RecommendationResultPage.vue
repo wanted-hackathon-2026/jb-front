@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onActivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
 import { useListingList } from '@/lib/listing-list'
 import { useRecommendationStore } from '@/stores/recommendation'
-import { SUCCESS_STATUS, type RecommendationStatus } from '@/lib/api/recommendation'
+import { NotFoundError, SUCCESS_STATUS, type RecommendationStatus } from '@/lib/api/recommendation'
 
 /**
  * URL 의 id 로 서버에서 조회한다. 로그인이 없는 서비스라 결과 URL 을 북마크하거나
@@ -25,20 +26,35 @@ const reco = useRecommendationStore()
 const status = ref<RecommendationStatus | 'LOADING'>('LOADING')
 
 /** 목록은 한 번에 다 받는다 — 정렬은 화면이 하므로 다시 부를 일이 없다. */
-const { sort, items, total, loading, reload } = useListingList(() =>
+const { sort, items, total, loading, failed, reload } = useListingList(() =>
   reco.fetchListings(props.recommendationId),
 )
 
+/** 상태 조회가 실패했나. 추천이 실패한 것(FAILED)과 다르다 — 이건 다시 물어보면 된다. */
+const unreachable = ref(false)
+
 async function load() {
   status.value = 'LOADING'
+  unreachable.value = false
   try {
     status.value = await reco.fetchStatus(props.recommendationId)
-    // 완료가 아니면 목록을 부를 이유가 없다 — 빈 페이지만 받아 온다.
+    // 완료가 아니면 목록을 부를 이유가 없다 — 처리 중에 부르면 409 다.
     if (status.value === SUCCESS_STATUS) await reload()
-  } catch {
-    // 만료·미존재 모두 여기로 온다. 사용자는 며칠 뒤 북마크로 들어올 수 있다(§4.3).
-    status.value = 'FAILED'
-    reco.drop(props.recommendationId)
+  } catch (e) {
+    /*
+     * **404 일 때만 버린다.** 만료됐거나 남의 추천이면 다시 물어봐도 같은 답이라
+     * 목록에 남겨둘 이유가 없다(RECOMMENDATION_NOT_FOUND).
+     *
+     * 나머지(네트워크 끊김·서버 오류)는 버리면 안 된다. 예전에는 전부 삼켜서
+     * drop() 까지 갔는데, 목이라 실패할 일이 없어 드러나지 않았을 뿐이다. 실 API 에서는
+     * 지하철에서 한 번 끊긴 것만으로 사용자의 추천이 영영 사라진다.
+     */
+    if (e instanceof NotFoundError) {
+      status.value = 'FAILED'
+      reco.drop(props.recommendationId)
+      return
+    }
+    unreachable.value = true
   }
 }
 
@@ -79,9 +95,12 @@ onActivated(() => {
       <h1 class="font-bold text-slate-900">추천 결과</h1>
     </header>
 
+    <!-- 상태를 못 물어봤다. 추천이 실패한 게 아니라 못 닿은 것이라 다시 시도가 맞다. -->
+    <BaseErrorState v-if="unreachable" title="추천 상태를 불러오지 못했어요" @retry="load" />
+
     <!-- 로딩 골격은 목록이 직접 안다 — 결과가 들어올 자리와 같은 컴포넌트로 깐다. -->
     <ListingList
-      v-if="status === 'LOADING'"
+      v-else-if="status === 'LOADING'"
       class="min-h-0 flex-1 pt-4"
       :listings="[]"
       loading
@@ -115,9 +134,11 @@ onActivated(() => {
       class="min-h-0 flex-1 pt-4"
       :listings="items"
       :loading="loading"
+      :failed="failed"
       :total="total"
       :recommendation-id="recommendationId"
       scored-when-loaded
+      @retry="reload"
     />
   </main>
 </template>

@@ -5,18 +5,19 @@
  * 함께 준다. 둘 다 `permitAll` 이라 **비로그인도 본다** — 토큰이 있으면 `favorite` 가
  * 그 사용자 기준으로 채워진다(선택적 인증).
  *
- * 추천 맥락이 붙은 단건(`getRecommendedListing`)만 아직 목이다. 추천 API 자체가 없다.
+ * 추천 맥락이 붙은 단건(`getRecommendedListing`)은 같은 매물에 그 추천에서의 평가를
+ * 얹어 준다 — 점수·순위·요약은 조건이 있어야 나오는 값이라 이쪽에만 있다.
  */
-import { getMockRecommendedListing } from '@/mocks/listings'
 import type { Listing } from '@/types/domain'
 import type {
   PropertyDetailResponse,
   PropertyMapItem,
   PropertyMapQuery,
   PropertyMapResponse,
+  RecommendedPropertyDetailResponse,
 } from '@/types/backend'
 import { sqmToPyeong } from '@/lib/format'
-import { hasRecommendationApi, NotFoundError, request } from './http'
+import { request } from './http'
 
 /**
  * 서버에 없는 값들.
@@ -142,17 +143,23 @@ export async function getListing(id: string): Promise<Listing> {
 /**
  * 추천 맥락이 붙은 매물 단건 조회.
  *
- * 같은 매물이라도 어느 추천 기준이냐에 따라 점수·이동시간이 달라져서 엔드포인트가
- * 따로 있다. **아직 목이다** — 추천 API 가 없다.
+ * 같은 매물이라도 어느 추천 기준이냐에 따라 점수·통근시간이 달라져서 엔드포인트가
+ * 따로 있다. 응답은 **매물 상세 그대로 + 평가**라, 상세 변환을 재사용하고 평가만 얹는다.
  */
 export async function getRecommendedListing(
   recommendationId: string,
   id: string,
 ): Promise<Listing> {
-  if (!hasRecommendationApi) {
-    const found = await getMockRecommendedListing(id)
-    if (!found) throw new NotFoundError(404)
-    return found
+  const res = await request<RecommendedPropertyDetailResponse>(
+    `/api/recommendations/${recommendationId}/properties/${id}`,
+  )
+  const e = res.evaluation
+  return {
+    ...detailToListing(res.property),
+    score: e.totalScore,
+    rank: e.rank,
+    aiSummary: e.summary,
+    // 환승·도보는 계산에 없다 — 직선거리 근사라서다(lib/api/recommendation.ts 의 같은 주석).
+    commutes: [{ anchorId: '', minutes: e.commuteMinutes, transfers: 0, walkMinutes: 0 }],
   }
-  return request<Listing>(`/api/recommendations/${recommendationId}/properties/${id}`)
 }

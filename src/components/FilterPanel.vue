@@ -45,6 +45,38 @@ const DEALS: { value: DealType; label: string }[] = [
       </div>
     </section>
 
+    <!--
+      매물 유형. 거래유형과 달리 **아무것도 안 고른 상태가 기본**이고 그게 '전체'다 —
+      서버는 빈 목록을 400 으로 막지만, 그 변환은 화면이 아니라
+      lib/recommendation-request.ts 가 맡는다.
+      칩은 여섯 개라 한 줄에 안 들어간다. 줄바꿈으로 흘린다.
+    -->
+    <section>
+      <h3 class="mb-3 font-bold text-slate-900">
+        매물유형
+        <span class="text-sm font-normal text-slate-500">
+          {{ filters.roomTypes.length ? '중복선택 가능' : '전체' }}
+        </span>
+      </h3>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="t in filters.allRoomTypes"
+          :key="t"
+          type="button"
+          class="h-11 min-w-20 flex-1 rounded-full border px-3 text-sm font-semibold transition-colors"
+          :class="
+            filters.roomTypes.includes(t)
+              ? 'border-brand-500 bg-brand-500 text-white'
+              : 'border-slate-200 bg-white text-slate-600'
+          "
+          :aria-pressed="filters.roomTypes.includes(t)"
+          @click="filters.toggleRoomType(t)"
+        >
+          {{ t }}
+        </button>
+      </div>
+    </section>
+
     <section>
       <div class="mb-2 flex items-baseline justify-between">
         <h3 class="font-bold text-slate-900">보증금</h3>

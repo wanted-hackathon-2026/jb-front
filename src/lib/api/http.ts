@@ -16,18 +16,6 @@ import type { ProblemDetail, TokenResponse } from '@/types/backend'
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 /**
- * 추천 API 가 백엔드에 존재하는가.
- *
- * **지금은 false 다.** `/api/recommendations/*` 는 아직 없다. 매물 목록·상세는
- * 2026-09-20 에 생겼지만(jb-backend 663da20) 추천은 그대로라, 그쪽 호출부만 목으로
- * 떨어진다. 엔드포인트가 생기면 이 한 줄을 true 로 바꾼다.
- *
- * 타입을 boolean 으로 못박아 둔 건 리터럴 narrowing 때문이다 — 안 그러면
- * 실제 호출 코드가 '도달 불가'로 접혀서 타입 검사를 받지 못한다.
- */
-export const hasRecommendationApi: boolean = false
-
-/**
  * problem+json 을 실어 나르는 오류. 분기는 **`code` 로만** 한다 — `detail` 은
  * 명세가 "사용자 화면에 그대로 노출하는 문구가 아니라 개발·운영 확인용 설명"이라고
  * 못박은 값이라 언제든 바뀐다(docs/specs/google-oauth-login.md §6).

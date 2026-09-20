@@ -42,3 +42,10 @@ export const LIFESTYLE_AXES = [
 
 export const lifestyleLabel = (key: LifestyleKey) =>
   LIFESTYLE_AXES.find((a) => a.key === key)!.label
+
+/**
+ * 그 축이 무엇을 재는지. 추천 결과의 축별 점수 옆에 쓴다 —
+ * 백엔드가 축마다 문장을 주지 않아서(lib/api/recommendation.ts 의 `toInsights`),
+ * 점수만 덩그러니 두지 않으려고 이 설명을 대신 붙인다.
+ */
+export const lifestyleHint = (key: LifestyleKey) => LIFESTYLE_AXES.find((a) => a.key === key)!.hint

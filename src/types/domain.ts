@@ -78,10 +78,14 @@ export interface LifestyleInsight {
   key: keyof LifestyleWeights
   /** 0~100. 매칭 점수와 같은 색 구간을 쓴다(lib/score.ts) */
   score: number
-  /** 굵게 나가는 한 줄 */
-  title: string
-  /** 그 아래 설명 */
-  body: string
+  /**
+   * 굵게 나가는 한 줄. **서버에 출처가 없어 대개 비어 있다** — 백엔드가 주는 건
+   * 축별 점수와 매물 전체 총평 하나뿐이고, 축마다 붙는 문장은 없다.
+   * 비면 화면이 그 축이 무엇을 재는지(`lib/lifestyle.ts` 의 hint)를 대신 적는다.
+   */
+  title?: string
+  /** 그 아래 설명. title 과 같은 처지다. */
+  body?: string
 }
 
 export interface Listing {

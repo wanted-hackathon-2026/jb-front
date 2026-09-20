@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
   ERROR_CODE,
   PROPERTY_DIRECTIONS,
+  PROPERTY_TYPES,
   PROPERTY_IMAGE_MAX_BYTES,
   PROPERTY_IMAGE_MAX_COUNT,
   PROPERTY_IMAGE_TYPES,
@@ -370,14 +371,20 @@ function messageOf(e: unknown): string {
         />
 
         <label class="mt-3 block text-sm text-slate-500" for="property-type">매물 종류</label>
-        <input
+        <!--
+          **자유 입력이 아니다.** 추천이 이 값을 정확히 일치로 거르기 때문에
+          (PropertyRepository 의 `p.propertyType in :propertyTypes`), '분리형 원룸'처럼
+          적어 두면 '원룸'을 고른 사용자에게 이 매물이 영영 안 잡힌다.
+          필터 화면과 같은 PROPERTY_TYPES 를 쓴다.
+        -->
+        <select
           id="property-type"
           v-model="propertyType"
-          type="text"
-          maxlength="20"
-          placeholder="예: 분리형 원룸"
-          class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
-        />
+          class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-brand-500"
+        >
+          <option value="" disabled>선택해 주세요</option>
+          <option v-for="t in PROPERTY_TYPES" :key="t" :value="t">{{ t }}</option>
+        </select>
 
         <p class="mt-4 text-sm text-slate-500">거래 유형</p>
         <div class="mt-1 flex gap-2">
