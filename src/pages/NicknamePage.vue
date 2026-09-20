@@ -172,6 +172,17 @@ const logout = () => auth.logout()
       </div>
 
       <div class="safe-bottom shrink-0 px-5 pt-4 pb-4">
+        <!--
+          로그아웃은 이 화면 맨 아래, 적용 버튼 바로 위다(시안). 버튼 모양을 주지 않고
+          밑줄 친 작은 글자로 두는 것도 시안 그대로 — 여기 온 사람이 하려던 일은
+          닉네임 변경이고, 로그아웃은 그 옆에 조용히 있어야 하는 출구다.
+
+          마이페이지 머리에 있던 것을 여기로 내렸다. 한 번 더 들어와야 하지만, 목록을
+          보다가 잘못 누를 자리에 둘 버튼이 아니다.
+
+          시안의 '탈퇴하기'는 아직 없다(위 주석) — 눌러도 아무 일이 없을 자리를
+          만들어 두지 않는다. 탈퇴 API 가 생기면 가운데 구분선과 함께 옆에 붙는다.
+        -->
         <div class="text-center">
           <button
             type="button"
@@ -184,7 +195,7 @@ const logout = () => auth.logout()
 
         <button
           type="submit"
-          class="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-brand-500 text-lg font-semibold text-white transition-opacity active:opacity-90 disabled:opacity-40"
+          class="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-brand-500 text-lg font-semibold text-white transition-opacity active:opacity-90 disabled:opacity-40"
           :disabled="!valid || saving"
           :aria-busy="saving"
         >
