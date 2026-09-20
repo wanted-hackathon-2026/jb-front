@@ -105,6 +105,30 @@ export interface WorkplaceCreateRequest {
 /** 출처: LeaseType.java (jb-backend a2ee567). domain.ts 의 DealType 과 다르다 — 매매가 없다. */
 export type LeaseType = 'JEONSE' | 'MONTHLY'
 
+/**
+ * 매물 `direction` 에 넣을 수 있는 값.
+ *
+ * 서버는 이 여덟 개만 알아듣는다 — **"지원하지 않는 방향은 임의로 해석하지 않고 저장하지
+ * 않는다"**(docs/specs/property-sunlight-estimate.md, jb-backend 1dc33ee).
+ *
+ * ⚠️ 어긋나도 **등록은 201 로 성공한다.** 채광 추정만 조용히 빠진다. 그래서 자유 입력으로
+ * 두면 "남" · "남쪽" 같은 값이 들어가 채광이 없는 매물이 소리 없이 쌓인다.
+ * 등록 화면이 이 목록으로 고르게 하는 이유다.
+ *
+ * `direction` 자체는 여전히 선택 필드다(비워도 등록된다). 다만 채광은
+ * `direction`·`floor`·`totalFloors` 가 **모두** 있어야 계산된다.
+ */
+export const PROPERTY_DIRECTIONS = [
+  '남향',
+  '남동향',
+  '남서향',
+  '동향',
+  '서향',
+  '북동향',
+  '북서향',
+  '북향',
+] as const
+
 /* ── 매물 등록(관리자) ─────────────────────────────────────────────────── */
 
 /**

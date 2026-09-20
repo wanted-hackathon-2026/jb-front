@@ -6,7 +6,12 @@ import { ApiError } from '@/lib/api/http'
 import { createProperty } from '@/lib/api/properties'
 import { resolveAddress } from '@/lib/postcode'
 import { useAuthStore } from '@/stores/auth'
-import { ERROR_CODE, type LeaseType, type PropertyCreateRequest } from '@/types/backend'
+import {
+  ERROR_CODE,
+  PROPERTY_DIRECTIONS,
+  type LeaseType,
+  type PropertyCreateRequest,
+} from '@/types/backend'
 
 /**
  * 매물 등록(관리자 전용).
@@ -359,15 +364,22 @@ function messageOf(e: unknown): string {
           </div>
         </div>
 
+        <!--
+          자유 입력이 아니라 목록이다. 서버가 아는 여덟 개를 벗어나면 채광 추정이
+          조용히 빠지는데(등록은 201 로 성공한다) 화면에는 아무 표시도 나지 않는다.
+        -->
         <label class="mt-3 block text-sm text-slate-500" for="direction">방향</label>
-        <input
+        <select
           id="direction"
           v-model="direction"
-          type="text"
-          maxlength="10"
-          placeholder="예: 남향"
-          class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
-        />
+          class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-brand-500"
+        >
+          <option value="">선택 안 함</option>
+          <option v-for="d in PROPERTY_DIRECTIONS" :key="d" :value="d">{{ d }}</option>
+        </select>
+        <p class="mt-1 text-xs text-slate-400">
+          방향·층·총 층수가 <strong class="font-semibold">모두</strong> 있어야 채광이 계산돼요.
+        </p>
 
         <label class="mt-3 block text-sm text-slate-500" for="description">설명</label>
         <textarea
