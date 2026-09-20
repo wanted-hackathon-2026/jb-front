@@ -6,8 +6,10 @@ import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
+import BaseStaticMap from '@/components/BaseStaticMap.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
 import { getListing, getRecommendedListing } from '@/lib/api/listings'
+import { hasKakaoKey } from '@/lib/kakao'
 import { lifestyleHint, lifestyleLabel } from '@/lib/lifestyle'
 import { formatCommute, formatMoney, formatPrice } from '@/lib/format'
 import { shareLink } from '@/lib/share'
@@ -34,6 +36,12 @@ const notice = useNoticeStore()
 
 const listing = ref<Listing | null>(null)
 const failed = ref(false)
+
+/**
+ * 지도를 끝내 못 띄웠나. 키가 없거나(`hasKakaoKey`) SDK 가 안 붙으면 '위치' 절을 통째로
+ * 뺀다 — 이 화면에서 지도는 있으면 좋은 것이지, 없다고 안내까지 띄울 것은 아니다.
+ */
+const mapUnavailable = ref(false)
 
 /**
  * 저장 여부는 스토어가 들고 있다 — 이 화면이 직접 들면 **이미 저장한 매물을 다시 열었을 때
@@ -422,6 +430,33 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
           <p class="mt-4 text-xs text-slate-400">
             등록번호 {{ listing.listingNo }} · {{ listing.postedDaysAgo }}일 전 등록
           </p>
+        </section>
+
+        <!--
+          위치. **이동 동선 바로 위**다 — 아래 타임라인이 "이 집에서 어디까지"를 말하는데,
+          그 '이 집'이 어디인지를 먼저 보여주는 순서다.
+
+          주소를 히어로에 이어 또 적는 건 중복이 아니다. 위쪽 주소는 가격 옆 한 줄이라
+          `truncate` 로 잘려서, 긴 주소는 지금까지 이 화면 어디에도 온전히 없었다.
+
+          뒤에 아무 절도 없으면(추천 맥락 없이 들어온 매물) 이 절이 마지막이라 아래 여백을
+          직접 챙긴다 — 다음 절의 `pt-7` 이 대신 벌려주던 자리가 없어서, 그냥 두면 지도가
+          하단 고정 바에 붙는다.
+        -->
+        <section
+          v-if="hasKakaoKey && !mapUnavailable"
+          class="px-5 pt-7"
+          :class="{ 'pb-8': !listing.route.length && !listing.lifestyleInsights.length }"
+        >
+          <h2 class="font-bold text-slate-900">위치</h2>
+          <p class="mt-1 text-sm leading-relaxed text-slate-600">{{ listing.address }}</p>
+          <BaseStaticMap
+            class="mt-3"
+            :x="listing.x"
+            :y="listing.y"
+            :label="listing.name || listing.address"
+            @unavailable="mapUnavailable = true"
+          />
         </section>
 
         <section v-if="listing.route.length" class="px-5 pt-7">

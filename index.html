@@ -9,7 +9,13 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
     <meta name="theme-color" content="#ffffff" />
-    <meta name="format-detection" content="telephone=no" />
+    <!--
+      전화번호·주소 자동 인식을 끈다. 주소를 켜 두면 브라우저가 본문의 주소를 제 맘대로
+      링크로 만들어 **기기 기본 지도 앱(대개 구글맵)** 으로 보낸다 — 우리는 상세의 '위치'
+      블록에서 카카오맵으로 보내기로 했으므로, 같은 주소가 화면에 따라 다른 지도로
+      갈라지면 안 된다.
+    -->
+    <meta name="format-detection" content="telephone=no, address=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta
