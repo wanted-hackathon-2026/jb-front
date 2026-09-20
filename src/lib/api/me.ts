@@ -3,6 +3,7 @@ import type { FavoritePropertySummary, TransportType } from '@/types/backend'
 import { listFavorites } from './favorites'
 import { listRecommendations } from './recommendation'
 import { sqmToPyeong } from '@/lib/format'
+import { toInstant } from '@/lib/server-time'
 
 /**
  * 서버 enum → 프론트 이동수단. `lib/recommendation-request.ts` 의 반대 방향이라
@@ -117,7 +118,8 @@ export async function getSearchHistory(): Promise<SearchHistoryEntry[]> {
   const page = await listRecommendations()
   return page.content.map((item) => ({
     id: item.recommendationId,
-    createdAt: item.requestedAt,
+    // 오프셋 없이 오는 값이라 세워서 넣는다 — 안 세우면 KST 에서 9시간 어긋난다.
+    createdAt: toInstant(item.requestedAt),
     // 거점은 한 번에 하나다 — 조건 스냅샷이 이름 하나만 들고 있다.
     anchorNames: [item.workplaceName],
     transport: TRANSPORT_MODE[item.transportType],

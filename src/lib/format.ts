@@ -1,3 +1,5 @@
+import type { Instant } from '@/lib/server-time'
+
 /** 만원 단위 금액을 "1억 2,000" 처럼 읽기 좋게 만든다. */
 export function formatMoney(manwon: number): string {
   if (manwon === 0) return '0'
@@ -30,7 +32,7 @@ export function formatDeposit(manwon: number): string {
  *
  * 카드와 목록이 같은 함수를 봐야 한다 — 목록은 이 문자열이 같은지로 같은 날을 가른다.
  */
-export const formatDay = (iso: string) =>
+export const formatDay = (iso: Instant) =>
   new Intl.DateTimeFormat('ko-KR').format(new Date(iso)).replace(/\.$/, '')
 
 /** 1평 = 3.3058㎡ (한국 표준). 백엔드는 ㎡ 로 주고 화면은 평으로 쓴다. */

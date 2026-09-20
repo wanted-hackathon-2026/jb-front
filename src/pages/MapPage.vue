@@ -27,6 +27,7 @@ import { getListingsInBounds, MAP_LIMIT } from '@/lib/api/listings'
 import type { PropertyMapQuery } from '@/types/backend'
 import type { SearchHistoryEntry } from '@/types/domain'
 import { useListingList } from '@/lib/listing-list'
+import { toInstant } from '@/lib/server-time'
 import { toRecommendationRequest } from '@/lib/recommendation-request'
 import { ApiError } from '@/lib/api/http'
 import { ERROR_CODE } from '@/types/backend'
@@ -192,7 +193,8 @@ const criteria = computed<SearchHistoryEntry | null>(() => {
   const job = reco.jobs.find((j) => j.id === id)
   return {
     id,
-    createdAt: new Date(job?.createdAt ?? Date.now()).toISOString(),
+    // 이건 브라우저가 만든 값이라 이미 오프셋이 있다 — toInstant 는 통과만 시킨다.
+    createdAt: toInstant(new Date(job?.createdAt ?? Date.now()).toISOString()),
     recommendationId: id,
     anchorNames: got.anchorNames,
     deposit: got.deposit,

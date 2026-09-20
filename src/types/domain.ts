@@ -18,6 +18,7 @@ export type DealType = 'monthly' | 'jeonse' | 'sale'
 export type TransportMode = 'transit' | 'car' | 'bicycle' | 'walk'
 
 import type { RecommendationStatusCode } from '@/types/backend'
+import type { Instant } from '@/lib/server-time'
 
 /** 거점 — 직장·학교 등 사용자가 자주 가는 곳 */
 export interface Anchor {
@@ -216,8 +217,12 @@ export type ListingSummary = Pick<
  */
 export interface SearchHistoryEntry {
   id: string
-  /** 추천을 돌린 시각(ISO). 카드 제목의 날짜가 여기서 나온다. */
-  createdAt: string
+  /**
+   * 추천을 돌린 시각. 카드 제목의 날짜가 여기서 나온다.
+   * `Instant` 라 서버 값을 `toInstant()` 없이 넣을 수 없다 — 시간대가 어긋난 채로
+   * 날짜가 찍히는 걸 타입이 막는다(`lib/server-time.ts`).
+   */
+  createdAt: Instant
   /** 그때 등록돼 있던 거점 이름 — 좌표는 이 화면에 필요 없다. */
   anchorNames: string[]
   transport: TransportMode
