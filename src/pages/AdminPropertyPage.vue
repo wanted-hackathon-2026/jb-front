@@ -319,8 +319,19 @@ function messageOf(e: unknown): string {
     <form class="min-h-0 flex-1 overflow-y-auto px-4 pb-10" @submit.prevent="submit">
       <!-- 주소 -->
       <section class="mt-4 rounded-2xl bg-white p-4">
-        <div class="flex items-center justify-between">
-          <h2 class="font-bold text-slate-900">주소</h2>
+        <!--
+          절마다 필수/선택을 배지로 박는다. '추가 정보' 에만 '선택' 이 붙어 있어서,
+          나머지가 다 필수라는 건 빠뜨려 보고 400 을 받아야 알 수 있었다. 절 안의 칸은
+          전부 같은 성격이라(주소·기본 정보는 모두 필수, 추가 정보는 모두 선택)
+          칸마다 별표를 다는 대신 머리에 한 번만 적는다.
+        -->
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="flex items-center gap-1.5 font-bold text-slate-900">
+            주소
+            <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-500"
+              >필수</span
+            >
+          </h2>
           <button
             type="button"
             class="min-h-11 rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-700"
@@ -358,7 +369,12 @@ function messageOf(e: unknown): string {
 
       <!-- 기본 정보 -->
       <section class="mt-3 rounded-2xl bg-white p-4">
-        <h2 class="font-bold text-slate-900">기본 정보</h2>
+        <h2 class="flex items-center gap-1.5 font-bold text-slate-900">
+          기본 정보
+          <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-500"
+            >필수</span
+          >
+        </h2>
 
         <label class="mt-3 block text-sm text-slate-500" for="name">이름</label>
         <input
@@ -444,8 +460,11 @@ function messageOf(e: unknown): string {
 
       <!-- 선택 항목 -->
       <section class="mt-3 rounded-2xl bg-white p-4">
-        <h2 class="font-bold text-slate-900">
-          추가 정보 <span class="text-sm font-normal text-slate-400">선택</span>
+        <h2 class="flex items-center gap-1.5 font-bold text-slate-900">
+          추가 정보
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-400"
+            >선택</span
+          >
         </h2>
 
         <div class="mt-3 flex gap-3">
