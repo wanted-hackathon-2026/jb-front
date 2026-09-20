@@ -258,18 +258,40 @@ function openAnchorPicker() {
  * 떨어지는데, 서버는 도로명으로만 좌표를 찾으므로 그런 지점은 애초에 등록할 수 없다.
  * 누른 뒤에 실패를 보여주는 대신 **버튼을 잠그고 이유를 먼저 말한다.**
  */
-const picked = ref<{ x: number; y: number; address: string; isRoad: boolean } | null>(null)
+const picked = ref<{
+  x: number
+  y: number
+  address: string
+  isRoad: boolean
+  /** 주소를 못 받아왔나. 도로명이 없는 위치와 안내 문구가 달라야 한다. */
+  failed?: boolean
+} | null>(null)
 const picking = ref(false)
 
 async function onPick(coord: { x: number; y: number }) {
   picking.value = true
   picked.value = { ...coord, address: '', isRoad: false }
-  const found = await coordToAddress(coord.x, coord.y)
-  // 주소를 기다리는 동안 다른 지점을 찍었으면 늦게 온 응답은 버린다.
-  if (picked.value?.x === coord.x && picked.value?.y === coord.y) {
-    picked.value = { ...coord, ...found }
+  /*
+   * 역지오코딩은 실패할 수 있다 — 키가 없거나(loadKakaoMaps 가 거절한다) SDK 가 안 붙거나
+   * 네트워크가 끊길 때다. 예전엔 키 없는 환경을 목이 받아 줘서 이 길이 안 보였는데,
+   * 목을 걷어내면서 드러났다. 안 잡으면 `picking` 이 영영 참으로 남아 카드에 도는 표시만
+   * 남는다.
+   */
+  try {
+    const found = await coordToAddress(coord.x, coord.y)
+    // 주소를 기다리는 동안 다른 지점을 찍었으면 늦게 온 응답은 버린다.
+    if (picked.value?.x === coord.x && picked.value?.y === coord.y) {
+      picked.value = { ...coord, ...found }
+    }
+  } catch {
+    if (picked.value?.x === coord.x && picked.value?.y === coord.y) {
+      // 도로명이 없는 위치와 구분한다 — 그쪽은 '건물 쪽을 찍어 보라'가 맞지만
+      // 이건 다시 시도할 일이다.
+      picked.value = { ...coord, address: '주소를 확인하지 못했어요', isRoad: false, failed: true }
+    }
+  } finally {
+    picking.value = false
   }
-  picking.value = false
 }
 
 /**
@@ -568,7 +590,10 @@ function addPickedAnchor() {
               {{ picking ? '주소를 확인하는 중…' : picked.address }}
             </span>
           </p>
-          <p v-if="!picking && !picked.isRoad" class="mt-1 text-sm text-red-500">
+          <p v-if="!picking && picked.failed" class="mt-1 text-sm text-red-500">
+            잠시 후 다시 찍어 주세요
+          </p>
+          <p v-else-if="!picking && !picked.isRoad" class="mt-1 text-sm text-red-500">
             도로명 주소가 없는 위치예요. 건물 쪽을 찍거나 검색으로 골라 주세요
           </p>
           <div class="mt-3 flex gap-2">

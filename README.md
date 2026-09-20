@@ -64,7 +64,9 @@ VITE_GOOGLE_CLIENT_ID=
 | `VITE_API_BASE_URL` | 같은 오리진 — 개발에선 Vite 프록시가 받는다 |
 | `API_PROXY_TARGET` · `API_PROXY_ORIGIN` | 배포 백엔드로 붙는다 |
 
-**키가 하나도 없어도 앱은 돌아간다** — 지도와 로그인만 자리표시자가 된다.
+**키가 없어도 앱은 뜬다** — 지도는 자리표시자가 되고 로그인은 막힌다. 다만 거점 검색은
+카카오 SDK 를 그대로 부르므로 키 없이는 실패 안내가 뜬다(가짜 데이터로 받아 주던 목을
+걷어냈다).
 그래서 클론 직후 `npm install && npm run dev` 가 바로 된다.
 
 > `API_` 로 시작하는 둘은 `VITE_` 가 없어서 **번들에 안 들어간다** — 개발 서버만 본다.
@@ -79,8 +81,7 @@ src/
 ├── assets/       # main.css — Tailwind 테마 토큰 + 모바일 베이스 스타일
 ├── components/   # 화면 조각. 하위 폴더 없이 평평하게 둔다
 ├── lib/          # 도메인에 기대지 않는 함수·상수 (포맷·정렬·점수 구간·SDK 로더 등)
-│   └── api/      #   서버 호출. 키·베이스가 없으면 mocks 로 떨어진다
-├── mocks/        # ⚠️ 가짜 데이터. 백엔드 연동 시 통째로 삭제한다
+│   └── api/      #   서버 호출. 응답 → 도메인 타입 변환도 여기서 한다
 ├── pages/        # 라우트 단위 화면
 ├── router/       # 라우트 정의
 ├── stores/       # Pinia 스토어
@@ -103,7 +104,7 @@ ListingCard  FilterPanel  MapView  WelcomeOverlay  …      ← 도메인을 안
 - 알파벳 정렬이 알아서 한 덩어리로 모아준다. 폴더 없이도 목록에서 뭉쳐 보인다
 - 성격이 바뀌어도 **파일을 옮기지 않는다** — import 경로가 깨지지 않는다
 
-판별 기준은 하나다. **`@/stores` · `@/types` · `@/lib/api` · `@/mocks` 를 import 하는가.**
+판별 기준은 하나다. **`@/stores` · `@/types` · `@/lib/api` 를 import 하는가.**
 안 하면 `Base` 다. `BaseScoreDonut` 은 `score: number` 만 받고 그게 매칭 점수인지 모른다.
 `ListingCard` 는 `Listing` 을 알므로 아니다.
 

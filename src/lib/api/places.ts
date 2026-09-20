@@ -1,18 +1,16 @@
-import { hasKakaoKey, loadKakaoMaps } from '@/lib/kakao'
-import {
-  coordToAddress as mockCoordToAddress,
-  searchPlaces as searchMockPlaces,
-} from '@/mocks/places'
+import { loadKakaoMaps } from '@/lib/kakao'
 import type { PlaceSuggestion } from '@/types/domain'
 
 /**
- * 장소 검색. 카카오 키가 있으면 실제 Places 검색으로, 없으면 목으로 떨어진다.
- * 호출부(SearchPage)는 어느 쪽인지 몰라도 된다.
+ * 장소 검색.
+ *
+ * 카카오 키가 없으면 `loadKakaoMaps()` 가 거절한다 — 예전엔 목으로 떨어뜨렸지만 목을
+ * 걷어냈다. **호출부는 실패를 다뤄야 한다**(SearchPage 의 failed). 못 받아온 것을
+ * '결과 없음' 으로 보여주면 사용자가 멀쩡히 있는 주소를 없다고 믿는다.
  */
 export async function searchPlaces(keyword: string): Promise<PlaceSuggestion[]> {
   const q = keyword.trim()
   if (!q) return []
-  if (!hasKakaoKey) return searchMockPlaces(q)
 
   await loadKakaoMaps()
   const places = new kakao.maps.services.Places()
@@ -51,10 +49,10 @@ export interface ReverseGeocoded {
 /**
  * 좌표 → 주소(역지오코딩). 지도에서 핀을 찍었을 때 그 자리의 주소를 얻는다.
  * 도로명 주소가 없는 좌표(산·공터 등)가 있어 지번으로 떨어뜨린다.
+ *
+ * 키가 없거나 SDK 가 안 붙으면 **거절한다** — 호출부가 실패를 다뤄야 한다(MapPage).
  */
 export async function coordToAddress(x: number, y: number): Promise<ReverseGeocoded> {
-  if (!hasKakaoKey) return mockCoordToAddress(x, y)
-
   await loadKakaoMaps()
   const geocoder = new kakao.maps.services.Geocoder()
 

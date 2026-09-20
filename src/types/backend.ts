@@ -6,9 +6,9 @@
  * 스키마와도 대조했다. 백엔드에 springdoc 이 이미 붙어 있으므로, 타입이 늘어나
  * 손으로 관리하기 벅차지면 OpenAPI → 타입 생성으로 갈아탄다(CLAUDE.md).
  *
- * ⚠️ **추천은 여기 없다.** `/api/recommendations/*` 는 아직 백엔드에 없어서
- *    `domain.ts` + `mocks/recommendation.ts` 가 굴린다. 매물 목록·상세는 2026-09-20 에
- *    실재하게 됐다(jb-backend 663da20).
+ * 2026-09-20 에 매물 목록·상세(jb-backend 663da20)와 추천(`/api/recommendations/*`)이
+ * 모두 실재하게 됐다 — 이 파일이 그 응답들의 계약이다. 화면이 쓰는 `domain.ts` 는
+ * 여전히 추측형이 섞여 있어서, `lib/api/*` 가 둘 사이를 옮겨 담는다.
  */
 
 /** 서버 시각. Jackson 기본 직렬화라 오프셋 없는 ISO-8601 이다("2026-09-17T00:59:56.548"). */
