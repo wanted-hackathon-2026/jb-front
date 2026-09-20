@@ -17,6 +17,8 @@
 export type DealType = 'monthly' | 'jeonse' | 'sale'
 export type TransportMode = 'transit' | 'car' | 'bicycle' | 'walk'
 
+import type { RecommendationStatusCode } from '@/types/backend'
+
 /** 거점 — 직장·학교 등 사용자가 자주 가는 곳 */
 export interface Anchor {
   id: string
@@ -218,12 +220,24 @@ export interface SearchHistoryEntry {
   createdAt: string
   /** 그때 등록돼 있던 거점 이름 — 좌표는 이 화면에 필요 없다. */
   anchorNames: string[]
-  /** 보증금·월세 범위(만원) */
-  deposit: [number, number]
-  rent: [number, number]
   transport: TransportMode
   maxMinutes: number
-  lifestyle: LifestyleWeights
+  /**
+   * 처리 상태. **서버 기록에만 있다** — 지도 시트가 조건을 되읽어 만드는 카드는
+   * 이미 끝난 추천이라 넘기지 않는다. 없으면 화면이 배지를 달지 않는다.
+   */
+  status?: RecommendationStatusCode
+  /**
+   * 보증금·월세 범위(만원)와 라이프스타일 중요도.
+   *
+   * **선택이다.** 서버의 기록 목록 API 가 이 셋을 내려주지 않기 때문이다
+   * (`RecommendationHistoryResponse`) — 조건은 `recommendation_criteria` 에 남아
+   * 있지만 응답에 실리지 않는다. 지도 시트처럼 조건을 손에 들고 있는 쪽은 채우고,
+   * 서버에서 받은 기록은 비운다. 카드는 없으면 그 줄을 접는다.
+   */
+  deposit?: [number, number]
+  rent?: [number, number]
+  lifestyle?: LifestyleWeights
   /** 이 기록으로 만들어진 추천의 id. 결과로 되돌아갈 때 쓴다. */
   recommendationId: string | null
 }

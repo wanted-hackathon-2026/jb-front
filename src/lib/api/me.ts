@@ -1,13 +1,25 @@
-import type { Listing, SearchHistoryEntry } from '@/types/domain'
-import type { FavoritePropertySummary } from '@/types/backend'
+import type { Listing, SearchHistoryEntry, TransportMode } from '@/types/domain'
+import type { FavoritePropertySummary, TransportType } from '@/types/backend'
 import { listFavorites } from './favorites'
+import { listRecommendations } from './recommendation'
 import { sqmToPyeong } from '@/lib/format'
+
+/**
+ * 서버 enum → 프론트 이동수단. `lib/recommendation-request.ts` 의 반대 방향이라
+ * 네 값을 다 받는다 — 보낼 때 자전거를 쓰므로 돌아올 때도 온다.
+ */
+const TRANSPORT_MODE: Record<TransportType, TransportMode> = {
+  TRANSIT: 'transit',
+  CAR: 'car',
+  BICYCLE: 'bicycle',
+  WALK: 'walk',
+}
 
 /**
  * 마이페이지 세 탭의 데이터.
  *
- * **관심 매물만 실제 백엔드를 본다**(`/api/me/favorites`). '이전 기록'은 추천 API 가
- * 없어서 아직 목이다. '최근 본 매물'은 여기 없다 — 서버가 아니라 이 기기에 쌓는다
+ * **관심 매물과 이전 기록은 실제 백엔드를 본다**(`/api/me/favorites`,
+ * `/api/recommendations`). '최근 본 매물'은 여기 없다 — 서버가 아니라 이 기기에 쌓는다
  * (`stores/recently-viewed.ts`).
  */
 
@@ -90,25 +102,28 @@ export async function getFavorites(): Promise<Listing[]> {
 }
 
 /**
- * 이전 추천 기록 — **항상 빈 목록이다.**
+ * 이전 추천 기록 — **실제 백엔드를 본다**(jb-backend 71b2a79).
  *
- * 백엔드에 *내가 요청했던 추천들*을 주는 엔드포인트가 없다. 지금 있는 넷은 모두
- * id 를 이미 알아야 부를 수 있어서(`GET /api/recommendations/{id}` …), 서버만으로는
- * 목록을 만들 수 없다.
+ * `GET /api/recommendations` 가 내가 요청했던 추천들을 최신순으로 준다. 로그인 여부와
+ * 무관하게 부를 수 있다 — 소유자는 JWT 아니면 `X-Client-Session` 이 가르므로,
+ * 비로그인 사용자도 이 기기에서 돌린 기록을 본다(관심 매물과 다른 점이다).
  *
- * 그래서 목을 지웠다. 가짜 기록을 띄우면 사용자가 자기 기록이라고 믿고, 눌러 들어간
- * 결과가 실제와 다르다. **비어 보이는 게 사실에 가깝다** — 화면은 '아직 추천받은
- * 기록이 없어요'로 뜬다.
- *
- * 채우는 길은 둘이다.
- * 1. `stores/recommendation.ts` 가 이미 쌓아 둔 `jb:reco-jobs:v1` 의 id 로 상태를
- *    조회한다. 값은 진짜지만 **기기를 바꾸면 사라지고**, 카드에 띄울 조건(거점·예산)은
- *    요청할 때 같이 저장해 둬야 한다
- * 2. 백엔드가 목록 API 를 준다. 서버는 이미 조건을 `recommendation_criteria` 에
- *    스냅샷으로 복사해 두므로 데이터는 다 있다
- *
- * 어느 쪽이든 **이 함수 하나만 갈아끼우면 된다** — 화면은 손대지 않는다.
+ * ⚠️ **응답에 조건이 다 오지 않는다.** 서버는 보증금·월세·라이프스타일 중요도까지
+ * `recommendation_criteria` 에 스냅샷으로 들고 있는데 이 목록에는 안 싣는다. 지어내지
+ * 않고 비워서 넘기면 카드가 그 줄을 접는다(`SearchHistoryEntry` 의 선택 필드).
+ * 백엔드가 그 셋을 응답에 더하면 여기서 채우기만 하면 된다.
  */
 export async function getSearchHistory(): Promise<SearchHistoryEntry[]> {
-  return []
+  const page = await listRecommendations()
+  return page.content.map((item) => ({
+    id: item.recommendationId,
+    createdAt: item.requestedAt,
+    // 거점은 한 번에 하나다 — 조건 스냅샷이 이름 하나만 들고 있다.
+    anchorNames: [item.workplaceName],
+    transport: TRANSPORT_MODE[item.transportType],
+    maxMinutes: item.maxCommuteMinutes,
+    status: item.status,
+    // 결과로 되돌아갈 때 쓴다. 끝나지 않았거나 실패한 추천에는 볼 결과가 없다.
+    recommendationId: item.status === 'COMPLETED' ? item.recommendationId : null,
+  }))
 }

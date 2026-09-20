@@ -541,6 +541,41 @@ export interface RecommendationStatusResponse {
 }
 
 /**
+ * 내가 요청했던 추천들. 출처: RecommendationHistoryResponse.java (jb-backend 71b2a79)
+ *
+ * 소유자는 로그인이면 JWT, 아니면 `X-Client-Session` 이 가른다 — 조회 계열과 같은
+ * 규칙이라 비로그인도 자기 기록을 본다(RecommendationService.history).
+ * 정렬은 서버가 `requestedAt DESC, id DESC` 로 고정한다.
+ *
+ * ⚠️ **조건 전부가 오지는 않는다.** 서버는 `recommendation_criteria` 에 보증금·월세·
+ * 라이프스타일 중요도까지 스냅샷으로 들고 있는데, 이 응답에는 거점·이동수단·
+ * 이동시간만 실린다. 화면은 없는 칸을 지어내지 않고 접는다(SearchHistoryCard).
+ */
+export interface RecommendationHistoryResponse {
+  content: RecommendationHistoryItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
+/** 출처: RecommendationHistoryResponse.Item */
+export interface RecommendationHistoryItem {
+  recommendationId: string
+  status: RecommendationStatusCode
+  requestedAt: LocalDateTime
+  completedAt: LocalDateTime | null
+  /** FAILED 일 때만. 개발 확인용 문구라 화면에 그대로 띄우지 않는다. */
+  failureReason: string | null
+  /** 그때의 거점 — 이름과 도로명 주소가 조건 스냅샷에서 온다. */
+  workplaceName: string
+  workplaceRoadAddress: string
+  transportType: TransportType
+  maxCommuteMinutes: number
+}
+
+/**
  * 한 매물에 대한 LLM 평가. 출처: RecommendationEvaluation.java
  *
  * 점수는 **이 추천 기준에서만** 의미가 있다. 같은 매물이라도 조건이 바뀌면 달라져서

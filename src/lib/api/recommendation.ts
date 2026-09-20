@@ -14,6 +14,7 @@ import type {
   RecommendationAcceptedResponse,
   RecommendationEvaluation,
   RecommendationCreateRequest,
+  RecommendationHistoryResponse,
   RecommendationStatusResponse,
   RecommendedPropertyItem,
   RecommendedPropertyResponse,
@@ -65,6 +66,25 @@ export async function createRecommendation(
     headers: sessionHeader(),
   })
   return { recommendationId: res.recommendationId, status: res.status }
+}
+
+/**
+ * 한 번에 받아올 기록 수. 서버 상한이 100 이고(`@Max(100)`) 마이페이지에 더 보기 UI 가
+ * 없어서, 관심 매물과 같이 한 장만 받아 사실상 전부를 보여준다.
+ */
+export const HISTORY_PAGE_SIZE = 100
+
+/**
+ * 내가 요청했던 추천 목록. 비로그인도 자기 기록을 본다 — 소유자를 세션 헤더가 가른다.
+ * 정렬은 서버가 최신순으로 고정한다(RecommendationService.history).
+ */
+export async function listRecommendations(
+  page = 0,
+  size = HISTORY_PAGE_SIZE,
+): Promise<RecommendationHistoryResponse> {
+  return request<RecommendationHistoryResponse>(`/api/recommendations?page=${page}&size=${size}`, {
+    headers: sessionHeader(),
+  })
 }
 
 /**
