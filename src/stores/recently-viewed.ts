@@ -35,15 +35,32 @@ const pick = (l: Listing): ViewedListing => ({
   photos: l.photos.slice(0, 1),
   lines: l.lines,
   commutes: l.commutes,
-  score: l.score,
+  /**
+   * **점수는 담지 않는다.** 매칭 점수는 '그때 그 추천 조건' 기준이라(역할 분담: 산식은
+   * 백엔드) 조건과 떼어놓으면 뜻이 없다. 추천 결과에서 열어본 매물만 점수를 들고 와
+   * 같은 목록에서 어떤 카드엔 도넛이 있고 어떤 카드엔 없는 모습이 됐다.
+   * 주변 매물·관심 매물 목록도 `score: null` 이다(lib/api/listings.ts·me.ts).
+   */
+  score: null,
 })
 
 export const useRecentlyViewedStore = defineStore('recently-viewed', () => {
-  const items = useStorage<ViewedListing[]>('jb:recently-viewed:v1', [])
+  const stored = useStorage<ViewedListing[]>('jb:recently-viewed:v1', [])
+
+  /**
+   * 읽을 때 점수를 한 번 더 턴다. 점수를 담던 시절의 기록이 이미 브라우저에 쌓여 있어서다 —
+   * 저장소 키를 올리면 지금 고치려는 도넛과 함께 사용자의 '최근 본' 목록까지 지워진다.
+   */
+  const items = computed<ViewedListing[]>(() =>
+    stored.value.map((v) => (v.score === null ? v : { ...v, score: null })),
+  )
 
   /** 상세를 열 때마다 부른다. 같은 매물을 다시 보면 **맨 앞으로 올라온다.** */
   function record(listing: Listing) {
-    items.value = [pick(listing), ...items.value.filter((v) => v.id !== listing.id)].slice(0, LIMIT)
+    stored.value = [pick(listing), ...stored.value.filter((v) => v.id !== listing.id)].slice(
+      0,
+      LIMIT,
+    )
   }
 
   /**
@@ -54,8 +71,8 @@ export const useRecentlyViewedStore = defineStore('recently-viewed', () => {
    * 비운다(stores/anchors.ts).
    */
   const clear = () => {
-    items.value = []
+    stored.value = []
   }
 
-  return { items, count: computed(() => items.value.length), record, clear }
+  return { items, count: computed(() => stored.value.length), record, clear }
 })
