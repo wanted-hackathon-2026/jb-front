@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
+import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import BaseScoreDonut from '@/components/BaseScoreDonut.vue'
 import RouteTimeline from '@/components/RouteTimeline.vue'
@@ -293,18 +294,12 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
         </span>
       </div>
 
-      <div v-if="failed" class="px-5 py-16 text-center">
-        <p class="font-semibold text-slate-900">매물을 찾을 수 없어요</p>
-        <p class="mt-1 text-sm text-slate-500">내려간 매물이거나, 잠시 연결이 끊겼을 수 있어요</p>
-        <!-- 문구만 두면 뒤로 가기 말고는 길이 없다. 대개는 다시 부르면 된다. -->
-        <button
-          type="button"
-          class="mt-5 h-11 rounded-full bg-brand-500 px-6 text-sm font-semibold text-white"
-          @click="load"
-        >
-          다시 시도
-        </button>
-      </div>
+      <BaseErrorState
+        v-if="failed"
+        title="매물을 찾을 수 없어요"
+        hint="내려간 매물이거나, 잠시 연결이 끊겼을 수 있어요"
+        @retry="load"
+      />
 
       <!--
         로딩 골격. 본문과 같은 절 구성(가격·주소 + 도넛 / 구분선 / 2칸 요약)으로 깔아

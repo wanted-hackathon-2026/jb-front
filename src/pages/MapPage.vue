@@ -27,11 +27,13 @@ import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
+import { useNoticeStore } from '@/stores/notice'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
 const auth = useAuthStore()
 const filters = useFiltersStore()
+const notice = useNoticeStore()
 const reco = useRecommendationStore()
 const sheet = useSheetStore()
 
@@ -100,6 +102,7 @@ const {
   items: listings,
   total: sheetTotal,
   loading,
+  failed: listingsFailed,
   reload: reloadListings,
 } = useListingList(async () => {
   const got = await getListingsInBounds({ ...bounds.value, limit: 200 })
@@ -195,6 +198,10 @@ async function requestRecommendation() {
     })
     started.value = true
     sheet.state = 'peek'
+  } catch {
+    // 이건 목록과 달리 **토스트가 맞다.** 시트를 열어 둔 채 누른 버튼이라 화면에
+    // 오류 자리를 만들 곳이 없고, 조건 입력을 그대로 두고 다시 누르게 하는 게 낫다.
+    notice.error('추천을 받지 못했어요. 잠시 후 다시 시도해 주세요')
   } finally {
     submitting.value = false
   }
@@ -508,8 +515,10 @@ function addPickedAnchor() {
         class="min-h-0 flex-1"
         :listings="listings"
         :loading="loading"
+        :failed="listingsFailed"
         :total="sheetTotal"
         :scored-when-loaded="anchors.hasAnchors"
+        @retry="reloadAll"
       />
     </BaseBottomSheet>
   </main>

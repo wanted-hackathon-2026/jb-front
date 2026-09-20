@@ -19,21 +19,41 @@ const results = ref<PlaceSuggestion[]>([])
  * 아직 안 온 것과 없는 것은 다르다. 한 글자 칠 때마다 그 거짓말이 한 번씩 스친다.
  */
 const searching = ref(false)
+/**
+ * 자동완성이 실패했나.
+ *
+ * `searching` 과 짝이다. 못 받아온 것을 '검색 결과가 없어요' 로 보여주면 사용자가
+ * 멀쩡히 있는 주소를 없다고 믿고 검색어를 고쳐 쓰게 된다.
+ */
+const failed = ref(false)
+
+async function search(word: string) {
+  searching.value = true
+  failed.value = false
+  try {
+    const found = await searchPlaces(word)
+    // 늦게 온 응답은 버린다 — 빨리 치면 앞 글자의 결과가 뒤에 도착해 방금 것을 덮는다.
+    if (keyword.value.trim() !== word) return
+    results.value = found
+  } catch {
+    if (keyword.value.trim() !== word) return
+    failed.value = true
+  } finally {
+    // 여기서 안 풀면 골격이 영영 돈다.
+    if (keyword.value.trim() === word) searching.value = false
+  }
+}
 
 // 입력이 비면 자동완성 대신 최근 목록으로 돌아간다.
-watch(keyword, async (q) => {
+watch(keyword, (q) => {
   const word = q.trim()
   if (!word) {
     results.value = []
     searching.value = false
+    failed.value = false
     return
   }
-  searching.value = true
-  const found = await searchPlaces(word)
-  // 늦게 온 응답은 버린다 — 빨리 치면 앞 글자의 결과가 뒤에 도착해 방금 것을 덮는다.
-  if (keyword.value.trim() !== word) return
-  results.value = found
-  searching.value = false
+  void search(word)
 })
 
 function pick(place: PlaceSuggestion) {
@@ -236,6 +256,18 @@ function split(text: string) {
           <BaseSkeleton class="h-3.5 w-3/4" />
         </li>
       </template>
+
+      <!-- 실패가 빈 결과보다 앞선다 — 뒤에 두면 '없어요' 가 먼저 걸려 실패를 가린다. -->
+      <li v-else-if="failed" class="px-5 py-10 text-center">
+        <p class="text-sm text-slate-500">주소를 검색하지 못했어요</p>
+        <button
+          type="button"
+          class="mt-3 h-11 rounded-full border border-slate-200 px-5 text-sm font-semibold text-slate-700"
+          @click="search(keyword.trim())"
+        >
+          다시 시도
+        </button>
+      </li>
 
       <li v-else-if="!results.length" class="px-5 py-10 text-center text-sm text-slate-400">
         검색 결과가 없어요

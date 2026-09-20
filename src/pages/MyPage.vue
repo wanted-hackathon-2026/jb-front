@@ -4,6 +4,7 @@ import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
+import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
@@ -432,17 +433,7 @@ watch(
         실패를 빈 목록으로 보여주면 '찜한 게 없다'는 거짓말이 된다.
         조판은 매물 상세·추천 결과의 실패 화면과 같다 — 세 곳이 같은 사고를 말한다.
       -->
-      <div v-else-if="error" class="px-5 py-16 text-center">
-        <p class="font-semibold text-slate-900">{{ error }}</p>
-        <p class="mt-1 text-sm text-slate-500">잠시 후 다시 시도해 주세요</p>
-        <button
-          type="button"
-          class="mt-5 h-11 rounded-full bg-brand-500 px-6 text-sm font-semibold text-white"
-          @click="load(tab)"
-        >
-          다시 시도
-        </button>
-      </div>
+      <BaseErrorState v-else-if="error" :title="error" @retry="load(tab)" />
 
       <template v-else-if="tab === 'history'">
         <BaseEmptyState

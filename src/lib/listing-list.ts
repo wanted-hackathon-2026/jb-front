@@ -20,6 +20,11 @@ export function useListingList(fetchAll: () => Promise<Listing[]>) {
   const sort = ref<SortKey>('score')
   const raw = ref<Listing[]>([])
   const loading = ref(true)
+  /**
+   * 실패 사유. **빈 목록과 못 받아온 것은 사용자에게 전혀 다른 상황이다** —
+   * 실패를 빈 목록으로 보여주면 "이 동네에 매물이 없다"는 거짓말이 된다.
+   */
+  const failed = ref(false)
 
   /** 정렬은 파생값이다 — 기준이 바뀌어도 다시 받아올 이유가 없다. */
   const items = computed(() => sortListings(raw.value, sort.value))
@@ -34,11 +39,21 @@ export function useListingList(fetchAll: () => Promise<Listing[]>) {
   async function reload() {
     const mine = ++issued
     loading.value = true
-    const got = await fetchAll()
-    if (mine !== issued) return
-    raw.value = got
-    loading.value = false
+    failed.value = false
+    try {
+      const got = await fetchAll()
+      if (mine !== issued) return
+      raw.value = got
+    } catch {
+      if (mine !== issued) return
+      // 받아둔 목록은 지우지 않는다 — 지도를 옮기다 한 번 실패했다고 보던 걸 비우면
+      // 화면이 통째로 날아간다. 실패했다는 사실만 덧붙인다.
+      failed.value = true
+    } finally {
+      // 여기서 안 풀면 **로딩이 영영 안 끝난다.** 예전엔 try 가 없어서 실제로 그랬다.
+      if (mine === issued) loading.value = false
+    }
   }
 
-  return { sort, items, total, loading, reload }
+  return { sort, items, total, loading, failed, reload }
 }

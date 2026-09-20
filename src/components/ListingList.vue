@@ -2,6 +2,7 @@
 import { computed, onActivated, ref, useTemplateRef, watch } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import BaseEmptyState from './BaseEmptyState.vue'
+import BaseErrorState from './BaseErrorState.vue'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
@@ -13,6 +14,11 @@ const props = defineProps<{
   listings: Listing[]
   /** 목록을 받아오는 중. */
   loading?: boolean
+  /**
+   * 받아오다 실패했나. **빈 목록과 구분해야 한다** — 실패를 "매물이 없어요"로 보여주면
+   * 이 동네에 매물이 없다는 거짓말이 된다.
+   */
+  failed?: boolean
   /** 머리말의 '총 N건'. 없으면 받아온 개수로 적는다. */
   total?: number
   /**
@@ -26,6 +32,8 @@ const props = defineProps<{
   /** 추천 결과 목록이면 그 추천의 id — 카드가 어느 상세로 갈지 정한다. */
   recommendationId?: string
 }>()
+
+const emit = defineEmits<{ retry: [] }>()
 
 /**
  * 정렬 키. **고르기만 하고 줄 세우진 않는다** — 목록을 통째로 들고 있는 부모가
@@ -171,11 +179,33 @@ const skeletonCount = computed(() =>
       </template>
       <!-- 빈 목록의 조판은 마이페이지의 빈 탭과 같은 컴포넌트다 — 앱 안에서 '아직 없다'는
            한 가지 모습으로만 말한다. -->
+      <!--
+        실패가 먼저다. 빈 상태보다 앞서야 "못 받은 것"이 "없는 것"으로 둔갑하지 않는다.
+      -->
+      <BaseErrorState
+        v-else-if="failed && !listings.length"
+        title="매물을 불러오지 못했어요"
+        @retry="emit('retry')"
+      />
       <BaseEmptyState
         v-else-if="!listings.length"
         title="조건에 맞는 매물이 없어요"
         hint="검색 필터를 넓혀보세요"
       />
+      <!--
+        보던 목록은 있는데 갱신이 실패했다(지도를 옮기다 한 번 실패). 목록을 지우면
+        화면이 통째로 날아가므로 그대로 두고, 낡았다는 사실만 위에 얹는다.
+      -->
+      <p
+        v-if="failed && listings.length"
+        class="mx-5 mb-2 flex items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-500"
+      >
+        <span>최신 목록을 못 받았어요</span>
+        <button type="button" class="shrink-0 font-semibold text-brand-500" @click="emit('retry')">
+          다시 시도
+        </button>
+      </p>
+
       <!-- 카드 사이에 선을 긋지 않는다 — 시안은 썸네일과 여백만으로 한 장을 가른다. -->
       <ul v-else class="px-5">
         <li v-for="l in listings" :key="l.id">
