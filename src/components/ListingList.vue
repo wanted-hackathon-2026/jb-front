@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, onActivated, ref, useTemplateRef, watch } from 'vue'
 import { useElementSize, useIntersectionObserver } from '@vueuse/core'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseSkeleton from './BaseSkeleton.vue'
@@ -77,6 +77,32 @@ function choose(key: SortKey) {
  */
 const scroller = useTemplateRef<HTMLElement>('scroller')
 
+/*
+ * 되돌아왔을 때의 스크롤.
+ *
+ * 살아남는 화면에서만 뜻이 있다(App.vue 의 KeepAlive) — 상세를 열었다 닫으면 목록은
+ * 그대로인데 맨 위로 튄다. KeepAlive 는 DOM 을 떼어 보관하고, 떼어낸 순간 scrollTop 은
+ * 0 이 되기 때문이다. 그래서 **떠날 때 읽지 않고** 스크롤하는 동안 계속 적어 둔다.
+ *
+ * ref 가 아니라 그냥 변수다 — 그리는 데 쓰지 않으므로 반응형일 이유가 없다.
+ */
+let parkedTop = 0
+const rememberTop = () => {
+  parkedTop = scroller.value?.scrollTop ?? 0
+}
+
+onActivated(() => {
+  if (scroller.value) scroller.value.scrollTop = parkedTop
+})
+
+// 목록을 처음부터 다시 받는 중이면(정렬 변경·다른 추천) 옛 자리는 버린다.
+watch(
+  () => props.loading,
+  (waiting) => {
+    if (waiting) parkedTop = 0
+  },
+)
+
 /**
  * 첫 로딩 골격의 개수. 스크롤 칸 높이를 재서 채운다 — 개수를 고정하면 그보다 긴
  * 화면에서 아래가 빈다(셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다).
@@ -148,6 +174,7 @@ useIntersectionObserver(
       ref="scroller"
       class="min-h-0 flex-1"
       :class="loading ? 'overflow-hidden' : 'overflow-y-auto'"
+      @scroll.passive="rememberTop"
     >
       <!--
         로딩은 카드와 **같은 골격**으로 깐다(px-5·py-2.5·썸네일 80·도넛 64).

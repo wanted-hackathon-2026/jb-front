@@ -21,6 +21,19 @@ const notice = useNoticeStore()
 const loginPrompt = useLoginPromptStore()
 
 /**
+ * 살려 둘 화면. 상세로 들어갔다 뒤로 나왔을 때 **받아둔 페이지와 스크롤이 그대로**
+ * 있어야 하는 건 추천 결과 목록뿐이다 — 스무 장을 넘겨 본 뒤 한 장을 열었다 닫으면
+ * 처음 열두 장으로 돌아가 맨 위에 서 있었다.
+ *
+ * 이름은 컴포넌트의 파일명에서 온다(Vue 가 <script setup> 에 붙여 준다). 그래도
+ * 그쪽에 defineOptions 로 한 번 더 박아 뒀다 — 파일을 옮기면 조용히 안 맞는다.
+ *
+ * 지도는 일부러 뺐다. 살려 두면 지도 SDK 인스턴스까지 같이 남아서, 되살아날 때
+ * 무엇이 다시 그려지고 무엇이 남는지부터 따져야 한다.
+ */
+const KEPT_ALIVE = ['RecommendationResultPage']
+
+/**
  * 완료 배너가 앉을 자리.
  *
  * 시트가 접혀 있으면 그 위에 얹는다(시안 3번 프레임) — 맨 아래에 두면 시트의
@@ -47,7 +60,11 @@ function open(id: string) {
   <div
     class="mx-auto flex h-full max-w-shell flex-col overflow-hidden bg-white shadow-[0_0_1.5rem_rgba(15,23,42,0.08)]"
   >
-    <RouterView />
+    <RouterView v-slot="{ Component }">
+      <KeepAlive :include="KEPT_ALIVE">
+        <component :is="Component" />
+      </KeepAlive>
+    </RouterView>
   </div>
 
   <!-- 전환 이름 네 가지는 main.css '열고 닫기 모션' 에 정의돼 있다. -->

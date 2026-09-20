@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onActivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
@@ -13,6 +13,12 @@ import { SUCCESS_STATUS, type RecommendationStatus } from '@/lib/api/recommendat
  */
 const props = defineProps<{ recommendationId: string }>()
 
+/**
+ * 이 화면은 KeepAlive 로 살려 둔다(App.vue) — 상세를 다녀와도 받아둔 페이지와 스크롤이
+ * 남아야 한다. include 가 이름으로 고르므로 파일명에 기대지 않고 여기 박아 둔다.
+ */
+defineOptions({ name: 'RecommendationResultPage' })
+
 const router = useRouter()
 const reco = useRecommendationStore()
 
@@ -24,7 +30,8 @@ const { sort, items, total, loading, loadingMore, hasNext, reload, more } = useL
     reco.fetchPage(props.recommendationId, { page, size: LISTING_PAGE_SIZE, sort: sortKey }),
 )
 
-onMounted(async () => {
+async function load() {
+  status.value = 'LOADING'
   try {
     status.value = await reco.fetchStatus(props.recommendationId)
     // 완료가 아니면 목록을 부를 이유가 없다 — 빈 페이지만 받아 온다.
@@ -34,6 +41,22 @@ onMounted(async () => {
     status.value = 'FAILED'
     reco.drop(props.recommendationId)
   }
+}
+
+/**
+ * 살아남은 화면이라 onMounted 는 첫 한 번만 돈다. **다른 추천으로 옮겨오면**
+ * (완료 배너를 눌렀을 때처럼) 같은 인스턴스가 재사용되므로 id 를 지켜본다 —
+ * 안 그러면 새 id 에 옛 목록이 붙어 있다.
+ */
+watch(() => props.recommendationId, load, { immediate: true })
+
+/**
+ * 돌아왔을 때 아직 끝나지 않은 추천이었으면 다시 물어본다. 완료된 결과는 다시 받지
+ * 않는다 — 그대로 두는 것이 이 화면을 살려 둔 이유고(스크롤·페이지), 결과는 그 추천에
+ * 한 번 고정된 값이라 다시 받아도 같다.
+ */
+onActivated(() => {
+  if (status.value !== SUCCESS_STATUS) void load()
 })
 </script>
 
