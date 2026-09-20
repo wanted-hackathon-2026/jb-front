@@ -316,6 +316,17 @@ function messageOf(e: unknown): string {
       <h1 class="font-bold text-slate-900">매물 등록</h1>
     </header>
 
+    <!--
+      세로 간격은 8 / 12 / 20 세 단계다. 안쪽이 바깥쪽보다 좁아야 묶음이 묶음으로 읽힌다.
+
+      | 8px  | 라벨 → 입력칸, 칩 줄 사이(gap-2)          |
+      | 12px | 라벨 → 칩 묶음, 컨트롤 → 보조 문구        |
+      | 20px | 항목 → 다음 항목                          |
+
+      칩 묶음만 12px 인 이유: 칩은 줄바꿈되고 그 줄 사이가 이미 8px 이라, 라벨까지 8px 로
+      띄우면 라벨이 칩의 한 줄처럼 보인다. 입력칸은 한 덩어리라 8px 로도 경계가 읽힌다
+      (닉네임 화면의 라벨 → 입력이 같은 8px 이다).
+    -->
     <form class="min-h-0 flex-1 overflow-y-auto px-4 pb-10" @submit.prevent="submit">
       <!-- 주소 -->
       <section class="mt-4 rounded-2xl bg-white p-4">
@@ -376,34 +387,47 @@ function messageOf(e: unknown): string {
           >
         </h2>
 
-        <label class="mt-3 block text-sm text-slate-500" for="name">이름</label>
+        <label class="mt-5 block text-sm text-slate-500" for="name">이름</label>
         <input
           id="name"
           v-model="name"
           type="text"
           maxlength="100"
           placeholder="건물명 또는 매물 이름"
-          class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+          class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
         />
 
-        <label class="mt-3 block text-sm text-slate-500" for="property-type">매물 종류</label>
         <!--
           **자유 입력이 아니다.** 추천이 이 값을 정확히 일치로 거르기 때문에
           (PropertyRepository 의 `p.propertyType in :propertyTypes`), '분리형 원룸'처럼
           적어 두면 '원룸'을 고른 사용자에게 이 매물이 영영 안 잡힌다.
           필터 화면과 같은 PROPERTY_TYPES 를 쓴다.
-        -->
-        <select
-          id="property-type"
-          v-model="propertyType"
-          class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-brand-500"
-        >
-          <option value="" disabled>선택해 주세요</option>
-          <option v-for="t in PROPERTY_TYPES" :key="t" :value="t">{{ t }}</option>
-        </select>
 
-        <p class="mt-4 text-sm text-slate-500">거래 유형</p>
-        <div class="mt-1 flex gap-2">
+          목록을 접어 두지 않고 펼친다. 여섯 개뿐이라 한눈에 들어오고, 바로 아래 거래
+          유형과 같은 모양이라 고르는 방식이 화면 안에서 하나로 읽힌다 — 네이티브
+          select 는 기기마다 다른 창을 띄워(iOS 는 휠) 이 화면에서만 딴 앱처럼 보였다.
+        -->
+        <p class="mt-5 text-sm text-slate-500">매물 종류</p>
+        <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="매물 종류">
+          <button
+            v-for="t in PROPERTY_TYPES"
+            :key="t"
+            type="button"
+            class="h-11 rounded-full border px-4 text-sm font-semibold transition-colors"
+            :class="
+              propertyType === t
+                ? 'border-brand-500 bg-brand-500 text-white'
+                : 'border-slate-200 bg-white text-slate-600'
+            "
+            :aria-pressed="propertyType === t"
+            @click="propertyType = t"
+          >
+            {{ t }}
+          </button>
+        </div>
+
+        <p class="mt-5 text-sm text-slate-500">거래 유형</p>
+        <div class="mt-3 flex gap-2">
           <button
             v-for="opt in [
               { value: 'MONTHLY' as LeaseType, label: '월세' },
@@ -418,17 +442,13 @@ function messageOf(e: unknown): string {
                 : 'border-slate-200 bg-white text-slate-600'
             "
             :aria-pressed="leaseType === opt.value"
-
-          목록을 접어 두지 않고 펼친다. 여섯 개뿐이라 한눈에 들어오고, 바로 아래 거래
-          유형과 같은 모양이라 고르는 방식이 화면 안에서 하나로 읽힌다 — 네이티브
-          select 는 기기마다 다른 창을 띄워(iOS 는 휠) 이 화면에서만 딴 앱처럼 보였다.
             @click="leaseType = opt.value"
           >
             {{ opt.label }}
           </button>
         </div>
 
-        <div class="mt-3 flex gap-3">
+        <div class="mt-5 flex gap-3">
           <div class="min-w-0 flex-1">
             <label class="block text-sm text-slate-500" for="deposit">보증금(만원)</label>
             <input
@@ -438,7 +458,7 @@ function messageOf(e: unknown): string {
               type="number"
               min="0"
               inputmode="numeric"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
           <div class="min-w-0 flex-1">
@@ -451,11 +471,11 @@ function messageOf(e: unknown): string {
               min="0"
               inputmode="numeric"
               :disabled="isJeonse"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
             />
           </div>
         </div>
-        <p v-if="isJeonse" class="mt-1 text-xs text-slate-400">전세는 월세가 0이어야 합니다.</p>
+        <p v-if="isJeonse" class="mt-3 text-xs text-slate-400">전세는 월세가 0이어야 합니다.</p>
       </section>
 
       <!-- 선택 항목 -->
@@ -467,7 +487,7 @@ function messageOf(e: unknown): string {
           >
         </h2>
 
-        <div class="mt-3 flex gap-3">
+        <div class="mt-5 flex gap-3">
           <div class="min-w-0 flex-1">
             <label class="block text-sm text-slate-500" for="area">전용면적(㎡)</label>
             <input
@@ -478,7 +498,7 @@ function messageOf(e: unknown): string {
               min="0"
               step="0.01"
               inputmode="decimal"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
           <div class="min-w-0 flex-1">
@@ -491,12 +511,12 @@ function messageOf(e: unknown): string {
               min="0"
               step="0.01"
               inputmode="decimal"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
         </div>
 
-        <div class="mt-3 flex gap-3">
+        <div class="mt-5 flex gap-3">
           <div class="min-w-0 flex-1">
             <label class="block text-sm text-slate-500" for="build-year">준공년도</label>
             <input
@@ -506,7 +526,7 @@ function messageOf(e: unknown): string {
               type="number"
               min="1"
               inputmode="numeric"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
           <div class="min-w-0 flex-1">
@@ -518,12 +538,12 @@ function messageOf(e: unknown): string {
               type="number"
               min="1"
               inputmode="numeric"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
         </div>
 
-        <div class="mt-3 flex gap-3">
+        <div class="mt-5 flex gap-3">
           <div class="min-w-0 flex-1">
             <label class="block text-sm text-slate-500" for="floor">층</label>
             <input
@@ -532,7 +552,7 @@ function messageOf(e: unknown): string {
               @input="onNumber('floor', $event)"
               type="number"
               inputmode="numeric"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
           <div class="min-w-0 flex-1">
@@ -544,7 +564,7 @@ function messageOf(e: unknown): string {
               type="number"
               min="1"
               inputmode="numeric"
-              class="mt-1 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
+              class="mt-2 h-12 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-brand-500"
             />
           </div>
         </div>
@@ -579,12 +599,12 @@ function messageOf(e: unknown): string {
           방향·층·총 층수가 <strong class="font-semibold">모두</strong> 있어야 채광이 계산돼요.
         </p>
 
-        <label class="mt-3 block text-sm text-slate-500" for="description">설명</label>
+        <label class="mt-5 block text-sm text-slate-500" for="description">설명</label>
         <textarea
           id="description"
           v-model="description"
           rows="3"
-          class="mt-1 w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-brand-500"
+          class="mt-2 w-full rounded-xl border border-slate-200 p-3 outline-none focus:border-brand-500"
         />
       </section>
 
@@ -651,8 +671,8 @@ function messageOf(e: unknown): string {
           }}
         </label>
 
-        <p v-if="imageError" class="mt-2 text-sm text-red-500">{{ imageError }}</p>
-        <p v-else class="mt-2 text-xs text-slate-400">
+        <p v-if="imageError" class="mt-3 text-sm text-red-500">{{ imageError }}</p>
+        <p v-else class="mt-3 text-xs text-slate-400">
           JPEG · PNG · WEBP, 한 장에 10MB 까지. 사진 없이 끝내도 돼요.
         </p>
 
