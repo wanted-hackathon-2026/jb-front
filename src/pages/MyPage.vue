@@ -287,9 +287,15 @@ watch(
         <BaseChevron />
       </button>
 
+      <!--
+        아바타 64px, 이름까지 여백 4px(글자까지는 14px) — 시안 실측이다. 프레임 폭 대비
+        비율로 재면 아바타가 17.2%(=64px)인데 80px 로 두고 있었고, 이름 버튼의
+        min-h-11 이 센터링으로 10px 을 더 먹어 아바타와 이름이 22px 떨어져 있었다.
+        둘이 합쳐 프로필 판이 시안보다 26px 두꺼웠다.
+      -->
       <div class="flex flex-col items-center">
         <p
-          class="grid size-20 place-items-center rounded-full bg-slate-300 text-2xl font-bold text-slate-600"
+          class="grid size-16 place-items-center rounded-full bg-slate-300 text-xl font-bold text-slate-600"
           aria-hidden="true"
         >
           {{ initial }}
@@ -303,7 +309,7 @@ watch(
         <button
           v-if="auth.isAuthenticated"
           type="button"
-          class="mt-3 flex min-h-11 items-center gap-1 font-bold text-slate-900"
+          class="mt-1 flex min-h-11 items-center gap-1 font-bold text-slate-900"
           @click="router.push({ name: 'nickname', query: { redirect: '/my' } })"
         >
           <!-- 닉네임이 없을 수 있다(가입 직후). 그때도 자리가 무너지지 않게 대체 문구를 둔다. -->
@@ -313,7 +319,7 @@ watch(
           >
           <BaseChevron direction="right" />
         </button>
-        <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
+        <p v-else class="mt-1 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
 
         <!--
           로그아웃은 여기 없다. 시안은 프로필 화면(닉네임) 맨 아래에 두고, 이 화면의
