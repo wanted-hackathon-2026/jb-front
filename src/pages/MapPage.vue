@@ -53,11 +53,9 @@ const onboarded = useStorage('jb:onboarded:v1', false)
 const mapView = useTemplateRef('mapView')
 
 const TABS = [
-  // AI 추천이 이 서비스가 파는 것이라 먼저 읽히는 자리에 둔다.
-  //
-  // 처음 골라져 있는 쪽은 여전히 '주변 매물' 이다(stores/sheet.ts). 거점도 조건도 없는
-  // 첫 방문에 필터부터 펴 보이면 할 일부터 던지는 꼴이라, 보이는 것을 먼저 보여주고
-  // 권유는 그 왼쪽에 둔다.
+  // AI 추천이 이 서비스가 파는 것이라 먼저 읽히는 자리에 두고, 첫 화면에서 골라져
+  // 있는 것도 이쪽이다(stores/sheet.ts 의 DEFAULT_SHEET_TAB). 주변 매물은 시트 뒤
+  // 지도에 이미 보이므로, 시트를 올렸을 때 할 수 있는 일이 먼저 나오는 게 맞다.
   { value: 'filters' as const, label: 'AI 추천' },
   { value: 'listings' as const, label: '주변 매물' },
 ]
