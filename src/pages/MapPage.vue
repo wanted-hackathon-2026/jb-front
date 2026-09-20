@@ -20,12 +20,11 @@ import { useFiltersStore } from '@/stores/filters'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { useSheetStore } from '@/stores/sheet'
 import { coordToAddress } from '@/lib/api/places'
-import { getAllListings, getListingPage } from '@/mocks/listings'
-import { LISTING_PAGE_SIZE, useListingPages } from '@/lib/listing-paging'
+import { getListings } from '@/mocks/listings'
+import { useListingList } from '@/lib/listing-list'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginPromptStore } from '@/stores/login-prompt'
-import type { Listing } from '@/types/domain'
 
 const router = useRouter()
 const anchors = useAnchorsStore()
@@ -44,8 +43,6 @@ const onboarded = useStorage('jb:onboarded:v1', false)
  * 열두 개씩 받아 찍으면 스크롤하는 동안 지도에 핀이 돋아난다.
  * (서버가 붙으면 이쪽은 보이는 영역 조회가 되고, 아래 목록만 페이지 조회를 쓴다.)
  */
-const listings = ref<Listing[]>([])
-const loading = ref(true)
 /** 줌 버튼이 지도 인스턴스를 직접 잡지 않고 MapView 가 노출한 조작만 부른다. */
 const mapView = useTemplateRef('mapView')
 
@@ -81,39 +78,32 @@ function openFavorites() {
 /** 점수가 붙어 오는 상태인가 — 거점이 있거나, 안내가 '추천 받은 뒤'를 흉내 내는 중. */
 const scored = computed(() => anchors.hasAnchors || sheet.previewScored)
 
-/** 바텀시트 목록의 무한 스크롤. 지도(listings)와 달리 페이지 단위로 쌓인다. */
+/**
+ * 목록 한 벌로 **지도 핀과 시트 목록을 함께** 그린다.
+ *
+ * 예전엔 둘을 따로 받았다 — 핀은 전부, 시트는 한 페이지씩. 실제 API 가 영역(bbox)
+ * 조회로 한 번에 다 주고 페이지를 쓰지 않아(property-listing-and-detail.md) 나눌
+ * 이유가 없어졌다. 두 번 받으면 같은 순간에 지도와 목록이 서로 다른 매물을 보여줄
+ * 수도 있다.
+ *
+ * 정렬은 화면이 하고 핀은 순서를 따지지 않으므로, 정렬된 `items` 를 양쪽이 같이 쓴다.
+ */
 const {
   sort: sheetSort,
-  items: sheetItems,
+  items: listings,
   total: sheetTotal,
-  loading: sheetLoading,
-  loadingMore: sheetLoadingMore,
-  hasNext: sheetHasNext,
-  reload: reloadSheet,
-  more: loadMoreSheet,
-} = useListingPages((page, sortKey) =>
-  getListingPage({ page, size: LISTING_PAGE_SIZE, sort: sortKey, scored: scored.value }),
-)
+  loading,
+  reload: reloadListings,
+} = useListingList(() => getListings(scored.value))
 
-async function load() {
-  loading.value = true
-  listings.value = await getAllListings(scored.value)
-  loading.value = false
-}
+/** 목록이 한 벌이라 한 번만 부르면 지도와 시트가 같이 갱신된다. */
+const reloadAll = () => void reloadListings()
 
-onMounted(() => {
-  void load()
-  void reloadSheet()
-})
+onMounted(reloadAll)
 // 거점이 바뀌면 점수 유무가 달라진다 — 지도와 목록을 다시 받는다.
 watch(() => anchors.anchors.length, reloadAll)
 // 안내가 '추천 받은 뒤'를 설명하는 동안에는 점수가 붙은 목록으로 바꿔 보여준다.
 watch(() => sheet.previewScored, reloadAll)
-
-function reloadAll() {
-  void load()
-  void reloadSheet()
-}
 
 /** 진행 표시는 가장 최근 요청 하나만 보여준다 — 여러 개를 쌓으면 지도를 다 덮는다. */
 const runningJob = computed(() => reco.pending.at(-1) ?? null)
@@ -487,13 +477,10 @@ function addPickedAnchor() {
         v-else
         v-model:sort="sheetSort"
         class="min-h-0 flex-1"
-        :listings="sheetItems"
-        :loading="sheetLoading"
+        :listings="listings"
+        :loading="loading"
         :total="sheetTotal"
-        :has-next="sheetHasNext"
-        :loading-more="sheetLoadingMore"
         :scored-when-loaded="anchors.hasAnchors"
-        @load-more="loadMoreSheet"
       />
     </BaseBottomSheet>
   </main>

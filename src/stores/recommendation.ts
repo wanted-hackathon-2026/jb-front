@@ -10,7 +10,6 @@ import {
   type RecommendRequest,
   type RecommendationStatus,
 } from '@/lib/api/recommendation'
-import type { ListingQuery } from '@/lib/api/listings-page'
 
 /**
  * 추천 작업의 단일 진실 공급원.
@@ -83,14 +82,11 @@ export const useRecommendationStore = defineStore('recommendation', () => {
   }
 
   /**
-   * 추천 매물 목록 한 페이지.
+   * 추천 매물 목록.
    *
-   * **결과 본문은 캐시하지 않는다.** 예전엔 목록 전체를 메모리에 들고 있었는데,
-   * 페이지로 나눠 받는 지금은 '전체'라는 게 없다 — 정렬 키마다 자르는 위치가 달라서
-   * 통짜로 캐시하면 어느 기준으로 담긴 건지 알 수 없는 배열만 남는다. 다시 들어오면
-   * 첫 페이지만 새로 받는다.
+   * **결과 본문은 캐시하지 않는다.** 용량·신선도 때문이다 — 다시 들어오면 새로 받는다.
    */
-  const fetchPage = (id: string, q: ListingQuery) => getRecommendedListings(id, q)
+  const fetchListings = (id: string) => getRecommendedListings(id)
 
   // 백그라운드 탭에서는 브라우저가 setInterval 을 1분까지 늦춘다. 복귀 즉시 한 번 확인해
   // "끝난 지 한참인데 팝업이 안 뜨는" 현상을 막는다(§7.1).
@@ -101,5 +97,5 @@ export const useRecommendationStore = defineStore('recommendation', () => {
   // 앱 부팅 시 진행 중이던 작업을 이어받는다 — 새로고침·재방문 복구의 핵심.
   if (pending.value.length) resume()
 
-  return { jobs, pending, arrived, request, check, fetchStatus, fetchPage, drop }
+  return { jobs, pending, arrived, request, check, fetchStatus, fetchListings, drop }
 })

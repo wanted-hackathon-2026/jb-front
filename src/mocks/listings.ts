@@ -1,7 +1,6 @@
 /** ⚠️ 가짜 매물 데이터. 백엔드 연동 시 이 파일을 통째로 삭제한다. */
 import { LIFESTYLE_AXES } from '@/lib/lifestyle'
-import type { ListingPage, ListingQuery } from '@/lib/api/listings-page'
-import type { SortKey } from '@/lib/listing-sort'
+import { sortListings } from '@/lib/listing-sort'
 import type { LifestyleInsight, Listing, RouteLeg } from '@/types/domain'
 
 const ROOM_TYPES = ['분리형 원룸', '오픈형 원룸', '복층 원룸', '1.5룸', '투룸']
@@ -317,26 +316,6 @@ function build(i: number): Listing {
 const ALL = Array.from({ length: SPOT_OF.length }, (_, i) => build(i))
 
 /**
- * 비교용 단일 가격. 전세와 월세를 한 축에 올리려면 환산이 필요해서 관행대로
- * 환산보증금(보증금 + 월세×100)을 쓴다.
- *
- * ⚠️ **가격 축의 정의는 원래 백엔드 몫이다**(README '역할 분담'). 목이 서버 노릇을
- * 하는 동안만 여기서 흉내 내는 임시 규칙이라, 이 파일과 함께 지워진다.
- */
-const priceOf = (l: Listing) => l.deposit + l.rent * 100
-
-/** 첫 거점까지의 소요 시간. 이동 정보가 없는 매물은 항상 뒤로 보낸다. */
-const commuteOf = (l: Listing) => l.commutes[0]?.minutes ?? Number.POSITIVE_INFINITY
-
-const COMPARATORS: Record<SortKey, (a: Listing, b: Listing) => number> = {
-  // 점수 없는 매물(-1)은 뒤로 간다.
-  score: (a, b) => (b.score ?? -1) - (a.score ?? -1),
-  commute: (a, b) => commuteOf(a) - commuteOf(b),
-  priceAsc: (a, b) => priceOf(a) - priceOf(b),
-  priceDesc: (a, b) => priceOf(b) - priceOf(a),
-}
-
-/**
  * 거점이 있으면 점수·순위가 붙고, 없으면 점수 없이 노선 배지만 남는다.
  *
  * 순위는 매물의 성질이 아니라 '이 추천 안에서 몇 번째냐'다 — **화면 정렬과 무관하게**
@@ -344,34 +323,21 @@ const COMPARATORS: Record<SortKey, (a: Listing, b: Listing) => number> = {
  */
 const dataset = (scored: boolean): Listing[] =>
   scored
-    ? [...ALL].sort(COMPARATORS.score).map((l, i) => ({ ...l, rank: i + 1 }))
+    ? sortListings(ALL, 'score').map((l, i) => ({ ...l, rank: i + 1 }))
     : ALL.map((l) => ({ ...l, score: null, commutes: [] }))
 
 /**
- * 지도가 쓰는 전체 목록. 핀과 클러스터에는 페이지 개념이 없다 — 보이는 영역의
- * 매물이 전부 있어야 한다. 실제 API 가 붙으면 이쪽은 페이지가 아니라 **영역(bbox)
- * 조회**가 되고, 목록만 아래 페이지 조회를 쓴다.
+ * 매물 목록. **지도 핀과 시트 목록이 같은 걸 쓴다.**
+ *
+ * 예전에는 둘로 나뉘어 있었다 — 핀은 전부, 목록은 한 페이지씩. 실제 API 가 영역(bbox)
+ * 조회로 한 번에 다 주고 "전통적인 페이지네이션을 사용하지 않는다"고 못박아서
+ * (property-listing-and-detail.md) 나눌 이유가 없어졌다.
+ *
+ * 정렬도 화면이 한다 — 서버가 정렬 키를 받지 않는다(lib/listing-sort.ts).
  */
-export async function getAllListings(scored: boolean): Promise<Listing[]> {
+export async function getListings(scored: boolean): Promise<Listing[]> {
   await new Promise((r) => setTimeout(r, 220))
   return dataset(scored)
-}
-
-/**
- * 목록 화면이 쓰는 한 페이지.
- *
- * **정렬을 여기서 한다.** 페이지를 나눠 주는 쪽이 정렬도 해야 순서가 맞는다 —
- * 받은 페이지만 화면에서 다시 줄 세우면 다음 페이지가 붙을 때 그 사이에 끼어든다.
- */
-export async function getListingPage(q: ListingQuery & { scored: boolean }): Promise<ListingPage> {
-  await new Promise((r) => setTimeout(r, 220))
-  const all = dataset(q.scored).sort(COMPARATORS[q.sort])
-  const from = q.page * q.size
-  return {
-    items: all.slice(from, from + q.size),
-    last: from + q.size >= all.length,
-    total: all.length,
-  }
 }
 
 /**

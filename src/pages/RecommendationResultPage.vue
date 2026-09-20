@@ -3,7 +3,7 @@ import { onActivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import ListingList from '@/components/ListingList.vue'
-import { LISTING_PAGE_SIZE, useListingPages } from '@/lib/listing-paging'
+import { useListingList } from '@/lib/listing-list'
 import { useRecommendationStore } from '@/stores/recommendation'
 import { SUCCESS_STATUS, type RecommendationStatus } from '@/lib/api/recommendation'
 
@@ -24,10 +24,9 @@ const reco = useRecommendationStore()
 
 const status = ref<RecommendationStatus | 'LOADING'>('LOADING')
 
-/** 무한 스크롤. 정렬이 바뀌면 이 안에서 알아서 첫 페이지부터 다시 받는다. */
-const { sort, items, total, loading, loadingMore, hasNext, reload, more } = useListingPages(
-  (page, sortKey) =>
-    reco.fetchPage(props.recommendationId, { page, size: LISTING_PAGE_SIZE, sort: sortKey }),
+/** 목록은 한 번에 다 받는다 — 정렬은 화면이 하므로 다시 부를 일이 없다. */
+const { sort, items, total, loading, reload } = useListingList(() =>
+  reco.fetchListings(props.recommendationId),
 )
 
 async function load() {
@@ -117,11 +116,8 @@ onActivated(() => {
       :listings="items"
       :loading="loading"
       :total="total"
-      :has-next="hasNext"
-      :loading-more="loadingMore"
       :recommendation-id="recommendationId"
       scored-when-loaded
-      @load-more="more"
     />
   </main>
 </template>

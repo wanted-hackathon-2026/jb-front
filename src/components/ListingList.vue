@@ -1,24 +1,20 @@
 <script setup lang="ts">
 import { computed, onActivated, ref, useTemplateRef, watch } from 'vue'
-import { useElementSize, useIntersectionObserver } from '@vueuse/core'
+import { useElementSize } from '@vueuse/core'
 import BaseEmptyState from './BaseEmptyState.vue'
 import BaseSkeleton from './BaseSkeleton.vue'
 import ListingCard from './ListingCard.vue'
 import ListingSortSheet from './ListingSortSheet.vue'
-import { LISTING_PAGE_SIZE } from '@/lib/listing-paging'
 import { SORT_LABELS, type SortKey } from '@/lib/listing-sort'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
   /** 지금까지 받아온 매물. **이미 정렬된 상태로 온다** — 여기서 다시 줄 세우지 않는다. */
   listings: Listing[]
-  /** 첫 페이지를 기다리는 중. 다음 페이지는 `loadingMore` 다. */
+  /** 목록을 받아오는 중. */
   loading?: boolean
-  /** 조건에 맞는 전체 건수. 없으면 받아온 개수로 적는다(페이지를 안 쓰는 호출부). */
+  /** 머리말의 '총 N건'. 없으면 받아온 개수로 적는다. */
   total?: number
-  /** 더 받아올 게 남았나. 바닥 감지를 켤지 가르는 값이다. */
-  hasNext?: boolean
-  loadingMore?: boolean
   /**
    * 로딩 중 '총 N건 · 정렬' 줄의 자리를 미리 잡을지.
    *
@@ -31,11 +27,9 @@ const props = defineProps<{
   recommendationId?: string
 }>()
 
-const emit = defineEmits<{ loadMore: [] }>()
-
 /**
- * 정렬 키. **고르기만 하고 줄 세우진 않는다** — 정렬은 페이지를 나눠 주는 서버가
- * 하고(mocks/listings.ts), 바뀌면 부모가 목록을 처음부터 다시 받는다.
+ * 정렬 키. **고르기만 하고 줄 세우진 않는다** — 목록을 통째로 들고 있는 부모가
+ * 정렬해서 내려준다(`lib/listing-sort.ts`).
  */
 const sort = defineModel<SortKey>('sort', { default: 'score' })
 
@@ -54,27 +48,14 @@ function close() {
 
 function choose(key: SortKey) {
   if (key !== sort.value) {
-    /*
-     * 기준이 바뀌면 목록은 처음부터 다시 받는다(부모의 useListingPages). 스크롤을
-     * 그대로 두면 새 1페이지의 중간에 서 있게 되는데, 바뀐 순서의 1등을 못 보는 데다
-     * 바닥과 가까우면 그 자리에서 곧장 다음 장을 부른다. 맨 위로 돌려놓는다.
-     */
+    // 순서가 통째로 바뀌므로 중간에 서 있으면 바뀐 1등을 못 본다. 맨 위로 돌려놓는다.
     scroller.value?.scrollTo({ top: 0 })
     sort.value = key
   }
   close()
 }
 
-/*
- * 바닥 감지.
- *
- * 스크롤 이벤트를 세는 대신 목록 끝의 빈 표식이 보이는지로 판단한다 — 스크롤 위치
- * 계산은 카드 높이가 제각각이면 어긋나는데, 이건 '끝이 보이면'이라 어긋날 게 없다.
- *
- * root 를 명시하는 게 중요하다. 이 목록은 **자기 스크롤 영역** 안에서 움직이므로
- * (아래 overflow-y-auto), 기본값인 뷰포트로 두면 바닥에 닿아도 울리지 않는다.
- * rootMargin 은 바닥에 닿기 200px 전에 미리 부르려고 둔다.
- */
+/** 이 목록은 **자기 스크롤 영역** 안에서 움직인다(아래 overflow-y-auto). */
 const scroller = useTemplateRef<HTMLElement>('scroller')
 
 /*
@@ -106,21 +87,11 @@ watch(
 /**
  * 첫 로딩 골격의 개수. 스크롤 칸 높이를 재서 채운다 — 개수를 고정하면 그보다 긴
  * 화면에서 아래가 빈다(셸은 폭만 480px 로 고정되고 높이는 dvh 라 상한이 없다).
- * 한 페이지(12건)는 넘기지 않는다 — 실제로 그보다 많이 도착하지 않으니
- * 더 깔아 봐야 없는 걸 약속하는 셈이다. 100 = py-2.5 20 + 썸네일 80.
+ * 100 = py-2.5 20 + 썸네일 80. 화면을 덮을 만큼만 깔면 되므로 상한을 12로 둔다.
  */
 const { height: scrollerHeight } = useElementSize(scroller)
 const skeletonCount = computed(() =>
-  Math.min(LISTING_PAGE_SIZE, Math.max(4, Math.ceil(scrollerHeight.value / 100))),
-)
-const sentinel = useTemplateRef<HTMLElement>('sentinel')
-
-useIntersectionObserver(
-  sentinel,
-  ([entry]) => {
-    if (entry?.isIntersecting) emit('loadMore')
-  },
-  { root: scroller, rootMargin: '200px' },
+  Math.min(12, Math.max(4, Math.ceil(scrollerHeight.value / 100))),
 )
 </script>
 
@@ -212,33 +183,9 @@ useIntersectionObserver(
           <ListingCard :listing="l" :recommendation-id="recommendationId" data-tour="listing" />
         </li>
 
-        <!--
-          다음 페이지 자리. 카드와 같은 골격이라 목록이 이어지는 것처럼 보이고,
-          도착해도 높이가 바뀌지 않는다(위 첫 로딩과 같은 이유다).
-        -->
-        <template v-if="loadingMore">
-          <li class="sr-only" role="status">매물을 더 불러오는 중</li>
-          <li v-for="i in 2" :key="`more-${i}`" class="flex gap-3 py-2.5" aria-hidden="true">
-            <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
-            <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
-              <BaseSkeleton class="h-4 w-2/3" />
-              <BaseSkeleton class="h-3 w-full" />
-              <BaseSkeleton class="h-3 w-4/5" />
-              <BaseSkeleton class="h-3 w-1/2" />
-            </div>
-            <BaseSkeleton class="size-16 shrink-0 rounded-full!" />
-          </li>
-        </template>
-
-        <!--
-          바닥 표식. 높이가 0 이면 관측기가 못 잡는 브라우저가 있어 1px 을 준다.
-          더 받을 게 없으면 아예 그리지 않는다 — 끝에 닿아도 아무 일이 없어야 한다.
-        -->
-        <li v-else-if="hasNext" ref="sentinel" class="h-px" aria-hidden="true" />
-
         <!-- 끝까지 봤다는 말. 목록이 갑자기 끊기면 덜 불러온 줄 안다. -->
         <li
-          v-else-if="listings.length"
+          v-if="listings.length"
           class="py-6 text-center text-sm text-slate-400"
           aria-hidden="true"
         >
