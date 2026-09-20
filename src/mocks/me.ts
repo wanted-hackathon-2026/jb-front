@@ -1,27 +1,12 @@
 /**
  * ⚠️ 가짜 마이페이지 데이터.
  *
- * **관심 매물은 여기서 빠졌다** — `/api/me/favorites` 가 실재해서 실제 API 로 갈아탔다
- * (`lib/api/me.ts`). 남은 둘은 대응 엔드포인트가 없어서 아직 목이다:
- * '최근 본 매물'은 조회 이력을 서버가 쌓을지부터 정해야 하고, '이전 기록'은
- * 추천 API 자체가 없다. 각각 엔드포인트가 생기면 하나씩 지운다.
+ * **'이전 기록' 하나만 남았다.** 관심 매물은 `/api/me/favorites` 로 갈아탔고
+ * (`lib/api/me.ts`), 최근 본 매물은 이 기기에 쌓기로 했다
+ * (`stores/recently-viewed.ts`). 이것도 추천 API 가 생기면 지운다.
  */
-import type { Listing, SearchHistoryEntry } from '@/types/domain'
-import { getListings } from './listings'
+import type { SearchHistoryEntry } from '@/types/domain'
 
-/** 최근 본 매물 — 본 순서대로 섞어 둔다. */
-export async function getMockRecentlyViewed(): Promise<Listing[]> {
-  const all = await getListings(false)
-  return [all[3], all[0], all[7], all[1], all[9], all[4]].filter(Boolean)
-}
-
-/**
- * 최신순으로 준다 — 목록이 날짜를 '그날의 첫 장'에만 찍으므로(MyPage 의 datedHistory)
- * 순서가 뒤섞이면 같은 날짜가 여러 번 나온다.
- *
- * **9월 16일이 두 건인 것은 일부러다.** 같은 날 두 번 돌린 기록이 어떻게 묶이는지
- * (날짜 머리글 한 번 + 카드 두 장) 목으로도 보이게 하려고 남겨 둔다.
- */
 export async function getMockSearchHistory(): Promise<SearchHistoryEntry[]> {
   await new Promise((r) => setTimeout(r, 180))
   return [

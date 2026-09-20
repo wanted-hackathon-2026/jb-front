@@ -8,9 +8,10 @@ import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import ListingCard from '@/components/ListingCard.vue'
 import SearchHistoryCard from '@/components/SearchHistoryCard.vue'
 import { formatDay } from '@/lib/format'
-import { getFavorites, getRecentlyViewed, getSearchHistory } from '@/lib/api/me'
+import { getFavorites, getSearchHistory } from '@/lib/api/me'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
+import { useRecentlyViewedStore } from '@/stores/recently-viewed'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
 
@@ -28,6 +29,11 @@ const route = useRoute()
 const auth = useAuthStore()
 /** 하트가 보는 스토어. 화면 변수 `favorites`(목록)와 이름이 겹쳐 따로 부른다. */
 const favoriteIds = useFavoritesStore()
+/**
+ * '최근 본 매물'은 서버가 아니라 이 기기에 쌓인다(stores/recently-viewed.ts).
+ * 받아올 게 없어서 로딩도 오류도 없다 — 탭을 열면 이미 있다.
+ */
+const recentlyViewed = useRecentlyViewedStore()
 
 /**
  * 이 화면도 KeepAlive 로 살려 둔다(App.vue) — 매물 상세를 다녀와도 목록과 스크롤이
@@ -60,7 +66,6 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const history = ref<SearchHistoryEntry[]>([])
 const favorites = ref<Listing[]>([])
-const recent = ref<Listing[]>([])
 
 /**
  * 로딩 골격의 개수. 목록이 들어갈 칸 높이를 재서 채운다 — 고정하면 그보다 긴 화면에서
@@ -118,7 +123,7 @@ async function load(which: Tab, quiet = false) {
       favorites.value = await getFavorites()
       // 이 목록은 정의상 전부 찜한 것이다 — 하트가 채워지도록 스토어에 심는다.
       favoriteIds.sync(favorites.value)
-    } else recent.value = await getRecentlyViewed()
+    }
   } catch {
     // 서버 문구를 그대로 띄우지 않는다 — 개발·운영 확인용이라 사용자에게 쓸 말이 아니다.
     // 조용한 갱신이 실패하면 보던 목록을 그대로 둔다 — 멀쩡한 화면을 오류로 덮지 않는다.
@@ -506,14 +511,14 @@ watch(
 
       <template v-else>
         <BaseEmptyState
-          v-if="!recent.length"
+          v-if="!recentlyViewed.count"
           title="최근 본 매물이 없어요"
           hint="매물을 둘러보면 여기에 쌓여요"
           action-label="매물 보러 가기"
           @action="goMap"
         />
         <ul v-else class="px-5 pt-4">
-          <li v-for="l in recent" :key="l.id">
+          <li v-for="l in recentlyViewed.items" :key="l.id">
             <ListingCard :listing="l" />
           </li>
         </ul>

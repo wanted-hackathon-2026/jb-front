@@ -6,10 +6,10 @@ import { formatCommute, formatPrice } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
-import type { Listing } from '@/types/domain'
+import type { ListingSummary } from '@/types/domain'
 
 const props = defineProps<{
-  listing: Listing
+  listing: ListingSummary
   /** 추천 결과 목록에서 왔다면 그 추천의 id. 주변 매물 목록에서는 없다. */
   recommendationId?: string
   /** 찜한 매물인지. 마이페이지 '관심 매물' 탭은 전부 채워진 하트로 나온다. */

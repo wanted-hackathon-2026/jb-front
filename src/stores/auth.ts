@@ -15,6 +15,7 @@ import { getAccount, updateNickname as patchNickname } from '@/lib/api/account'
 import { loginWithGoogle, logout as apiLogout, reissue } from '@/lib/api/auth'
 import { forgetGoogleSession, hasGoogleClientId } from '@/lib/google'
 import { useNoticeStore } from './notice'
+import { useRecentlyViewedStore } from './recently-viewed'
 
 /**
  * idle: 아직 복원을 시도하지 않았다 (앱 시작 직후)
@@ -25,6 +26,7 @@ export type AuthStatus = 'idle' | 'restoring' | 'authenticated' | 'anonymous'
 
 export const useAuthStore = defineStore('auth', () => {
   const notice = useNoticeStore()
+  const recentlyViewed = useRecentlyViewedStore()
 
   const user = ref<AccountResponse | null>(null)
   const status = ref<AuthStatus>('idle')
@@ -131,6 +133,8 @@ export const useAuthStore = defineStore('auth', () => {
     // 이걸 빼면 다음 로그인 때 구글이 같은 계정으로 말없이 다시 들여보낸다 —
     // 계정을 바꾸려고 로그아웃한 사용자가 갇힌다.
     forgetGoogleSession()
+    // 공용 기기에서 앞사람이 뭘 봤는지 다음 사람에게 보이지 않게 한다.
+    recentlyViewed.clear()
     user.value = null
     hadSession.value = false
     status.value = 'anonymous'

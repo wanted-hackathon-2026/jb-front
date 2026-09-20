@@ -167,6 +167,29 @@ export interface Listing {
 }
 
 /**
+ * 매물 카드(`ListingCard`)가 그리는 데 **실제로 쓰는 것만.**
+ *
+ * 카드가 전체 `Listing` 을 요구하면, 통째로 들고 있지 않은 곳에서는 못 쓴다 —
+ * 최근 본 매물처럼 카드용 스냅샷만 저장하는 경우가 그렇다
+ * (stores/recently-viewed.ts). 필요한 것만 받으면 그런 곳도 같은 카드를 쓴다.
+ */
+export type ListingSummary = Pick<
+  Listing,
+  | 'id'
+  | 'dealType'
+  | 'deposit'
+  | 'rent'
+  | 'roomType'
+  | 'areaPyeong'
+  | 'floor'
+  | 'address'
+  | 'photos'
+  | 'lines'
+  | 'commutes'
+  | 'score'
+>
+
+/**
  * 마이페이지 '이전 기록' 한 장 — 그때 어떤 조건으로 추천을 돌렸는지.
  *
  * 추천 요청(POST /api/recommendations)의 입력값을 되읽는 화면이라, 필드가

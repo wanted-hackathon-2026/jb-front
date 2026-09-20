@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useLoginPromptStore } from '@/stores/login-prompt'
 import { useNoticeStore } from '@/stores/notice'
+import { useRecentlyViewedStore } from '@/stores/recently-viewed'
 import type { Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -25,6 +26,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const favorites = useFavoritesStore()
+const recentlyViewed = useRecentlyViewedStore()
 const loginPrompt = useLoginPromptStore()
 const notice = useNoticeStore()
 
@@ -153,6 +155,8 @@ async function load() {
     // 서버가 알려준 찜 여부를 반영한다. 목록을 거치지 않고 바로 들어온 경우
     // (링크 공유·새로고침) 스토어가 이 매물을 모르기 때문이다.
     favorites.sync([got])
+    // 본 순간 남긴다 — 마이페이지 '최근 본 매물'이 이걸 읽는다.
+    recentlyViewed.record(got)
   } catch {
     failed.value = true
   }

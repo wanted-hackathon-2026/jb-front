@@ -1,4 +1,4 @@
-import { getMockRecentlyViewed, getMockSearchHistory } from '@/mocks/me'
+import { getMockSearchHistory } from '@/mocks/me'
 import type { Listing, SearchHistoryEntry } from '@/types/domain'
 import type { FavoritePropertySummary } from '@/types/backend'
 import { listFavorites } from './favorites'
@@ -7,8 +7,9 @@ import { sqmToPyeong } from '@/lib/format'
 /**
  * 마이페이지 세 탭의 데이터.
  *
- * **관심 매물만 실제 백엔드를 본다**(`/api/me/favorites`). 나머지 둘은 대응하는
- * 엔드포인트가 없어서 아직 목이다.
+ * **관심 매물만 실제 백엔드를 본다**(`/api/me/favorites`). '이전 기록'은 추천 API 가
+ * 없어서 아직 목이다. '최근 본 매물'은 여기 없다 — 서버가 아니라 이 기기에 쌓는다
+ * (`stores/recently-viewed.ts`).
  */
 
 /**
@@ -84,14 +85,6 @@ function toListing(p: FavoritePropertySummary): Listing {
 export async function getFavorites(): Promise<Listing[]> {
   const page = await listFavorites(0, PAGE_SIZE)
   return page.content.map((item) => toListing(item.property))
-}
-
-/**
- * 최근 본 매물. 백엔드에 해당 엔드포인트가 없다 — 조회 이력을 서버가 쌓을지
- * 프론트가 localStorage 로 들고 있을지부터 정해야 한다.
- */
-export async function getRecentlyViewed(): Promise<Listing[]> {
-  return getMockRecentlyViewed()
 }
 
 /**
