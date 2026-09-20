@@ -124,6 +124,8 @@ const infoRows = computed(() => {
   if (!l) return []
   return [
     { label: '층', value: `${l.floor}층 / 전체 ${l.totalFloors}층` },
+    // 모르는 해를 0 이나 빈칸으로 두면 '0년 준공'이나 '모른다'가 된다. 말로 적는다.
+    { label: '준공', value: l.buildYear === null ? '정보 없음' : `${l.buildYear}년` },
     { label: '향', value: `${l.direction}향` },
     {
       label: '관리비',
@@ -339,6 +341,14 @@ watch(() => [props.id, props.recommendationId], load, { immediate: true })
               class="mb-2 inline-block rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-500"
             >
               추천 {{ listing.rank }}순위
+            </p>
+            <!--
+              매물명은 가격 위에 작게 둔다. 주소만으로는 같은 건물의 다른 매물이
+              구분되지 않는데, 그렇다고 이름을 제목으로 올리면 사용자가 먼저 봐야 할
+              값(가격)이 밀린다. 비어 올 수 있어 v-if 로 감싼다.
+            -->
+            <p v-if="listing.name" class="truncate text-sm font-medium text-slate-500">
+              {{ listing.name }}
             </p>
             <h1 class="truncate text-2xl font-bold text-slate-900">{{ price }}</h1>
             <!-- 관리비는 가격 바로 옆에 붙어야 하는 돈이다 — 따로 두면 아래 표까지 내려가야 안다. -->

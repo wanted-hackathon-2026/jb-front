@@ -29,6 +29,7 @@ const PAGE_SIZE = 100
 function toListing(p: FavoritePropertySummary): Listing {
   return {
     id: p.id,
+    name: p.name,
     // 이 목록은 정의상 전부 찜한 것이다.
     favorite: true,
     // 서버 LeaseType 에는 매매가 없다 — 전세·월세뿐이다(types/domain.ts 의 DealType 주석).
@@ -40,6 +41,7 @@ function toListing(p: FavoritePropertySummary): Listing {
     // 전용면적은 ㎡ 로 온다. 없는 매물이 있어(선택 필드) 0 으로 떨어뜨린다.
     areaPyeong: p.exclusiveArea === null ? 0 : sqmToPyeong(p.exclusiveArea),
     floor: p.floor ?? 0,
+    buildYear: p.buildYear ?? null,
     // 도로명이 없으면 지번으로 떨어뜨린다(카카오 장소 검색과 같은 규칙).
     address: p.roadAddress || p.address,
 

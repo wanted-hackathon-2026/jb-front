@@ -86,6 +86,12 @@ export interface LifestyleInsight {
 
 export interface Listing {
   id: string
+  /**
+   * 매물명. 건물·단지 이름이다("래미안 1단지 101동").
+   * 주소만으로는 같은 건물의 매물이 구분되지 않아 상세에서 제목 위에 세운다.
+   * 목록 카드에는 넣지 않는다 — 카드 세 줄 높이가 썸네일에 맞춰져 있다(ListingCard).
+   */
+  name: string
   dealType: DealType
   /** 보증금(만원) */
   deposit: number
@@ -131,6 +137,11 @@ export interface Listing {
   maintenanceFee: number
   /** 건물 전체 층수. floor 와 짝을 이뤄 '3층 / 전체 15층'으로 읽힌다. */
   totalFloors: number
+  /**
+   * 준공 연도. **모르면 null 이다** — 0 으로 두면 '0년 준공'이 찍힌다.
+   * 지도 목록 응답에는 없고 상세·찜 목록에만 온다(PropertyMapResponse.Item 에 없다).
+   */
+  buildYear: number | null
   /** 향 — '남', '남동' 처럼 방위만 담는다. 화면에서 '향'을 붙인다. */
   direction: string
   /** 입주 가능 시점. 날짜일 수도, '즉시 입주'·'협의 가능' 같은 말일 수도 있다. */

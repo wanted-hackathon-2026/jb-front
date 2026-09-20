@@ -59,6 +59,7 @@ function toListing(p: PropertyMapItem): Listing {
   return {
     ...ABSENT,
     id: p.id,
+    name: p.name,
     favorite: p.favorite,
     dealType: dealTypeOf(p.leaseType),
     deposit: p.deposit,
@@ -67,6 +68,8 @@ function toListing(p: PropertyMapItem): Listing {
     areaPyeong: pyeong(p.exclusiveArea),
     floor: p.floor ?? 0,
     address: p.address,
+    // 준공 연도는 목록 응답에 없다. 상세에서만 온다.
+    buildYear: null,
     x: p.longitude,
     y: p.latitude,
     // 목록에는 대표 사진 한 장만 온다. 없으면 빈 배열 — 카드가 자리표시자로 간다.
@@ -85,6 +88,7 @@ function detailToListing(p: PropertyDetailResponse): Listing {
   return {
     ...ABSENT,
     id: p.id,
+    name: p.name,
     favorite: p.favorite,
     dealType: dealTypeOf(p.leaseType),
     deposit: p.deposit,
@@ -92,6 +96,7 @@ function detailToListing(p: PropertyDetailResponse): Listing {
     roomType: p.propertyType,
     areaPyeong: pyeong(p.exclusiveArea),
     supplyPyeong: pyeong(p.supplyArea),
+    buildYear: p.buildYear,
     floor: p.floor ?? 0,
     totalFloors: p.totalFloors ?? 0,
     bathrooms: p.bathroomCount ?? 0,

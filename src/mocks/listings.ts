@@ -257,6 +257,9 @@ const OPTION_SETS = [
   ['에어컨', '냉장고', '세탁기', '전자레인지', '붙박이장', '도어록'],
 ]
 
+/** 건물 이름. 주소만으로는 같은 동의 매물이 구분되지 않아 목에도 이름을 붙인다. */
+const BUILDING_NAMES = ['현대빌라', '래미안', '푸르지오', '한신오피스텔', '자이', '더샵']
+
 /** 화면 확인용으로 결정적인 값을 만든다 — 새로고침마다 바뀌면 비교가 안 된다. */
 function build(i: number): Listing {
   const spot = HOTSPOTS[SPOT_OF[i]]
@@ -276,6 +279,7 @@ function build(i: number): Listing {
   const lines = LINE_SETS[i % LINE_SETS.length]
   return {
     id: `l${i + 1}`,
+    name: `${spot.dong} ${BUILDING_NAMES[i % BUILDING_NAMES.length]}`,
     // 목에는 '내가 찜했나'가 없다 — 서버만 아는 값이다.
     favorite: false,
     dealType: rent === 0 ? 'jeonse' : 'monthly',
@@ -293,6 +297,8 @@ function build(i: number): Listing {
     commutes: [{ anchorId: 'a1', minutes: 20 + (i % 5) * 4, transfers: i % 3, walkMinutes }],
     lines,
     supplyPyeong: areaPyeong + 4 + (i % 3),
+    // null 이 섞여야 '준공 정보 없음'으로 떨어지는 화면도 같이 확인된다.
+    buildYear: i % 7 === 0 ? null : 1995 + (i % 28),
     bathrooms: 1 + (i % 2),
     description: DESCRIPTIONS[i % DESCRIPTIONS.length],
     // 0 이 섞여야 '관리비 없음'으로 떨어지는 화면도 같이 확인된다.
