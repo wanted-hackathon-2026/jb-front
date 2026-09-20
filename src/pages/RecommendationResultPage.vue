@@ -55,8 +55,12 @@ watch(() => props.recommendationId, load, { immediate: true })
  * 않는다 — 그대로 두는 것이 이 화면을 살려 둔 이유고(스크롤·페이지), 결과는 그 추천에
  * 한 번 고정된 값이라 다시 받아도 같다.
  */
+let activatedOnce = false
 onActivated(() => {
-  if (status.value !== SUCCESS_STATUS) void load()
+  // 첫 활성화는 위 watch(immediate) 와 겹친다 — 같은 걸 두 번 받지 않는다.
+  const first = !activatedOnce
+  activatedOnce = true
+  if (!first && status.value !== SUCCESS_STATUS) void load()
 })
 </script>
 
