@@ -4,6 +4,7 @@ import { useStorage } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import BaseAiIcon from '@/components/BaseAiIcon.vue'
 import BaseChip from '@/components/BaseChip.vue'
+import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
 import BaseBottomSheet from '@/components/BaseBottomSheet.vue'
 import BaseSpinner from '@/components/BaseSpinner.vue'
 import BaseSegmentedControl from '@/components/BaseSegmentedControl.vue'
@@ -260,6 +261,10 @@ function addPickedAnchor() {
         좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
         아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
         왼쪽도 8px + 내용 들여쓰기 10px 로 같은 18px 을 만든다.
+
+        돋보기를 시안 에셋으로 바꾸면서 이 계산이 오히려 맞게 됐다 — 예전에 그리던
+        아이콘은 20px 박스 안에서 테두리가 2.5px 쯤 안쪽에 있어 실제로 보이는 가장자리는
+        20.5px 이었다. 지금 것은 그림이 박스를 꽉 채워 18px 에 정확히 선다.
       -->
       <div
         data-tour="anchors"
@@ -304,16 +309,7 @@ function addPickedAnchor() {
           aria-label="거점 검색"
           @click="openAnchorPicker"
         >
-          <svg
-            viewBox="0 0 24 24"
-            class="size-5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-4-4" stroke-linecap="round" />
-          </svg>
+          <BaseSearchIcon class="size-5" />
         </button>
       </div>
     </div>

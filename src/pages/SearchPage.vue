@@ -3,6 +3,7 @@ import BaseSkeleton from '@/components/BaseSkeleton.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
+import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
 import { searchPlaces } from '@/lib/api/places'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import type { PlaceSuggestion } from '@/types/domain'
@@ -150,17 +151,7 @@ function split(text: string) {
             placeholder="직장·학교 이름이나 주소"
             autofocus
           />
-          <svg
-            viewBox="0 0 24 24"
-            class="size-5 shrink-0 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="6.5" />
-            <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-          </svg>
+          <BaseSearchIcon class="size-4 shrink-0 text-slate-400" />
         </div>
       </div>
 
@@ -280,6 +271,7 @@ function split(text: string) {
         <div class="mb-2 flex items-center justify-between">
           <p class="flex items-center gap-1.5 font-bold text-slate-900">
             <svg
+              v-if="s.key === 'anchor'"
               viewBox="0 0 24 24"
               class="size-5 text-brand-500"
               fill="none"
@@ -287,16 +279,11 @@ function split(text: string) {
               stroke-width="2"
               aria-hidden="true"
             >
-              <template v-if="s.key === 'anchor'">
-                <circle cx="12" cy="12" r="6" />
-                <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-                <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
-              </template>
-              <template v-else>
-                <circle cx="11" cy="11" r="6.5" />
-                <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-              </template>
+              <circle cx="12" cy="12" r="6" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+              <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
             </svg>
+            <BaseSearchIcon v-else class="size-4 text-brand-500" />
             {{ s.title }}
           </p>
           <button

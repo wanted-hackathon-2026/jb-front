@@ -3,6 +3,7 @@ import { useElementSize } from '@vueuse/core'
 import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
+import BaseSearchIcon from '@/components/BaseSearchIcon.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
 import BaseErrorState from '@/components/BaseErrorState.vue'
 import BaseSkeleton from '@/components/BaseSkeleton.vue'
@@ -471,17 +472,7 @@ watch(
             class="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
             for="history-search"
           >
-            <svg
-              viewBox="0 0 24 24"
-              class="size-6 shrink-0 text-slate-500"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="6.5" />
-              <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-            </svg>
+            <BaseSearchIcon class="size-4 shrink-0 text-slate-500" />
             <BaseChip
               v-for="k in keywords"
               :key="k"
