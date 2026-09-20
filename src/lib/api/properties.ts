@@ -1,7 +1,7 @@
 /**
- * 매물 등록. 출처: PropertyController.java:15 `POST /api/properties` (jb-backend a2ee567)
+ * 매물 등록. 출처: PropertyController.java:42 `POST /api/properties` (jb-backend 95a4463)
  *
- * **관리자 전용이다.** AuthConfig.java:63 이 이 경로에만 PropertyAdminAuthorizationManager
+ * **관리자 전용이다.** AuthConfig.java:69 이 이 경로에만 PropertyAdminAuthorizationManager
  * 를 걸어 두는데, 그 매니저는 JWT 의 role 클레임이 아니라 **DB 의 현재 role 을 다시 읽는다**
  * ("Read the current database role, not the potentially stale JWT role claim").
  * 그래서 프론트가 보는 role(`GET /api/me`)과 서버 판단이 어긋날 수 있고,

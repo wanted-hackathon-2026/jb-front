@@ -2,15 +2,14 @@
  * 찜. 출처: FavoriteController.java:14 `/api/me/favorites` (jb-backend a2ee567)
  * 명세: docs/specs/my-account-and-favorites.md (jb-backend)
  *
- * ⚠️ 아직 화면이 없다. 백엔드 계약대로 만들어만 두고, 찜 UI 가 생기면 그대로 쓴다.
- *
  * 반환 타입이 `types/backend.ts` 의 Favorite* 그대로인 건 의도다 — 프론트의
  * `Listing`(domain.ts)은 목을 굴리려고 만든 추측형이고, 이쪽은 실재하는 계약이다.
- * 둘을 섞으면 어느 쪽이 사실인지 알 수 없게 된다. 화면이 생길 때 매핑을 정한다.
+ * 둘을 섞으면 어느 쪽이 사실인지 알 수 없게 된다. `Listing` 으로의 변환은
+ * `lib/api/me.ts` 한 곳에만 둔다.
  *
  * **찜은 로그인 전용이다.** 비로그인 세션 개념이 favorite 에는 없다(user_id NOT NULL).
- * 지금 앱의 하트 세 군데(지도 FAB·카드·상세)는 로그인 없이 눌리므로, 붙일 때
- * 로그인 유도 경로가 함께 필요하다.
+ * 하트 세 군데(지도 FAB·카드·상세)는 로그인 없이도 눌리므로, 누른 뒤에 로그인으로
+ * 유도한다(`stores/favorites.ts` 의 `canUseApi` 가드 + `stores/login-prompt.ts`).
  */
 import type { FavoriteCreated, FavoriteDetailed, FavoritePage } from '@/types/backend'
 import { request } from './http'

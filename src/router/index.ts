@@ -53,7 +53,7 @@ const routes: RouteRecordRaw[] = [
     /**
      * 매물 등록(관리자 전용). 서비스 동선이 아니라 데이터 주입 도구라 메뉴에 노출하지
      * 않고 주소로만 들어온다. 권한 판단은 화면이 하고(auth.user.role), 실제 차단은
-     * 서버가 한다(AuthConfig.java:63 — DB 의 현재 role 을 다시 읽는다).
+     * 서버가 한다(AuthConfig.java:69 — DB 의 현재 role 을 다시 읽는다).
      */
     path: '/admin/properties/new',
     name: 'admin-property-new',
