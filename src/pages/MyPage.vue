@@ -453,7 +453,7 @@ watch(
             class="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
             for="history-search"
           >
-            <BaseSearchIcon class="size-4 shrink-0 text-slate-500" />
+            <BaseSearchIcon class="text-[#3f3f46]" />
             <BaseChip
               v-for="k in keywords"
               :key="k"

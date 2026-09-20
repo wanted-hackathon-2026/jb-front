@@ -334,7 +334,7 @@ function addPickedAnchor() {
           aria-label="거점 검색"
           @click="openAnchorPicker"
         >
-          <BaseSearchIcon class="size-5" />
+          <BaseSearchIcon class="text-[#3f3f46]" />
         </button>
       </div>
     </div>

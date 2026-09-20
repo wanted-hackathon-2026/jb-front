@@ -144,7 +144,7 @@ function split(text: string) {
             placeholder="직장·학교 이름이나 주소"
             autofocus
           />
-          <BaseSearchIcon class="size-4 shrink-0 text-slate-400" />
+          <BaseSearchIcon class="text-[#3f3f46]" />
         </div>
       </div>
 
@@ -276,7 +276,7 @@ function split(text: string) {
               <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
               <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" stroke-linecap="round" />
             </svg>
-            <BaseSearchIcon v-else class="size-4 text-brand-500" />
+            <BaseSearchIcon v-else class="text-brand-500" />
             {{ s.title }}
           </p>
           <button
