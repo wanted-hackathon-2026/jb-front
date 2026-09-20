@@ -9,6 +9,7 @@ import type { TransportMode } from '@/types/domain'
 export const TRANSPORTS = [
   { value: 'transit', label: '대중교통' },
   { value: 'car', label: '자가용' },
+  { value: 'bicycle', label: '자전거' },
   { value: 'walk', label: '도보' },
 ] as const satisfies readonly { value: TransportMode; label: string }[]
 

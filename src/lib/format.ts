@@ -62,3 +62,16 @@ export function formatCommute(minutes: number, transfers: number, walkMinutes: n
   if (walkMinutes > 0) parts.push(`도보 ${walkMinutes}분`)
   return parts.join(' · ')
 }
+
+/**
+ * 분 → "50분" · "1시간" · "1시간 20분".
+ *
+ * 이동시간 상한이 180 까지 열려 있어(서버 `@Max(180)`) 분으로만 적으면
+ * "최대 180분" 처럼 한 번 계산해야 읽히는 값이 나온다.
+ */
+export function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (!h) return `${m}분`
+  return m ? `${h}시간 ${m}분` : `${h}시간`
+}

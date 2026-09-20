@@ -15,7 +15,7 @@
  * 목에만 존재하는 값이라, 실제 매물 API 가 붙으면 이 축을 지우거나 백엔드에 요청해야 한다.
  */
 export type DealType = 'monthly' | 'jeonse' | 'sale'
-export type TransportMode = 'transit' | 'car' | 'walk'
+export type TransportMode = 'transit' | 'car' | 'bicycle' | 'walk'
 
 /** 거점 — 직장·학교 등 사용자가 자주 가는 곳 */
 export interface Anchor {
@@ -56,6 +56,8 @@ export interface LifestyleWeights {
   safety: number
   infrastructure: number
 }
+// 값은 1~5 정수다 — 서버의 `@Min(1) @Max(5)` 를 그대로 쓴다(`lib/lifestyle.ts`
+// 의 `IMPORTANCE_RANGE`). 매물의 축별 **점수**(0~100)와 눈금이 다르니 섞지 않는다.
 
 /**
  * 이동 동선의 한 구간. 시안의 막대 한 칸 + 그 아래 정류 표시가 이 단위다.

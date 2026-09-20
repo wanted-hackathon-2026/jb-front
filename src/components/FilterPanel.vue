@@ -1,17 +1,35 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import BaseSpinner from './BaseSpinner.vue'
 import BaseRangeSlider from '@/components/BaseRangeSlider.vue'
 import BaseWeightSlider from '@/components/BaseWeightSlider.vue'
-import { formatDeposit } from '@/lib/format'
-import { LIFESTYLE_AXES } from '@/lib/lifestyle'
+import { formatDeposit, formatMinutes } from '@/lib/format'
+import { IMPORTANCE_RANGE, LIFESTYLE_AXES, importanceLabel } from '@/lib/lifestyle'
 import { TRANSPORTS } from '@/lib/transport'
 import { DEPOSIT_RANGE, MINUTES_RANGE, RENT_RANGE, useFiltersStore } from '@/stores/filters'
+import { useAnchorsStore } from '@/stores/anchors'
 import type { DealType } from '@/types/domain'
 
 const filters = useFiltersStore()
+const anchors = useAnchorsStore()
 
 defineProps<{ submitting?: boolean }>()
-defineEmits<{ submit: [] }>()
+defineEmits<{ submit: []; pickAnchor: [] }>()
+
+/**
+ * 거점이 없으면 이동시간 절을 잠근다.
+ *
+ * 서버는 거점 없는 추천을 받지 못한다 — 검증이 `workplaceId` 와 `workplace` 중
+ * **정확히 하나**를 요구하고(RecommendationCreateRequest), 후보 선정 자체가 거점
+ * 좌표에서 반경을 잡아 뽑는다(RecommendationProcessor.findCandidates).
+ *
+ * 그래서 예전에는 '적용'을 누른 **뒤에** 토스트로 거부했다. 조건을 다 맞춰 놓고
+ * 마지막에 안 된다는 걸 아는 순서라 가장 늦게 알려주는 모양이었다. 잠가서 **누르기
+ * 전에** 알린다.
+ *
+ * 백엔드가 거점 없는 추천을 받게 되면 이 값만 지우면 된다 — 잠금이 전부 여기서 나온다.
+ */
+const needsAnchor = computed(() => !anchors.hasAnchors)
 
 const DEALS: { value: DealType; label: string }[] = [
   { value: 'monthly', label: '월세' },
@@ -49,7 +67,9 @@ const DEALS: { value: DealType; label: string }[] = [
       매물 유형. 거래유형과 달리 **아무것도 안 고른 상태가 기본**이고 그게 '전체'다 —
       서버는 빈 목록을 400 으로 막지만, 그 변환은 화면이 아니라
       lib/recommendation-request.ts 가 맡는다.
-      칩은 여섯 개라 한 줄에 안 들어간다. 줄바꿈으로 흘린다.
+      칩은 여섯 개라 한 줄에 안 들어간다. flex-wrap 으로 흘리면 마지막 줄에 혼자
+      남는 칩이 남은 폭을 다 먹어 '빌라'만 길어지므로, 3열 그리드로 두 줄에 나눠
+      폭을 균일하게 둔다.
     -->
     <section>
       <h3 class="mb-3 font-bold text-slate-900">
@@ -58,12 +78,12 @@ const DEALS: { value: DealType; label: string }[] = [
           {{ filters.roomTypes.length ? '중복선택 가능' : '전체' }}
         </span>
       </h3>
-      <div class="flex flex-wrap gap-2">
+      <div class="grid grid-cols-3 gap-2">
         <button
           v-for="t in filters.allRoomTypes"
           :key="t"
           type="button"
-          class="h-11 min-w-20 flex-1 rounded-full border px-3 text-sm font-semibold transition-colors"
+          class="h-11 rounded-full border px-3 text-sm font-semibold transition-colors"
           :class="
             filters.roomTypes.includes(t)
               ? 'border-brand-500 bg-brand-500 text-white'
@@ -98,39 +118,83 @@ const DEALS: { value: DealType; label: string }[] = [
     </section>
 
     <section data-tour="conditions">
-      <h3 class="mb-3 font-bold text-slate-900">거점 이동시간</h3>
-      <!-- 시안: 이동수단 칩과 '최대 N분'이 같은 줄에 있고, 슬라이더는 그 아래 전체 폭이다. -->
-      <div class="mb-3 flex items-center gap-2">
-        <button
-          v-for="t in TRANSPORTS"
-          :key="t.value"
-          type="button"
-          class="h-9 rounded-full px-4 text-sm font-semibold transition-colors"
-          :class="
-            filters.transport === t.value
-              ? 'bg-brand-500 text-white'
-              : 'bg-slate-100 text-slate-600'
-          "
-          :aria-pressed="filters.transport === t.value"
-          @click="filters.transport = t.value"
-        >
-          {{ t.label }}
-        </button>
-        <span class="ml-auto shrink-0 text-sm font-semibold text-brand-500">
-          최대 {{ filters.maxMinutes }}분
+      <!--
+        '최대 N분'은 칩과 같은 줄에 있었는데, 이동수단이 넷이 되면서 320px 한 줄에
+        들어가지 않는다. 보증금·월세 절이 이미 쓰는 '제목 줄 오른쪽에 현재값' 배치로 옮긴다.
+      -->
+      <div class="mb-3 flex items-baseline justify-between">
+        <h3 class="font-bold text-slate-900">거점 이동시간</h3>
+        <!-- 잠겼을 때 값만 또렷하면 고를 수 있는 것처럼 보인다 — 아래 조작부와 같이 흐려진다. -->
+        <span class="text-sm font-semibold text-brand-500" :class="needsAnchor ? 'opacity-40' : ''">
+          최대 {{ formatMinutes(filters.maxMinutes) }}
         </span>
       </div>
-      <BaseWeightSlider
-        v-model="filters.maxMinutes"
-        label="거점까지 최대 이동시간"
-        bare
-        v-bind="MINUTES_RANGE"
-      />
+      <!--
+        거점이 없으면 이 절을 잠근다. 흐리게만 두면 눌리는데 반응이 없어 고장으로 보이므로
+        입력 자체를 막고(`disabled`·`pointer-events-none`), 보조기기에도 알린다.
+      -->
+      <div
+        :class="needsAnchor ? 'pointer-events-none opacity-40' : ''"
+        :aria-disabled="needsAnchor"
+      >
+        <!--
+          칩이 넷이라 가로로 늘어놓으면 320px 을 넘는다('대중교통'만 글자폭 56px).
+          매물유형과 같이 그리드로 폭을 나눠 네 칸을 균일하게 둔다 — 칸이 폭을 정하므로
+          칩에서 좌우 패딩을 뺀다.
+        -->
+        <div class="mb-3 grid grid-cols-4 gap-2">
+          <button
+            v-for="t in TRANSPORTS"
+            :key="t.value"
+            type="button"
+            class="h-9 rounded-full text-sm font-semibold transition-colors"
+            :class="
+              filters.transport === t.value
+                ? 'bg-brand-500 text-white'
+                : 'bg-slate-100 text-slate-600'
+            "
+            :aria-pressed="filters.transport === t.value"
+            :disabled="needsAnchor"
+            @click="filters.transport = t.value"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+        <BaseWeightSlider
+          v-model="filters.maxMinutes"
+          label="거점까지 최대 이동시간"
+          bare
+          v-bind="MINUTES_RANGE"
+        />
+      </div>
+
+      <!--
+        안내는 잠근 것 **바로 아래** 둔다. 토스트로 띄우면 화면 위쪽에 떴다 사라져서
+        무엇이 왜 잠겼는지와 이어지지 않는다. 다음에 할 일(거점 선택)까지 여기 둔다 —
+        문구만 있으면 막다른 길이다.
+      -->
+      <p
+        v-if="needsAnchor"
+        class="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-sm text-slate-500"
+      >
+        <span class="min-w-0">거점을 선택하면 통근시간으로도 걸러드려요</span>
+        <button
+          type="button"
+          class="shrink-0 font-semibold text-brand-500"
+          @click="$emit('pickAnchor')"
+        >
+          거점 선택
+        </button>
+      </p>
     </section>
 
     <section data-tour="conditions">
       <h3 class="mb-3 font-bold text-slate-900">라이프스타일</h3>
       <div class="flex flex-col gap-4">
+        <!--
+          눈금은 서버와 같은 1~5 다. 다섯 칸뿐이라 숫자만 적으면 '3' 이 무슨 뜻인지
+          알 수 없어, 값 자리에는 단 이름을 적는다.
+        -->
         <BaseWeightSlider
           v-for="item in LIFESTYLE_AXES"
           :key="item.key"
@@ -138,6 +202,8 @@ const DEALS: { value: DealType; label: string }[] = [
           :icon="item.icon"
           :label="item.label"
           :hint="item.hint"
+          :value-text="importanceLabel(filters.lifestyle[item.key])"
+          v-bind="IMPORTANCE_RANGE"
         />
       </div>
     </section>
@@ -153,7 +219,7 @@ const DEALS: { value: DealType; label: string }[] = [
         type="button"
         data-tour="apply"
         class="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-brand-500 text-base font-bold text-white disabled:opacity-50"
-        :disabled="submitting"
+        :disabled="submitting || needsAnchor"
         :aria-busy="submitting"
         @click="$emit('submit')"
       >

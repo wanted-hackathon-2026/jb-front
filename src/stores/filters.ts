@@ -9,13 +9,13 @@ import { MAX_COMMUTE_MINUTES, MIN_COMMUTE_MINUTES } from '@/lib/recommendation-r
 export const DEPOSIT_RANGE = { min: 0, max: 50000, step: 500 }
 export const RENT_RANGE = { min: 0, max: 200, step: 5 }
 /**
- * 통근시간 슬라이더. **하한이 0 이 아니라 5 다** — 서버가 `@Min(5)` 로 막는다
- * (RecommendationCreateRequest). 0 을 고를 수 있게 두면 누를 수는 있는데 저장은
- * 400 인 버튼이 된다.
+ * 통근시간 슬라이더. 양끝이 서버 제약 그대로다 — `@Min(5) @Max(180)`
+ * (RecommendationCreateRequest.java:22). 서버가 안 받는 값을 고를 수 있게 두면
+ * 누를 수는 있는데 저장은 400 인 버튼이 된다.
  */
 export const MINUTES_RANGE = {
   min: MIN_COMMUTE_MINUTES,
-  max: Math.min(60, MAX_COMMUTE_MINUTES),
+  max: MAX_COMMUTE_MINUTES,
   step: 5,
 }
 
@@ -24,7 +24,7 @@ export const MINUTES_RANGE = {
  *
  * 범위형(보증금·월세)은 **최소부터 중간까지**다. 한 점으로 두면 폭이 0 이라 결과가 비고,
  * 전체로 두면 거르지 않는 것이라 슬라이더가 있는 이유가 없어진다.
- * 가중치형은 중앙값 하나(50)가 곧 '선호 없음'이라 NEUTRAL 과 같은 값이 된다.
+ * 가중치형은 중앙값 하나(3)가 곧 '선호 없음'이라 NEUTRAL 과 같은 값이 된다.
  */
 const toMid = ({ min, max }: { min: number; max: number }): [number, number] => [
   min,
@@ -36,14 +36,16 @@ const toMid = ({ min, max }: { min: number; max: number }): [number, number] => 
  *
  * 초기화는 값을 0 으로 만드는 게 아니라 필터를 푸는 것이다. 그래서 축의 성격에 따라
  * 가는 곳이 다르다 — 범위형(보증금·월세·이동시간)은 **양끝**이 조건 해제이고,
- * 가중치형(라이프스타일)은 **중앙**이 '선호 없음'이다. 가중치를 0 으로 두면
+ * 가중치형(라이프스타일)은 **중앙**이 '선호 없음'이다. 가중치를 최하로 두면
  * "무엇도 중요하지 않다"가 되어 모든 매물이 동점이 된다.
+ *
+ * 눈금은 1~5 (`IMPORTANCE_RANGE`) 이고 그 한가운데가 3 이다.
  */
 const NEUTRAL_LIFESTYLE: LifestyleWeights = {
-  sunlight: 50,
-  quietness: 50,
-  safety: 50,
-  infrastructure: 50,
+  sunlight: 3,
+  quietness: 3,
+  safety: 3,
+  infrastructure: 3,
 }
 
 export const useFiltersStore = defineStore('filters', () => {
@@ -53,8 +55,13 @@ export const useFiltersStore = defineStore('filters', () => {
   const deposit = useStorage<[number, number]>('jb:deposit:v2', toMid(DEPOSIT_RANGE))
   const rent = useStorage<[number, number]>('jb:rent:v2', toMid(RENT_RANGE))
   const transport = useStorage<TransportMode>('jb:transport:v1', 'transit')
-  const maxMinutes = useStorage('jb:max-minutes:v2', (MINUTES_RANGE.min + MINUTES_RANGE.max) / 2)
-  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v3', { ...NEUTRAL_LIFESTYLE })
+  /**
+   * 이동시간 기본값. 범위(5~60)의 한가운데는 32.5 인데 슬라이더 step 이 5 라
+   * 격자에서 벗어난다 — 첫 진입에 "최대 32.5분"이 뜬다. 가운데에 가장 가까운
+   * 격자점인 30 으로 둔다.
+   */
+  const maxMinutes = useStorage('jb:max-minutes:v3', 30)
+  const lifestyle = useStorage<LifestyleWeights>('jb:lifestyle:v4', { ...NEUTRAL_LIFESTYLE })
   /**
    * 매물 유형. **비어 있으면 '아무거나'** 라는 뜻이고, 보낼 때 전체로 펴진다
    * (`lib/recommendation-request.ts`). 어휘는 등록 화면과 같은 `PROPERTY_TYPES` 다 —

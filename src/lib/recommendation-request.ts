@@ -10,6 +10,7 @@ import {
   type RecommendationCreateRequest,
   type TransportType,
 } from '@/types/backend'
+import { IMPORTANCE_RANGE } from '@/lib/lifestyle'
 import type { LifestyleWeights, TransportMode } from '@/types/domain'
 
 /** 서버가 받는 최소 통근시간. `@Min(5)` 라 0 을 보내면 400 이다. */
@@ -17,21 +18,21 @@ export const MIN_COMMUTE_MINUTES = 5
 /** 서버 상한. `@Max(180)`. */
 export const MAX_COMMUTE_MINUTES = 180
 
-/** 프론트 이동수단 → 서버 enum. 자전거는 화면에 없어서 쓰지 않는다. */
+/** 프론트 이동수단 → 서버 enum. 서버의 네 값을 전부 쓴다(TransportType.java). */
 const TRANSPORT: Record<TransportMode, TransportType> = {
   transit: 'TRANSIT',
   car: 'CAR',
+  bicycle: 'BICYCLE',
   walk: 'WALK',
 }
 
 /**
- * 0~100 슬라이더 → 1~5 중요도.
- *
- * 25 단위로 접는다: 0→1, 25→2, 50→3, 75→4, 100→5. 가운데(50)가 정확히 한가운데(3)로
- * 떨어져야 '아무 것도 안 건드린 상태'가 중립으로 나간다.
+ * 중요도. 슬라이더 눈금이 이미 서버와 같은 1~5 라(`lib/lifestyle.ts` 의
+ * `IMPORTANCE_RANGE`) 환산하지 않는다 — 옛 0~100 값이 로컬에 남아 있을 때만
+ * 대비해 양끝을 자른다. 슬라이더 하한이 5 여도 여기서 한 번 더 막는 것과 같은 이유다.
  */
 export const toImportance = (weight: number) =>
-  Math.min(5, Math.max(1, 1 + Math.round(weight / 25)))
+  Math.min(IMPORTANCE_RANGE.max, Math.max(IMPORTANCE_RANGE.min, Math.round(weight)))
 
 export interface FilterSnapshot {
   /**

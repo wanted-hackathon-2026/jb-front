@@ -105,7 +105,9 @@ const onInput = (e: Event) =>
           @input="onInput"
         />
       </div>
-      <span v-if="!bare" class="w-12 shrink-0 text-right text-sm font-semibold text-slate-900">
+      <!-- 값 칸은 네 글자('상관없음')가 한 줄에 들어가는 폭이다. 320px 에서
+           라벨 96 + 값 64 + 여백 24 를 빼면 트랙에 96px 이 남는다. -->
+      <span v-if="!bare" class="w-16 shrink-0 text-right text-sm font-semibold text-slate-900">
         {{ valueText ?? modelValue }}
       </span>
     </div>

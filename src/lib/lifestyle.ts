@@ -49,3 +49,21 @@ export const lifestyleLabel = (key: LifestyleKey) =>
  * 점수만 덩그러니 두지 않으려고 이 설명을 대신 붙인다.
  */
 export const lifestyleHint = (key: LifestyleKey) => LIFESTYLE_AXES.find((a) => a.key === key)!.hint
+
+/**
+ * 중요도 슬라이더의 범위. **서버 제약 그대로다** — `@Min(1) @Max(5)`
+ * (RecommendationCreateRequest.java:23-26, jb-backend 2a709d1).
+ *
+ * 예전엔 0~100 슬라이더를 25단위로 접어 보냈는데, 그러면 38에서 62까지 끌어도
+ * 서버엔 똑같이 3 이 가서 움직여도 결과가 안 변하는 구간이 생겼다.
+ * 눈금을 서버 해상도에 맞추면 슬라이더를 움직인 만큼만 결과가 달라진다.
+ */
+export const IMPORTANCE_RANGE = { min: 1, max: 5, step: 1 }
+
+/** 5단짜리 눈금이라 숫자만 두면 '3' 이 무슨 뜻인지 알 수 없다. 단마다 말을 붙인다. */
+const IMPORTANCE_LABELS = ['상관없음', '조금', '보통', '중요', '매우중요'] as const
+
+export const importanceLabel = (v: number) =>
+  IMPORTANCE_LABELS[
+    Math.min(IMPORTANCE_RANGE.max, Math.max(IMPORTANCE_RANGE.min, Math.round(v))) - 1
+  ]

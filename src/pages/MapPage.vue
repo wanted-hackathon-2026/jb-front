@@ -222,6 +222,11 @@ async function requestRecommendation() {
    * 주소를 보내는 쪽은 서버가 지오코딩하므로, 지번만 있는 거점(지도 핀 찍기)은
    * 실패할 수 있다 — 거점 등록과 같은 제약이다.
    */
+  /*
+   * 거점이 없으면 필터 시트가 '적용'을 잠그므로 여기까지 오지 않는다(FilterPanel 의
+   * `needsAnchor`). 그래도 남겨 둔다 — 잠금은 화면의 약속이고, 이건 요청을 만드는
+   * 함수의 약속이다. 다른 곳에서 부르게 되면 화면 잠금은 따라오지 않는다.
+   */
   const anchor = anchors.anchors[0]
   if (!anchor) {
     notice.error('거점을 먼저 설정해 주세요')
@@ -287,19 +292,18 @@ function addPickedAnchor() {
     -->
     <div class="safe-top pointer-events-none absolute inset-x-0 top-0 z-30 px-5 pt-3.5 pb-3">
       <!--
-        좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
-        아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
-        왼쪽도 8px + 내용 들여쓰기 10px 로 같은 18px 을 만든다.
+        좌우 광학 여백 18px 을 맞춘다. 바 안쪽 여백이 4px 이므로
+        왼쪽은 4 + 내용 들여쓰기 14 = 18, 오른쪽은 4 + 아이콘 버튼(44px) 안에서
+        돋보기(15px)가 가운데 놓이며 생기는 14.5 = 18.5 다.
 
-        돋보기를 시안 에셋으로 바꾸면서 이 계산이 오히려 맞게 됐다 — 예전에 그리던
-        아이콘은 20px 박스 안에서 테두리가 2.5px 쯤 안쪽에 있어 실제로 보이는 가장자리는
-        20.5px 이었다. 지금 것은 그림이 박스를 꽉 채워 18px 에 정확히 선다.
+        세로 여백을 주지 않고 자식이 바 높이를 꽉 채우게 둔다(h-full) — 48px 바 안에서
+        여백을 8px 씩 주면 누를 수 있는 높이가 32px 로 줄어든다.
       -->
       <div
         data-tour="anchors"
         class="pointer-events-auto flex h-[49px] items-center gap-2 rounded-full bg-white px-1 shadow-md"
       >
-        <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
+        <div class="flex h-full flex-1 items-center gap-2 overflow-x-auto pl-3.5">
           <template v-if="anchors.hasAnchors">
             <BaseChip
               v-for="a in anchors.anchors"
@@ -553,7 +557,11 @@ function addPickedAnchor() {
       </div>
 
       <div v-if="sheet.tab === 'filters'" class="min-h-0 flex-1 overflow-y-auto">
-        <FilterPanel :submitting="submitting" @submit="requestRecommendation" />
+        <FilterPanel
+          :submitting="submitting"
+          @submit="requestRecommendation"
+          @pick-anchor="openAnchorPicker"
+        />
       </div>
       <!-- 목록은 자기 스크롤 영역을 직접 가진다(정렬 헤더는 고정되어야 한다). -->
       <ListingList

@@ -483,7 +483,7 @@ export type TransportType = 'WALK' | 'BICYCLE' | 'TRANSIT' | 'CAR'
 export type RecommendationStatusCode = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
 /**
- * 추천 요청. 출처: RecommendationCreateRequest.java (jb-backend c0ff0f0)
+ * 추천 요청. 출처: RecommendationCreateRequest.java (jb-backend 2a709d1)
  *
  * 값 제약이 빡빡하다. 어긋나면 전부 400 이라 보내기 전에 프론트가 맞춘다
  * (`lib/recommendation-request.ts`).
@@ -504,7 +504,7 @@ export interface RecommendationCreateRequest {
   transportType: TransportType
   /** 5~180. 프론트 슬라이더 하한도 5 다. */
   maxCommuteMinutes: number
-  /** 넷 다 1~5. 프론트의 0~100 슬라이더를 접어서 보낸다. */
+  /** 넷 다 1~5. 프론트 슬라이더 눈금도 같은 1~5 라 환산하지 않는다. */
   sunlightImportance: number
   quietnessImportance: number
   safetyImportance: number

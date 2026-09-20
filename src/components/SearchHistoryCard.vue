@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatDay, formatDeposit } from '@/lib/format'
-import { LIFESTYLE_AXES } from '@/lib/lifestyle'
+import { formatDay, formatDeposit, formatMinutes } from '@/lib/format'
+import { IMPORTANCE_RANGE, LIFESTYLE_AXES, importanceLabel } from '@/lib/lifestyle'
 import { transportLabel } from '@/lib/transport'
 import type { SearchHistoryEntry } from '@/types/domain'
 
@@ -57,7 +57,7 @@ const rentText = computed(() => `${props.entry.rent[0]}만원 ~ ${props.entry.re
         <!-- 시안은 수단보다 '최대 N분' 을 굵게 둔다 — 조건을 좁힌 쪽이 그 값이다. -->
         <dd class="text-sm text-slate-700">
           {{ transportLabel(entry.transport) }} |
-          <span class="font-semibold">최대 {{ entry.maxMinutes }}분</span>
+          <span class="font-semibold">최대 {{ formatMinutes(entry.maxMinutes) }}</span>
         </dd>
       </div>
     </dl>
@@ -65,6 +65,8 @@ const rentText = computed(() => `${props.entry.rent[0]}만원 ~ ${props.entry.re
     <!--
       가중치는 슬라이더가 아니라 '그때 이랬다'는 기록이라 읽기 전용 막대다.
       축 순서·이름은 필터 시트와 같은 테이블을 본다.
+      값은 1~5 눈금이라(IMPORTANCE_RANGE) 막대 길이로 쓰려면 백분율로 편다 —
+      예전처럼 값을 그대로 %로 두면 5 가 5% 짜리 막대가 된다.
     -->
     <ul class="mt-3 flex flex-col gap-1.5">
       <li v-for="axis in LIFESTYLE_AXES" :key="axis.key" class="flex items-center gap-2">
@@ -76,11 +78,11 @@ const rentText = computed(() => `${props.entry.rent[0]}만원 ~ ${props.entry.re
         <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
           <span
             class="block h-full rounded-full bg-slate-400"
-            :style="{ width: `${entry.lifestyle[axis.key]}%` }"
+            :style="{ width: `${(entry.lifestyle[axis.key] / IMPORTANCE_RANGE.max) * 100}%` }"
           />
         </span>
-        <span class="w-10 shrink-0 text-right text-sm text-slate-500">
-          {{ entry.lifestyle[axis.key] }}점
+        <span class="w-16 shrink-0 text-right text-sm text-slate-500">
+          {{ importanceLabel(entry.lifestyle[axis.key]) }}
         </span>
       </li>
     </ul>
