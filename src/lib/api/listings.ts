@@ -18,6 +18,7 @@ import type {
 } from '@/types/backend'
 import { sqmToPyeong } from '@/lib/format'
 import { clientSessionToken } from '@/lib/client-session'
+import { LIFESTYLE_AXES } from '@/lib/lifestyle'
 import { request } from './http'
 
 /**
@@ -147,6 +148,14 @@ export async function getListing(id: string): Promise<Listing> {
  * 같은 매물이라도 어느 추천 기준이냐에 따라 점수·통근시간이 달라져서 엔드포인트가
  * 따로 있다. 응답은 **매물 상세 그대로 + 평가**라, 상세 변환을 재사용하고 평가만 얹는다.
  */
+/** 축 이름과 응답 필드 이름이 달라(`quietness` ↔ `quietnessScore`) 한 줄로 이어 둔다. */
+const AXIS_SCORE = {
+  sunlight: (e: RecommendedPropertyDetailResponse['evaluation']) => e.sunlightScore,
+  quietness: (e: RecommendedPropertyDetailResponse['evaluation']) => e.quietnessScore,
+  safety: (e: RecommendedPropertyDetailResponse['evaluation']) => e.safetyScore,
+  infrastructure: (e: RecommendedPropertyDetailResponse['evaluation']) => e.infrastructureScore,
+} as const
+
 export async function getRecommendedListing(
   recommendationId: string,
   id: string,
@@ -162,6 +171,20 @@ export async function getRecommendedListing(
     score: e.totalScore,
     rank: e.rank,
     aiSummary: e.summary,
+    /*
+     * 축별 점수. 서버는 네 축을 따로 주는데(sunlightScore …) 여기서 옮겨 담지 않아
+     * 상세의 '라이프스타일' 절이 통째로 안 뜨고 있었다 — 받아 놓고 안 쓰던 값이다.
+     *
+     * 순서는 LIFESTYLE_AXES 를 따른다. 필터 시트에서 고른 순서와 상세에서 읽는 순서가
+     * 다르면 같은 네 축인지 알아보기 어렵다.
+     *
+     * 축마다 붙는 문장(title·body)은 서버에 없다. 총평 하나(summary)뿐이라 비워 두고,
+     * 화면이 그 축이 무엇을 재는지로 대신 채운다(types/domain.ts 의 LifestyleInsight).
+     */
+    lifestyleInsights: LIFESTYLE_AXES.map((axis) => ({
+      key: axis.key,
+      score: AXIS_SCORE[axis.key](e),
+    })),
     // 환승·도보는 계산에 없다 — 직선거리 근사라서다(lib/api/recommendation.ts 의 같은 주석).
     commutes: [{ anchorId: '', minutes: e.commuteMinutes, transfers: 0, walkMinutes: 0 }],
   }
