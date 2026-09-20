@@ -11,6 +11,7 @@ import {
   type RecommendationStatus,
 } from '@/lib/api/recommendation'
 import { useListingList } from '@/lib/listing-list'
+import { useAuthStore } from './auth'
 import type { SearchHistoryEntry } from '@/types/domain'
 
 /**
@@ -50,6 +51,12 @@ export interface Job {
 const isDone = (s: RecommendationStatus) => s === SUCCESS_STATUS || s === 'FAILED'
 
 export const useRecommendationStore = defineStore('recommendation', () => {
+  /**
+   * 소유자를 가르는 값이 토큰이라, 서버를 부르기 전에 로그인 여부가 정해졌는지 본다.
+   * 부를 자격을 묻는 게 아니다 — 비로그인도 자기 추천을 본다.
+   */
+  const auth = useAuthStore()
+
   // localStorage — 탭을 닫았다 와도 진행 중이던 작업을 기억한다.
   const jobs = useStorage<Job[]>('jb:reco-jobs:v1', [])
 
@@ -65,6 +72,12 @@ export const useRecommendationStore = defineStore('recommendation', () => {
 
   async function check() {
     if (!pending.value.length) return pause()
+    /*
+     * 누구의 추천인지가 토큰으로 갈린다. 복원 전에 물어보면 로그인 사용자의 작업도
+     * 익명으로 조회돼 404 가 나고, 아래 catch 가 그걸 'FAILED' 로 굳혀 **진행 중이던
+     * 추천을 잃는다.** 상태가 정해질 때까지 기다린다.
+     */
+    await auth.whenSettled()
 
     for (const job of pending.value) {
       if (Date.now() - job.createdAt > STALE_MS) {
@@ -124,6 +137,14 @@ export const useRecommendationStore = defineStore('recommendation', () => {
    */
   async function show(id: string) {
     if (activeId.value === id && !result.failed.value) return
+    /*
+     * 주소에 `?reco=` 를 달고 새로고침하면 이 함수가 앱이 뜨자마자 돈다. 그런데
+     * access token 은 메모리에만 살아서(`lib/api/http.ts`) 그 순간엔 비어 있다 —
+     * 로그인 사용자의 추천을 익명으로 조회하게 되고, 서버는 소유자가 다르다며
+     * 404 를 준다. 화면에는 '매물을 불러오지 못했어요' 가 뜨고, 다시 시도를 누르면
+     * 그때는 토큰이 있어 멀쩡히 나온다. 그 오류가 이 기다림 하나로 사라진다.
+     */
+    await auth.whenSettled()
     activeId.value = id
     await result.reload()
   }

@@ -7,7 +7,7 @@
  * 토큰은 여기 두지 않는다 — 전송 계층(lib/api/http.ts)이 메모리에 들고 있고,
  * 이 스토어는 '누가 로그인했나'만 안다. 새로고침 복원은 `restore()` 다.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import type { AccountResponse } from '@/types/backend'
@@ -64,6 +64,32 @@ export const useAuthStore = defineStore('auth', () => {
    * 동기화가 저절로 이어진다**(`isAuthenticated` 는 그때 이미 true 라 안 바뀐다).
    */
   const canUseApi = computed(() => isAuthenticated.value && !needsProfile.value)
+
+  /**
+   * 로그인 여부가 **정해졌는가**. idle·restoring 은 아직 모르는 상태다.
+   */
+  const settled = computed(() => status.value === 'authenticated' || status.value === 'anonymous')
+
+  /**
+   * 정해질 때까지 기다린다.
+   *
+   * access token 은 메모리에만 살아서(`lib/api/http.ts`) 새로고침 직후엔 비어 있다.
+   * 그동안 서버를 부르면 **로그인한 사용자의 요청이 익명으로 나간다** — 소유자를
+   * 토큰으로 가르는 API(추천·기록)는 그걸 '남의 것'으로 보고 404 를 준다.
+   *
+   * 부를 수 있느냐(`canUseApi`)와는 다른 질문이다. 비로그인도 부를 수 있지만
+   * **누구 것이냐**가 갈리는 API 가 이걸 쓴다.
+   */
+  function whenSettled(): Promise<void> {
+    if (settled.value) return Promise.resolve()
+    return new Promise((resolve) => {
+      const stop = watch(settled, (ok) => {
+        if (!ok) return
+        stop()
+        resolve()
+      })
+    })
+  }
 
   /** 구글 클라이언트 ID 가 없으면 로그인 버튼 자체를 비활성으로 둔다. */
   const canLogin = hasGoogleClientId
@@ -151,6 +177,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     needsProfile,
     canUseApi,
+    settled,
+    whenSettled,
     canLogin,
     restore,
     login,
