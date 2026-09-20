@@ -160,7 +160,14 @@ function markerImage(color: string) {
   let image = markerImages.get(color)
   if (!image) {
     const marker = listingMarker(color)
-    image = new kakao.maps.MarkerImage(marker.src, new kakao.maps.Size(marker.size, marker.size))
+    /*
+     * 앵커를 이미지 한가운데로 **명시한다.** SDK 기본값은 물방울 핀을 전제한 아래
+     * 끝이라, 동그란 점을 그대로 쓰면 매물이 실제 좌표보다 위에 찍힌다. 크기를
+     * 키우면 그 어긋남도 같이 커지므로 기본값에 기대지 않는다.
+     */
+    image = new kakao.maps.MarkerImage(marker.src, new kakao.maps.Size(marker.size, marker.size), {
+      offset: new kakao.maps.Point(marker.size / 2, marker.size / 2),
+    })
     markerImages.set(color, image)
   }
   return image

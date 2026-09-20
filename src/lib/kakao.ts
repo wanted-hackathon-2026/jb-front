@@ -31,6 +31,20 @@ export function loadKakaoMaps(): Promise<void> {
   return promise
 }
 
+/**
+ * 카카오맵(앱 또는 웹)에서 한 지점을 여는 주소.
+ *
+ * 앱 스킴(`kakaomap://`)이 아닌 게 중요하다 — 스킴은 앱이 없으면 아무 일도 일어나지 않고,
+ * 일어나지 않았다는 걸 알 방법도 없다. 이 주소는 앱이 있으면 앱으로 넘어가고 없으면
+ * 웹 지도가 열린다.
+ *
+ * 인자 순서가 이 파일의 다른 곳(x, y)과 뒤집힌 건 카카오의 링크 규격이 그래서다 —
+ * `이름,위도,경도` 를 쉼표로 끊어 읽는다. 그래서 이름은 반드시 인코딩한다
+ * (`encodeURIComponent` 는 쉼표도 `%2C` 로 바꾸므로 이름 안의 쉼표가 좌표를 밀지 않는다).
+ */
+export const kakaoMapLink = (name: string, y: number, x: number) =>
+  `https://map.kakao.com/link/map/${encodeURIComponent(name)},${y},${x}`
+
 /** 클러스터 배지를 시안의 민트로 덮는다. SDK 기본값은 파란 원이라 그냥 두면 안 맞는다. */
 /**
  * 단건 매물 마커.
@@ -39,10 +53,31 @@ export function loadKakaoMaps(): Promise<void> {
  * 여러 건이 뭉친 숫자다). 그래서 2건 이상만 배지로 묶고, 단건은 이 점으로 찍는다 —
  * 기본 파란 물방울 핀은 시안의 색 언어와 어긋난다.
  */
+/**
+ * 마커 한 변. 18 에서 키웠다 — 색면 지름이 9.5px 밖에 안 돼서, 도로·라벨·POI 가
+ * 빼곡한 지도에서는 진한 민트조차 무늬에 묻혔다. 24 면 색면이 13px 이 된다.
+ */
+const DOT_SIZE = 24
+
+/**
+ * 테두리가 **두 겹**이다.
+ *
+ * 흰 테두리 하나만 두르면 밝은 지도에서 아무 일도 하지 않는다 — 카카오 기본 지도
+ * 바탕과 흰색의 명도대비가 1.09, 도로(흰색) 위에서는 1.00 이라 윤곽이 말 그대로
+ * 사라진다. 바깥에 어두운 실선을 한 겹 더 둘러 형태를 만든다.
+ *
+ * 흰 띠를 남기는 이유는 색면이 지도 무늬에 바로 닿지 않게 띄워 주기 때문이다.
+ * 어두운 선만 쓰면 항공사진처럼 어두운 바탕에서 같은 문제가 반대로 생긴다 —
+ * 두 겹이라 양쪽에서 산다.
+ *
+ * 어두운 색은 카드 썸네일 위 하트의 그림자와 같은 값이다(ListingCard) — '밝은 것
+ * 위에 떠 있는 것'의 윤곽색을 이 앱에서 하나로 쓴다.
+ */
 const DOT = (
   fill: string,
-) => `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
-  <circle cx="9" cy="9" r="6" fill="${fill}" stroke="#fff" stroke-width="2.5"/>
+) => `<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${DOT_SIZE}" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" fill="none" stroke="rgba(15,23,42,0.45)" stroke-width="1"/>
+  <circle cx="12" cy="12" r="8" fill="${fill}" stroke="#fff" stroke-width="3"/>
 </svg>`
 
 /** 점수가 없는 매물(주변 매물 목록)의 색. 지금까지 모든 핀이 쓰던 그 민트다. */
@@ -57,7 +92,7 @@ export const LISTING_MARKER_COLOR = '#00c8b3'
  */
 export const listingMarker = (fill: string = LISTING_MARKER_COLOR) => ({
   src: `data:image/svg+xml;utf8,${encodeURIComponent(DOT(fill))}`,
-  size: 18,
+  size: DOT_SIZE,
 })
 
 /**
