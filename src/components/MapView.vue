@@ -4,10 +4,12 @@ import {
   ANCHOR_LABEL,
   CLUSTER_MIN_LEVEL,
   CLUSTER_STYLES,
-  LISTING_MARKER,
+  LISTING_MARKER_COLOR,
+  listingMarker,
   PICKED_MARKER,
   loadKakaoMaps,
 } from '@/lib/kakao'
+import { scoreColorValue } from '@/lib/score'
 import type { Anchor, Listing } from '@/types/domain'
 
 const props = defineProps<{
@@ -148,6 +150,22 @@ const brandColor = () =>
  */
 let fitted = false
 
+/**
+ * 매물 마커 이미지. **점수대마다 다른 색**이라 만들 때마다 data URI 를 새로 짓는데,
+ * 한 화면에 수십 개가 뜨고 목록이 바뀔 때마다 다시 그려서 색깔 수(넷 + 무점수)만큼만
+ * 만들어 두고 돌려 쓴다.
+ */
+const markerImages = new Map<string, kakao.maps.MarkerImage>()
+function markerImage(color: string) {
+  let image = markerImages.get(color)
+  if (!image) {
+    const marker = listingMarker(color)
+    image = new kakao.maps.MarkerImage(marker.src, new kakao.maps.Size(marker.size, marker.size))
+    markerImages.set(color, image)
+  }
+  return image
+}
+
 function drawListings() {
   if (!map || !clusterer) return
   clusterer.clear()
@@ -156,10 +174,14 @@ function drawListings() {
       (l) =>
         new kakao.maps.Marker({
           position: new kakao.maps.LatLng(l.y, l.x),
-          image: new kakao.maps.MarkerImage(
-            LISTING_MARKER.src,
-            new kakao.maps.Size(LISTING_MARKER.size, LISTING_MARKER.size),
-          ),
+          /*
+           * 추천 결과는 점수대별 색으로 찍는다. 시트 목록의 도넛과 같은 색 어휘라
+           * (`lib/score.ts` 의 SCORE_BANDS) '초록 핀 = 아까 그 90점대 매물'이 바로 읽힌다.
+           *
+           * 점수는 추천 경로에만 있다 — 주변 매물은 null 이라 지금까지의 민트 그대로다
+           * (lib/api/listings.ts). 즉 색이 갈리는 것 자체가 '줄 세워진 목록'이라는 표시다.
+           */
+          image: markerImage(l.score === null ? LISTING_MARKER_COLOR : scoreColorValue(l.score)),
         }),
     ),
   )

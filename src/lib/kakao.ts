@@ -39,13 +39,26 @@ export function loadKakaoMaps(): Promise<void> {
  * 여러 건이 뭉친 숫자다). 그래서 2건 이상만 배지로 묶고, 단건은 이 점으로 찍는다 —
  * 기본 파란 물방울 핀은 시안의 색 언어와 어긋난다.
  */
-const DOT = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
-  <circle cx="9" cy="9" r="6" fill="#00c8b3" stroke="#fff" stroke-width="2.5"/>
+const DOT = (
+  fill: string,
+) => `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+  <circle cx="9" cy="9" r="6" fill="${fill}" stroke="#fff" stroke-width="2.5"/>
 </svg>`
-export const LISTING_MARKER = {
-  src: `data:image/svg+xml;utf8,${encodeURIComponent(DOT)}`,
+
+/** 점수가 없는 매물(주변 매물 목록)의 색. 지금까지 모든 핀이 쓰던 그 민트다. */
+export const LISTING_MARKER_COLOR = '#00c8b3'
+
+/**
+ * 단건 매물 마커. **색을 받는다** — 추천 결과는 점수대별 색으로 찍어 시트 목록의
+ * 도넛과 같은 어휘를 쓴다(`lib/score.ts`). 색을 안 주면 지금까지의 민트 그대로다.
+ *
+ * `var(--…)` 는 못 쓴다. data URI 안의 SVG 는 페이지 CSS 를 보지 못해서, 부르는 쪽이
+ * 토큰을 풀어 실제 색값을 넘겨야 한다(`scoreColorValue`).
+ */
+export const listingMarker = (fill: string = LISTING_MARKER_COLOR) => ({
+  src: `data:image/svg+xml;utf8,${encodeURIComponent(DOT(fill))}`,
   size: 18,
-}
+})
 
 /**
  * 지도를 눌러 고른 지점.
