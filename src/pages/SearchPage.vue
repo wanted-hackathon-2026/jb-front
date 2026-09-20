@@ -293,7 +293,7 @@ function split(text: string) {
           <button
             v-if="s.rows.length"
             type="button"
-            class="text-sm text-slate-400"
+            class="text-xs text-slate-400"
             @click="s.clear()"
           >
             전체삭제
