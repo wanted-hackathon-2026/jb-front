@@ -178,6 +178,16 @@ const needsLogin = computed(() => tab.value === 'favorites' && auth.status === '
 const needsNickname = computed(() => tab.value === 'favorites' && auth.needsProfile)
 
 /**
+ * 로그인 여부가 **정해졌는가**(idle·restoring 이 아닌가).
+ *
+ * 이전 기록은 로그인 없이도 부를 수 있지만 **누구의 기록이냐가 토큰으로 갈린다** —
+ * 서버가 JWT 가 있으면 계정의 기록을, 없으면 `X-Client-Session` 의 기록을 준다.
+ * 그런데 access token 은 메모리에만 살아서(`lib/api/http.ts`) 새로고침 직후엔 비어
+ * 있다. 그때 부르면 로그인한 사용자도 익명 세션의 기록(대개 빈 목록)을 받는다.
+ */
+const authSettled = computed(() => auth.status === 'authenticated' || auth.status === 'anonymous')
+
+/**
  * 탭을 옮길 때마다 받아온다. 세 벌을 한 번에 받으면 첫 화면이 그만큼 늦어진다.
  *
  * `quiet` 는 **보던 화면을 지우지 않고** 다시 받는 것이다 — 골격도 실패 화면도 띄우지
@@ -194,6 +204,12 @@ async function load(which: Tab, quiet = false) {
     // 확정되면 아래 watch 가 다시 부른다. 비로그인·닉네임 미설정이 확정된 경우에만
     // 안내로 넘긴다.
     loading.value = auth.status !== 'anonymous' && !auth.needsProfile
+    return
+  }
+  // 복원이 끝나기 전에 부르면 남의(익명 세션의) 기록을 받는다. 로딩을 유지하고
+  // 기다리면 아래 watch 가 상태가 정해진 뒤 다시 부른다.
+  if (which === 'history' && !authSettled.value) {
+    if (!quiet) loading.value = true
     return
   }
   if (!quiet) {
@@ -345,8 +361,10 @@ watch(
   () => [auth.status, auth.needsProfile],
   () => {
     // 다른 사람의 목록이거나 아예 못 받던 목록이다 — 캐시를 버려야 다시 받아온다.
+    // 이전 기록도 같다: 토큰이 생기면 익명 세션이 아니라 계정의 기록으로 바뀐다.
     loaded.delete('favorites')
-    if (tab.value === 'favorites') void load('favorites')
+    loaded.delete('history')
+    if (tab.value === 'favorites' || tab.value === 'history') void load(tab.value)
   },
 )
 </script>
