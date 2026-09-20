@@ -325,44 +325,48 @@ watch(
         <p v-else class="mt-3 flex min-h-11 items-center font-bold text-slate-900">내 정보</p>
 
         <!--
-          관리자 전용 도구. **role 이 ADMIN 일 때만** 끼워 넣는다 — 서비스 동선이 아니라
-          데이터를 넣는 도구라 일반 사용자에게 보이면 눌러도 서버가 튕긴다. 여기 없으면
-          관리자가 주소를 외워야 한다(화면 어디에도 링크가 없었다).
-
-          회색 맨 글자였을 때는 바로 위 '내 정보' 줄과 구별되지 않아 서비스 기능처럼
-          보였다. 테두리와 배지를 둘러 '도구'라는 걸 생김새로 먼저 말한다. 배지에
-          브랜드색을 쓰지 않는 이유도 같다 — 민트는 서비스가 사용자에게 권하는 자리에만
-          쓰고(main.css), 이 버튼은 시안에 아예 없는 화면으로 가는 길이다.
-
           로그아웃은 여기 없다. 시안은 프로필 화면(닉네임) 맨 아래에 두고, 이 화면의
           이름 줄이 거기로 가는 길이다 — 자주 누를 것이 아니라 한 단계 안쪽이 맞다.
         -->
-        <button
-          v-if="isAdmin"
-          type="button"
-          class="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-2 pr-2.5 text-sm font-medium text-slate-600"
-          @click="router.push({ name: 'admin-property-new' })"
-        >
-          <span
-            class="rounded-full bg-slate-700 px-1.5 py-0.5 text-[11px] font-bold text-white"
-            aria-hidden="true"
-          >
-            관리자
-          </span>
-          매물 등록
-          <svg
-            viewBox="0 0 24 24"
-            class="size-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
       </div>
     </header>
+
+    <!--
+      관리자 전용 줄. 프로필 블록과 탭 사이에 통째로 한 줄을 끼운다.
+
+      가운데로 모인 프로필 조판(시안) 안에 넣을 자리가 없었다 — 기둥에 세우면 기둥만
+      길어지고, 오른쪽 끝에 붙이면 정렬 축이 둘로 갈리고, 뒤로 버튼 줄로 올리면 화면을
+      오가는 네비와 섞인다. 전체 폭이면 제 축을 가지므로 어느 쪽과도 다투지 않고,
+      '이 계정은 관리자' 라는 상태 표시까지 겸한다.
+
+      role 이 ADMIN 일 때만 나온다 — 서비스 동선이 아니라 데이터를 넣는 도구라 일반
+      사용자에게 보이면 눌러도 서버가 튕긴다(PropertyAdminAuthorizationManager).
+      여기 없으면 관리자가 주소를 외워야 한다.
+
+      브랜드색은 쓰지 않는다 — 민트는 서비스가 사용자에게 권하는 자리의 색이고
+      (main.css), 이 줄은 시안에 아예 없는 화면으로 가는 길이다.
+    -->
+    <button
+      v-if="isAdmin"
+      type="button"
+      class="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-2 text-left"
+      @click="router.push({ name: 'admin-property-new' })"
+    >
+      <span class="text-sm text-slate-500">관리자 계정입니다</span>
+      <span class="flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900">
+        매물 등록
+        <svg
+          viewBox="0 0 24 24"
+          class="size-4 text-slate-400"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+    </button>
 
     <!-- 탭. 활성 표시는 밑줄이라, 줄이 탭 바 아래 경계선 위에 겹쳐 앉는다. -->
     <div class="flex shrink-0 border-b border-slate-200" role="tablist">
