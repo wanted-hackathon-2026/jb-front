@@ -51,9 +51,9 @@ function toListing(p: FavoritePropertySummary): Listing {
      * - 좌표: 목록(Summary)에는 없고 상세(Detail)에만 있다. 카드가 쓰지 않아 0 으로 둔다.
      * - 점수·순위·이동 동선·AI 요약·라이프스타일 평가: '어느 추천 기준이냐'가 있어야
      *   나오는 값이라 찜 목록에는 존재할 수 없다(lib/api/listings.ts 의 같은 구분).
-     * - 공급면적·욕실·사진·관리비·향·옵션 따위 상세 값: 백엔드에 컬럼 자체가 없다.
+     * - 공급면적·욕실·관리비·향·옵션 따위 상세 값: 목록 응답에 없다.
      *   찜 목록은 카드로만 쓰이니 화면에 영향도 없다 — 상세로 들어가면 매물 API 를
-     *   다시 부른다.
+     *   다시 부른다. (대표 사진은 2026-09-20 에 생겨서 이제 채운다.)
      */
     x: 0,
     y: 0,
@@ -72,7 +72,8 @@ function toListing(p: FavoritePropertySummary): Listing {
     options: [],
     listingNo: '',
     postedDaysAgo: 0,
-    photos: [],
+    // 대표 사진 한 장. 카드는 첫 장만 쓴다.
+    photos: p.thumbnailUrl ? [p.thumbnailUrl] : [],
     aiSummary: null,
     rank: null,
     lifestyleInsights: [],

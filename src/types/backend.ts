@@ -119,6 +119,21 @@ export type LeaseType = 'JEONSE' | 'MONTHLY'
  * `direction` 자체는 여전히 선택 필드다(비워도 등록된다). 다만 채광은
  * `direction`·`floor`·`totalFloors` 가 **모두** 있어야 계산된다.
  */
+/**
+ * 매물 유형 어휘. **등록 화면과 추천 요청이 이 하나를 같이 쓴다.**
+ *
+ * 서버가 추천 후보를 `p.propertyType in :propertyTypes` 로 — **정확히 일치**로 —
+ * 거른다(PropertyRepository). 등록할 때 '원룸'이라 적고 추천에서 '원룸형'을 보내면
+ * 그 매물은 영영 안 잡힌다. 자유 입력을 두면 언젠가 반드시 어긋나므로 목록을 고정하고
+ * 양쪽이 같은 상수를 보게 했다.
+ *
+ * 값을 늘릴 때는 **뒤에 덧붙인다** — 기존 매물의 문자열이 그대로 남아 있어서
+ * 이름을 바꾸면 이미 등록된 매물이 추천에서 사라진다.
+ */
+export const PROPERTY_TYPES = ['원룸', '투룸', '쓰리룸', '오피스텔', '아파트', '빌라'] as const
+
+export type PropertyTypeName = (typeof PROPERTY_TYPES)[number]
+
 export const PROPERTY_DIRECTIONS = [
   '남향',
   '남동향',
@@ -212,6 +227,11 @@ export interface FavoritePropertySummary {
   exclusiveArea: number | null
   floor: number | null
   buildYear: number | null
+  /**
+   * 대표 사진(`displayOrder = 0`). 사진이 없으면 null.
+   * **2026-09-20 에 생겼다**(jb-backend 6783d46) — 그전에는 찜 목록 카드가 늘 회색이었다.
+   */
+  thumbnailUrl: string | null
 }
 
 /** 출처: FavoriteDtos.java:25 Detail (jb-backend a2ee567) */
@@ -436,4 +456,121 @@ export const ERROR_CODE = {
   GEOCODING_UNAVAILABLE: 'GEOCODING_UNAVAILABLE',
   /** 400. 요청 JSON·필드 검증 실패. */
   INVALID_REQUEST: 'INVALID_REQUEST',
+  /** 404. 내 추천이 아니거나 없는 id 다. 남의 것도 '없음'으로 온다. */
+  RECOMMENDATION_NOT_FOUND: 'RECOMMENDATION_NOT_FOUND',
+  /** 409. 아직 처리 중이다. 결과를 부르기 전에 상태가 COMPLETED 인지 확인한다. */
+  RECOMMENDATION_NOT_READY: 'RECOMMENDATION_NOT_READY',
+  /** 404. 추천에 넘긴 거점이 내 것이 아니거나 지워졌다. */
+  WORKPLACE_NOT_FOUND: 'WORKPLACE_NOT_FOUND',
+  /** 502. VWorld 주소 검색이 죽었다. */
+  ADDRESS_SEARCH_UNAVAILABLE: 'ADDRESS_SEARCH_UNAVAILABLE',
 } as const
+
+/* ── 추천 ──────────────────────────────────────────────────────────────── */
+
+/**
+ * 이동수단. 출처: TransportType.java (jb-backend c0ff0f0)
+ *
+ * ⚠️ **통근시간은 직선거리 근사다.** 이 enum 이 들고 있는 건 실제 경로가 아니라
+ * 우회·환승·대기를 뭉뚱그려 보정한 실효 속도고, 응답의 `commuteMinutes` 도 같은
+ * 근사값이다(property-recommendation.md). 길찾기 API 가 붙으면 바뀐다.
+ */
+export type TransportType = 'WALK' | 'BICYCLE' | 'TRANSIT' | 'CAR'
+
+/** 출처: RecommendationStatus.java (jb-backend c0ff0f0) */
+export type RecommendationStatusCode = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+
+/**
+ * 추천 요청. 출처: RecommendationCreateRequest.java (jb-backend c0ff0f0)
+ *
+ * 값 제약이 빡빡하다. 어긋나면 전부 400 이라 보내기 전에 프론트가 맞춘다
+ * (`lib/recommendation-request.ts`).
+ */
+export interface RecommendationCreateRequest {
+  /** 등록된 거점의 id. **좌표가 아니라 id 다** — 서버가 스냅샷으로 복사해 둔다. */
+  workplaceId: string
+  transportType: TransportType
+  /** 5~180. 프론트 슬라이더 하한도 5 다. */
+  maxCommuteMinutes: number
+  /** 넷 다 1~5. 프론트의 0~100 슬라이더를 접어서 보낸다. */
+  sunlightImportance: number
+  quietnessImportance: number
+  safetyImportance: number
+  infrastructureImportance: number
+  /** 만원. min ≤ max 여야 한다. */
+  depositMin: number
+  depositMax: number
+  monthlyRentMin: number
+  monthlyRentMax: number
+  /**
+   * 매물 유형. **1~10개고 비면 400 이다.**
+   * 서버가 `property_type` 을 **정확히 일치**로 거르므로(PropertyRepository 의
+   * `p.propertyType in :propertyTypes`), 등록 화면과 같은 어휘를 써야 한다
+   * — 그래서 `PROPERTY_TYPES` 하나를 양쪽이 공유한다.
+   */
+  roomTypes: string[]
+}
+
+/** 출처: RecommendationAcceptedResponse.java. 202 로 온다. */
+export interface RecommendationAcceptedResponse {
+  recommendationId: string
+  status: RecommendationStatusCode
+}
+
+/** 출처: RecommendationStatusResponse.java */
+export interface RecommendationStatusResponse {
+  recommendationId: string
+  status: RecommendationStatusCode
+  requestedAt: LocalDateTime
+  startedAt: LocalDateTime | null
+  completedAt: LocalDateTime | null
+  /** FAILED 일 때만 채워진다. 개발 확인용 문구라 화면에 그대로 띄우지 않는다. */
+  failureReason: string | null
+}
+
+/**
+ * 한 매물에 대한 LLM 평가. 출처: RecommendationEvaluation.java
+ *
+ * 점수는 **이 추천 기준에서만** 의미가 있다. 같은 매물이라도 조건이 바뀌면 달라져서
+ * 매물 상세(`/api/properties/{id}`)에는 없고 추천 경로에만 붙는다.
+ */
+export interface RecommendationEvaluation {
+  /** 1부터. 추천 순위다. */
+  rank: number
+  commuteMinutes: number
+  totalScore: number
+  sunlightScore: number
+  quietnessScore: number
+  safetyScore: number
+  infrastructureScore: number
+  commuteScore: number
+  summary: string
+}
+
+/** 출처: RecommendedPropertyResponse.java */
+export interface RecommendedPropertyItem {
+  id: string
+  name: string
+  /** 목록과 달리 **도로명**이 온다. */
+  roadAddress: string
+  latitude: number
+  longitude: number
+  thumbnailUrl: string | null
+  propertyType: string
+  leaseType: LeaseType
+  deposit: number
+  monthlyRent: number
+  exclusiveArea: number | null
+  floor: number | null
+  evaluation: RecommendationEvaluation
+}
+
+export interface RecommendedPropertyResponse {
+  content: RecommendedPropertyItem[]
+}
+
+/** 출처: RecommendedPropertyDetailResponse.java — 매물 상세에 평가만 덧붙인다. */
+export interface RecommendedPropertyDetailResponse {
+  property: PropertyDetailResponse
+  evaluation: RecommendationEvaluation
+}

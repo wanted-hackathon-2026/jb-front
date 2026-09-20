@@ -1,6 +1,6 @@
 /**
  * 거점(workplace). 프론트의 `Anchor` 가 서버에서는 이 이름이다.
- * 출처: WorkplaceController.java:28 `/api/workplaces` (jb-backend a2ee567)
+ * 출처: WorkplaceController.java:28 `/api/workplaces` (jb-backend c0ff0f0)
  *
  * 이름이 다른 만큼 필드도 다르다. 변환을 이 파일에 가둬서 스토어·화면은
  * 계속 `Anchor` 만 본다:
@@ -44,15 +44,35 @@ export async function createWorkplace(name: string, roadAddress: string): Promis
 }
 
 /**
- * 거점 삭제. 204 No Content 를 기대한다.
+ * 거점 삭제. 204 No Content.
  *
- * ⚠️ **a2ee567 시점 백엔드에는 아직 없다.** 경로는 구현이 아니라 API 정의
- * (`docs/api정의.png`)에서 왔고, 정의의 단수형 `/api/workplace` 대신 이미 구현된
- * 등록·조회와 같은 복수형으로 맞췄다.
+ * **2026-09-20 에 실제로 생겼다**(jb-backend cc9af61). 그전에는 미매핑 404 로 떨어져
+ * 삭제가 로컬에만 남았고, 그 흔적을 치우는 일회성 청산이 `stores/anchors.ts` 의
+ * `flushRemoved` 다.
  *
- * 없는 거점을 지울 때 204(찜처럼 멱등)인지 404 인지는 확답이 없다. 호출부가 404 를
- * '이미 지워진 것'으로 받아 넘기므로 어느 쪽이든 동작한다(stores/anchors.ts) —
- * 구현 전인 지금도 미매핑 경로가 404 라서 삭제가 로컬에만 남는 예전 동작 그대로다.
+ * 남의 거점을 지우려 하면 404 다 — 없는 것과 같은 취급이라 존재 여부가 새지 않는다.
  */
 export const deleteWorkplace = (id: string) =>
   request<void>(`/api/workplaces/${id}`, { method: 'DELETE' })
+
+/**
+ * 거점 부분 수정. 보낸 필드만 바뀐다.
+ *
+ * 주소를 바꾸면 **서버가 좌표를 다시 찾는다** — 등록과 같은 지오코딩 경로라
+ * 실패 코드도 같다(ADDRESS_NOT_GEOCODABLE · GEOCODING_UNAVAILABLE).
+ * 이름만 바꾸면 지오코딩은 돌지 않는다.
+ *
+ * ⚠️ 아직 화면이 없다. 거점이 1개뿐이라 지우고 다시 넣는 것과 차이가 크지 않아서,
+ * 이름 바꾸기 UI 가 생길 때 쓴다.
+ */
+export async function updateWorkplace(
+  id: string,
+  patch: { name?: string; roadAddress?: string },
+): Promise<Anchor> {
+  return toAnchor(
+    await request<WorkplaceResponse>(`/api/workplaces/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  )
+}
