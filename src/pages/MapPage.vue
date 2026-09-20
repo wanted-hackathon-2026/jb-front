@@ -280,8 +280,12 @@ function addPickedAnchor() {
     <MapPlaceholder v-else :show-radius="anchors.hasAnchors" @pick="onPick" />
 
     <!-- 상단 검색 바. 거점이 있으면 칩이 들어차고, 없으면 placeholder 가 보인다. -->
-    <!-- 상단 여백 14px 은 시안에서 실측한 값이다(좌우는 아래 주석의 광학 정렬을 따른다). -->
-    <div class="safe-top pointer-events-none absolute inset-x-0 top-0 z-30 p-3 pt-3.5">
+    <!--
+      자리와 크기는 시안 값이다: 위 15px, 좌우 20px, **바 높이 49px**. 검색 화면의
+      알약(48px)과 사실상 같은 높이여야 한다 — 두 화면의 검색바는 같은 물건이고,
+      지도에서 눌러 들어가면 그 자리에 그대로 앉아야 한다.
+    -->
+    <div class="safe-top pointer-events-none absolute inset-x-0 top-0 z-30 px-5 pt-3.5 pb-3">
       <!--
         좌우 여백을 맞춘다. 오른쪽은 바 안쪽 여백 8px + 아이콘 버튼(40px) 안에서
         아이콘(20px)이 가운데 놓이며 생기는 10px = 18px 이다.
@@ -293,7 +297,7 @@ function addPickedAnchor() {
       -->
       <div
         data-tour="anchors"
-        class="pointer-events-auto flex items-center gap-2 rounded-full bg-white p-2 shadow-md"
+        class="pointer-events-auto flex h-[49px] items-center gap-2 rounded-full bg-white px-1 shadow-md"
       >
         <div class="flex flex-1 items-center gap-2 overflow-x-auto pl-2.5">
           <template v-if="anchors.hasAnchors">
@@ -322,7 +326,7 @@ function addPickedAnchor() {
           <button
             v-else
             type="button"
-            class="min-h-11 flex-1 truncate text-left text-slate-400"
+            class="h-full flex-1 truncate text-left text-slate-400"
             @click="openAnchorPicker"
           >
             자주 가는 곳을 거점으로 등록
@@ -330,7 +334,7 @@ function addPickedAnchor() {
         </div>
         <button
           type="button"
-          class="grid size-10 shrink-0 place-items-center rounded-full text-slate-600"
+          class="grid h-full w-11 shrink-0 place-items-center rounded-full"
           aria-label="거점 검색"
           @click="openAnchorPicker"
         >

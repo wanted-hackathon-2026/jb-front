@@ -126,7 +126,18 @@ function split(text: string) {
 
 <template>
   <main class="flex min-h-0 flex-1 flex-col bg-slate-50">
-    <div class="safe-top bg-white px-2 pt-3 pb-2">
+    <!--
+      검색 알약은 시안 값 51px 이다. 지도 상단 바(49px)와 사실상 같은 높이여야 한다 —
+      지도에서 눌러 들어오면 같은 물건이 그 자리에 앉아야 한다. 위 14px·오른쪽 20px 도
+      지도와 같다(시안 위 15 / 오른쪽 17.5).
+
+      왼쪽만 8px 인 것은 뒤로 버튼의 44px 터치 상자가 앉는 자리라서다 — 그 덕에 화살표의
+      광학 여백은 다른 화면과 같은 18px 이 된다.
+
+      높이는 알약이 들고 입력칸이 채운다(h-full). 입력칸이 높이를 정하면 알약 안에서
+      세로로 뜨거나 눌리는 자리가 생긴다.
+    -->
+    <div class="safe-top bg-white pt-3.5 pr-5 pb-2 pl-2">
       <div class="flex items-center gap-1">
         <button
           type="button"
@@ -136,11 +147,11 @@ function split(text: string) {
         >
           <BaseChevron />
         </button>
-        <div class="flex flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
+        <div class="flex h-[51px] flex-1 items-center gap-2 rounded-full bg-slate-100 px-4">
           <input
             v-model="keyword"
             type="search"
-            class="h-11 flex-1 bg-transparent outline-none placeholder:text-slate-400"
+            class="h-full flex-1 bg-transparent outline-none placeholder:text-slate-400"
             placeholder="직장·학교 이름이나 주소"
             autofocus
           />
