@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
-import { computed, onActivated, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChevron from '@/components/BaseChevron.vue'
 import BaseChip from '@/components/BaseChip.vue'
@@ -73,6 +73,42 @@ const initial = computed(
 )
 
 const loading = ref(true)
+/**
+ * 골격을 깔 것인가. **`loading` 과 따로 둔다.**
+ *
+ * 받아오는 게 한두 프레임이면 골격은 뜨자마자 사라져 화면이 깜빡인 것으로만 남는다.
+ * 그래서 로딩이 이 시간을 넘길 때만 켠다 — 빠른 응답에선 아무것도 깔리지 않고,
+ * 느릴 때 자리를 잡아 주는 값은 그대로다.
+ *
+ * 넘기 전까지는 목록 자리를 비워 둔다(아래 마크업). 빈 화면을 대신 띄우면
+ * '찜한 게 없다'가 잠깐 스쳤다가 목록이 들어오는, 골격보다 나쁜 깜빡임이 된다.
+ */
+const SKELETON_DELAY_MS = 250
+const skeleton = ref(false)
+let skeletonTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  loading,
+  (on) => {
+    clearTimeout(skeletonTimer)
+    if (!on) return void (skeleton.value = false)
+    skeletonTimer = setTimeout(() => (skeleton.value = true), SKELETON_DELAY_MS)
+  },
+  { immediate: true },
+)
+onUnmounted(() => clearTimeout(skeletonTimer))
+
+/**
+ * 이미 받아온 탭.
+ *
+ * 탭은 떠나는 자리가 아니라 오가는 자리다(주소에 적어 두고 지도의 하트 FAB 도 여기로
+ * 되돌려 보낸다). 옮길 때마다 처음부터 받으면 왕복할 때마다 목록이 사라졌다 돌아온다.
+ * 한 번 받은 탭은 보던 목록을 그대로 두고 **조용히** 갱신한다 — 낡은 값을 굳히지 않으면서
+ * 화면은 제자리에서 바뀐다.
+ */
+const loaded = new Set<Tab>()
+/** 최근 본 매물은 이 기기에 이미 있다 — 받아올 게 없으니 처음부터 받아온 셈이다. */
+loaded.add('recent')
+
 /** 실패 사유. 비어 있는 것과 못 불러온 것은 사용자에게 전혀 다른 상황이다. */
 const error = ref<string | null>(null)
 const history = ref<SearchHistoryEntry[]>([])
@@ -135,6 +171,8 @@ async function load(which: Tab, quiet = false) {
       // 이 목록은 정의상 전부 찜한 것이다 — 하트가 채워지도록 스토어에 심는다.
       favoriteIds.sync(favorites.value)
     }
+    // 받아온 뒤에만 적는다 — 실패한 탭은 다음에 다시 골격부터 깔아야 한다.
+    loaded.add(which)
   } catch {
     // 서버 문구를 그대로 띄우지 않는다 — 개발·운영 확인용이라 사용자에게 쓸 말이 아니다.
     // 조용한 갱신이 실패하면 보던 목록을 그대로 둔다 — 멀쩡한 화면을 오류로 덮지 않는다.
@@ -201,7 +239,8 @@ function backspace() {
 
 onMounted(() => load(tab.value))
 // load 의 둘째 인자는 quiet 라, watch 가 넘기는 '이전 값'이 새어 들어가지 않게 감싼다.
-watch(tab, (t) => void load(t))
+// 두 번째부터는 조용히 받는다 — 보던 목록을 지우지 않고 도착하면 갈아 끼운다.
+watch(tab, (t) => void load(t, loaded.has(t)))
 
 /**
  * 되살아날 때(App.vue 의 KeepAlive).
@@ -269,6 +308,8 @@ watch(tab, (t) => router.replace({ query: t === 'history' ? {} : { tab: t } }))
 watch(
   () => [auth.status, auth.needsProfile],
   () => {
+    // 다른 사람의 목록이거나 아예 못 받던 목록이다 — 캐시를 버려야 다시 받아온다.
+    loaded.delete('favorites')
     if (tab.value === 'favorites') void load('favorites')
   },
 )
@@ -382,39 +423,49 @@ watch(
       @scroll.passive="rememberTop"
     >
       <!--
-        로딩 골격은 탭마다 다르다 — 기록 카드와 매물 카드는 높이가 아예 달라서,
+        받아오는 동안은 이 가지에 머문다. 골격은 `skeleton` 이 켜질 때만 깐다 —
+        `loading` 에 직접 걸면 한두 프레임짜리 응답에서도 깔렸다 사라져 깜빡인다.
+        켜지기 전까지는 비워 둔다: 여기서 빠져나가면 아래 빈 화면이 잠깐 스친다.
+
+        골격 모양은 탭마다 다르다 — 기록 카드와 매물 카드는 높이가 아예 달라서,
         한 모양으로 때우면 도착하는 순간 목록이 통째로 밀린다. 개수는 고정하지 않는다:
         셸 높이가 dvh 라 상한이 없어서, 몇 개든 고정하면 그보다 긴 화면에서 아래가 빈다
         (skeletonCount 가 남은 높이를 카드 높이로 나눈다).
       -->
       <template v-if="loading">
-        <p class="sr-only" role="status">목록을 불러오는 중</p>
-        <!-- 구분도 탭을 따라간다 — 기록은 두툼한 띠, 매물은 여백뿐(아래 목록과 같은 모양). -->
-        <ul
-          class="divide-slate-100"
-          :class="tab === 'history' ? 'divide-y-[1.125rem]' : 'px-5 pt-4'"
-          aria-hidden="true"
-        >
-          <li v-for="i in skeletonCount" :key="i" :class="tab === 'history' && 'px-5'">
-            <!-- 기록 카드: 날짜 + 거점 줄 + 조건 줄(py-5) -->
-            <div v-if="tab === 'history'" class="flex flex-col gap-3 py-5">
-              <BaseSkeleton class="h-5 w-32" />
-              <BaseSkeleton class="h-5 w-1/2 rounded-full!" />
-              <BaseSkeleton class="h-5 w-2/3" />
-            </div>
-            <!-- 매물 카드: 썸네일 80 + 본문 + 도넛 64(py-2.5) -->
-            <div v-else class="flex gap-3 py-2.5">
-              <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
-              <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
-                <BaseSkeleton class="h-4 w-2/3" />
-                <BaseSkeleton class="h-3 w-full" />
-                <BaseSkeleton class="h-3 w-4/5" />
-                <BaseSkeleton class="h-3 w-1/2" />
+        <template v-if="skeleton">
+          <p class="sr-only" role="status">목록을 불러오는 중</p>
+          <!-- 구분도 탭을 따라간다 — 기록은 두툼한 띠, 매물은 여백뿐(아래 목록과 같은 모양). -->
+          <ul
+            class="divide-slate-100"
+            :class="tab === 'history' ? 'divide-y-[1.125rem]' : 'px-5 pt-4'"
+            aria-hidden="true"
+          >
+            <li v-for="i in skeletonCount" :key="i" :class="tab === 'history' && 'px-5'">
+              <!-- 기록 카드: 날짜 + 거점 줄 + 조건 줄(py-5) -->
+              <div v-if="tab === 'history'" class="flex flex-col gap-3 py-5">
+                <BaseSkeleton class="h-5 w-32" />
+                <BaseSkeleton class="h-5 w-1/2 rounded-full!" />
+                <BaseSkeleton class="h-5 w-2/3" />
               </div>
-              <BaseSkeleton class="size-16 shrink-0 rounded-full!" />
-            </div>
-          </li>
-        </ul>
+              <!--
+                매물 카드: 썸네일 80 + 본문(py-2.5). **점수 도넛 자리는 두지 않는다** —
+                이 골격을 쓰는 건 관심 매물뿐인데 그 목록은 score 가 null 이라
+                (lib/api/me.ts) 도넛이 오지 않는다. 자리를 잡아 두면 도착하는 순간
+                본문이 그 폭만큼 늘어나, 밀림을 막으려고 깐 골격이 밀림을 만든다.
+              -->
+              <div v-else class="flex gap-3 py-2.5">
+                <BaseSkeleton class="size-20 shrink-0 rounded-xl!" />
+                <div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
+                  <BaseSkeleton class="h-4 w-2/3" />
+                  <BaseSkeleton class="h-3 w-full" />
+                  <BaseSkeleton class="h-3 w-4/5" />
+                  <BaseSkeleton class="h-3 w-1/2" />
+                </div>
+              </div>
+            </li>
+          </ul>
+        </template>
       </template>
 
       <!-- 로그인해야 볼 수 있는 탭. 호출도 하지 않고 여기서 멈춘다. -->
