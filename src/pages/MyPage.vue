@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseChip from '@/components/BaseChip.vue'
 import BaseEmptyState from '@/components/BaseEmptyState.vue'
@@ -27,14 +27,19 @@ const route = useRoute()
 const auth = useAuthStore()
 
 /**
- * 진입할 때 열 탭. 지도의 하트 FAB 가 `?tab=favorites` 로 바로 보낸다.
- * 모르는 값이 오면 기본 탭으로 떨어뜨린다 — 주소창은 사용자가 고칠 수 있다.
+ * 이 화면도 KeepAlive 로 살려 둔다(App.vue) — 매물 상세를 다녀와도 목록과 스크롤이
+ * 남아야 한다. include 가 이름으로 고르므로 파일명에 기대지 않고 박아 둔다.
  */
-const initialTab = TABS.some((t) => t.value === route.query.tab)
-  ? (route.query.tab as Tab)
-  : 'history'
+defineOptions({ name: 'MyPage' })
 
-const tab = ref<Tab>(initialTab)
+/**
+ * 주소가 정본이다. 지도의 하트 FAB 가 `?tab=favorites` 로 바로 보내고, 탭을 옮기면
+ * 아래 watch 가 주소에 다시 적는다. 모르는 값이 오면 기본 탭으로 떨어뜨린다 —
+ * 주소창은 사용자가 고칠 수 있다.
+ */
+const toTab = (q: unknown): Tab => (TABS.some((t) => t.value === q) ? (q as Tab) : 'history')
+
+const tab = ref<Tab>(toTab(route.query.tab))
 
 /** 빈 화면의 다음 행동은 셋 다 지도다 — 매물도 추천도 거기서 시작한다. */
 const goMap = () => router.push({ name: 'map' })
@@ -81,9 +86,18 @@ const needsLogin = computed(() => tab.value === 'favorites' && auth.status === '
  */
 const needsNickname = computed(() => tab.value === 'favorites' && auth.needsProfile)
 
-/** 탭을 옮길 때마다 받아온다. 세 벌을 한 번에 받으면 첫 화면이 그만큼 늦어진다. */
-async function load(which: Tab) {
+/**
+ * 탭을 옮길 때마다 받아온다. 세 벌을 한 번에 받으면 첫 화면이 그만큼 늦어진다.
+ *
+ * `quiet` 는 **보던 화면을 지우지 않고** 다시 받는 것이다 — 골격도 실패 화면도 띄우지
+ * 않고, 도착하면 목록만 갈아 끼운다. 되살아날 때 쓴다(아래 onActivated): 그 사이
+ * 목록이 달라졌을 수 있어 다시 받긴 해야 하는데, 골격을 깔면 스크롤 자리가 사라져
+ * 화면을 살려 둔 뜻이 없어진다.
+ */
+async function load(which: Tab, quiet = false) {
   if (which === 'favorites' && !auth.canUseApi) {
+    // 조용한 갱신은 안내 화면(로그인·닉네임)을 건드리지 않는다.
+    if (quiet) return
     // 복원이 아직 안 끝났으면(idle·restoring) 로그인 여부를 모르는 상태다. 그때
     // 빈 목록을 보여주면 '찜한 게 없다'는 거짓말이 되므로 로딩을 유지하고, 상태가
     // 확정되면 아래 watch 가 다시 부른다. 비로그인·닉네임 미설정이 확정된 경우에만
@@ -91,17 +105,20 @@ async function load(which: Tab) {
     loading.value = auth.status !== 'anonymous' && !auth.needsProfile
     return
   }
-  loading.value = true
-  error.value = null
+  if (!quiet) {
+    loading.value = true
+    error.value = null
+  }
   try {
     if (which === 'history') history.value = await getSearchHistory()
     else if (which === 'favorites') favorites.value = await getFavorites()
     else recent.value = await getRecentlyViewed()
   } catch {
     // 서버 문구를 그대로 띄우지 않는다 — 개발·운영 확인용이라 사용자에게 쓸 말이 아니다.
-    error.value = '목록을 불러오지 못했어요'
+    // 조용한 갱신이 실패하면 보던 목록을 그대로 둔다 — 멀쩡한 화면을 오류로 덮지 않는다.
+    if (!quiet) error.value = '목록을 불러오지 못했어요'
   } finally {
-    loading.value = false
+    if (!quiet) loading.value = false
   }
 }
 
@@ -161,7 +178,62 @@ function backspace() {
 }
 
 onMounted(() => load(tab.value))
-watch(tab, load)
+// load 의 둘째 인자는 quiet 라, watch 가 넘기는 '이전 값'이 새어 들어가지 않게 감싼다.
+watch(tab, (t) => void load(t))
+
+/**
+ * 되살아날 때(App.vue 의 KeepAlive).
+ *
+ * 주소가 정본이라 먼저 맞춘다 — 지도의 하트 FAB 처럼 `?tab=` 을 달고 다시 들어오면
+ * 살아남은 인스턴스는 옛 탭을 보고 있다. 탭이 바뀌면 위 watch 가 골격까지 깔고
+ * 받아오므로 여기서 더 할 일이 없다.
+ *
+ * 같은 탭으로 돌아왔으면 조용히 다시 받는다. 세 탭 모두 그 사이 달라질 수 있다 —
+ * 상세에서 찜을 풀었거나(관심 매물), 지도에서 추천을 새로 돌렸거나(이전 기록),
+ * 매물을 하나 더 봤거나(최근 본 매물).
+ */
+let activatedOnce = false
+onActivated(() => {
+  const want = toTab(route.query.tab)
+  const first = !activatedOnce
+  activatedOnce = true
+  if (want !== tab.value) return void (tab.value = want)
+  restoreTop()
+  // 첫 활성화는 위 onMounted 와 겹친다 — 같은 걸 두 번 받지 않는다.
+  if (!first) void load(tab.value, true)
+})
+
+/*
+ * 되돌아왔을 때의 스크롤. KeepAlive 는 DOM 을 떼어 보관하는데 떼는 순간 scrollTop 이
+ * 0 이 되므로, 떠날 때 읽지 않고 스크롤하는 동안 계속 적어 둔다(ListingList 와 같다).
+ * 그리는 데 쓰지 않으므로 반응형일 이유가 없다.
+ */
+let parkedTop = 0
+const rememberTop = () => {
+  parkedTop = listBox.value?.scrollTop ?? 0
+}
+const restoreTop = () => {
+  if (listBox.value) listBox.value.scrollTop = parkedTop
+}
+// 탭을 옮기면 다른 목록이다 — 옛 자리는 버린다.
+watch(tab, () => {
+  parkedTop = 0
+})
+
+/**
+ * 고른 탭을 주소에 적는다.
+ *
+ * 매물 상세를 다녀오면 이 화면은 새로 뜬다 — 주소에 없으면 무엇을 보고 있었는지 알
+ * 길이 없어 첫 탭으로 돌아간다. 최근 본 매물에서 한 장을 열었다 닫으면 이전 기록이
+ * 열려 있던 게 그래서다.
+ *
+ * 읽는 쪽은 이미 있었다(지도의 하트가 `?tab=favorites` 로 들어온다) — 쓰기만 더한다.
+ * push 가 아니라 replace 다. 탭은 되돌아갈 자리가 아니라 지금 보고 있는 자리라,
+ * 쌓아 두면 뒤로 가기가 탭 사이를 오간다.
+ *
+ * 기본 탭은 주소에서 뺀다 — /my 와 /my?tab=history 가 같은 화면이면 하나로 족하다.
+ */
+watch(tab, (t) => router.replace({ query: t === 'history' ? {} : { tab: t } }))
 /**
  * 세션 복원이 끝나거나, 로그인 상태가 바뀌거나, 닉네임을 정하면 관심 매물을 다시 받아온다.
  *
@@ -257,6 +329,7 @@ watch(
       ref="listBox"
       class="min-h-0 flex-1"
       :class="loading ? 'overflow-hidden' : 'overflow-y-auto'"
+      @scroll.passive="rememberTop"
     >
       <!--
         로딩 골격은 탭마다 다르다 — 기록 카드와 매물 카드는 높이가 아예 달라서,
