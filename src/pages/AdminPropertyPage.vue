@@ -402,6 +402,10 @@ function messageOf(e: unknown): string {
                 : 'border-slate-200 bg-white text-slate-600'
             "
             :aria-pressed="leaseType === opt.value"
+
+          목록을 접어 두지 않고 펼친다. 여섯 개뿐이라 한눈에 들어오고, 바로 아래 거래
+          유형과 같은 모양이라 고르는 방식이 화면 안에서 하나로 읽힌다 — 네이티브
+          select 는 기기마다 다른 창을 띄워(iOS 는 휠) 이 화면에서만 딴 앱처럼 보였다.
             @click="leaseType = opt.value"
           >
             {{ opt.label }}
@@ -530,16 +534,29 @@ function messageOf(e: unknown): string {
           자유 입력이 아니라 목록이다. 서버가 아는 여덟 개를 벗어나면 채광 추정이
           조용히 빠지는데(등록은 201 로 성공한다) 화면에는 아무 표시도 나지 않는다.
         -->
-        <label class="mt-3 block text-sm text-slate-500" for="direction">방향</label>
-        <select
-          id="direction"
-          v-model="direction"
-          class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-brand-500"
-        >
-          <option value="">선택 안 함</option>
-          <option v-for="d in PROPERTY_DIRECTIONS" :key="d" :value="d">{{ d }}</option>
-        </select>
-        <p class="mt-1 text-xs text-slate-400">
+        <p class="mt-5 text-sm text-slate-500">방향</p>
+        <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="방향">
+          <!--
+            '선택 안 함' 을 칩으로 남긴다. 고른 칩을 다시 눌러 끄는 방식은 화면에
+            드러나지 않아, 잘못 고른 사람이 되돌릴 길을 못 찾는다.
+          -->
+          <button
+            v-for="d in ['', ...PROPERTY_DIRECTIONS]"
+            :key="d"
+            type="button"
+            class="h-11 rounded-full border px-4 text-sm font-semibold transition-colors"
+            :class="
+              direction === d
+                ? 'border-brand-500 bg-brand-500 text-white'
+                : 'border-slate-200 bg-white text-slate-600'
+            "
+            :aria-pressed="direction === d"
+            @click="direction = d"
+          >
+            {{ d || '선택 안 함' }}
+          </button>
+        </div>
+        <p class="mt-3 text-xs text-slate-400">
           방향·층·총 층수가 <strong class="font-semibold">모두</strong> 있어야 채광이 계산돼요.
         </p>
 
