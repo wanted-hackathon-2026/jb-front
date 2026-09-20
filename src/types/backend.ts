@@ -456,6 +456,8 @@ export const ERROR_CODE = {
   GEOCODING_UNAVAILABLE: 'GEOCODING_UNAVAILABLE',
   /** 400. 요청 JSON·필드 검증 실패. */
   INVALID_REQUEST: 'INVALID_REQUEST',
+  /** 400. 비로그인인데 `X-Client-Session` 헤더가 없다. 전송 계층이 늘 붙이므로 나면 버그다. */
+  CLIENT_SESSION_REQUIRED: 'CLIENT_SESSION_REQUIRED',
   /** 404. 내 추천이 아니거나 없는 id 다. 남의 것도 '없음'으로 온다. */
   RECOMMENDATION_NOT_FOUND: 'RECOMMENDATION_NOT_FOUND',
   /** 409. 아직 처리 중이다. 결과를 부르기 전에 상태가 COMPLETED 인지 확인한다. */
@@ -487,8 +489,18 @@ export type RecommendationStatusCode = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 
  * (`lib/recommendation-request.ts`).
  */
 export interface RecommendationCreateRequest {
-  /** 등록된 거점의 id. **좌표가 아니라 id 다** — 서버가 스냅샷으로 복사해 둔다. */
-  workplaceId: string
+  /**
+   * 등록된 거점의 id. **좌표가 아니라 id 다** — 서버가 스냅샷으로 복사해 둔다.
+   * `workplace` 와 **정확히 하나만** 보낸다(서버 `@AssertTrue`). 둘 다 보내도 400 이다.
+   */
+  workplaceId?: string
+  /**
+   * 이번 요청에만 쓸 거점. 저장하지 않는다.
+   * **비로그인은 거점을 저장할 수 없어 이쪽만 쓴다**(jb-backend 9cd8ab2).
+   * 서버가 주소를 지오코딩하므로 등록과 같은 실패 코드가 난다
+   * (ADDRESS_NOT_GEOCODABLE · GEOCODING_UNAVAILABLE).
+   */
+  workplace?: { name: string; roadAddress: string }
   transportType: TransportType
   /** 5~180. 프론트 슬라이더 하한도 5 다. */
   maxCommuteMinutes: number

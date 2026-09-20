@@ -19,7 +19,19 @@ import type {
   RecommendedPropertyResponse,
 } from '@/types/backend'
 import { sqmToPyeong } from '@/lib/format'
+import { clientSessionToken } from '@/lib/client-session'
 import { request } from './http'
+
+/**
+ * 비로그인 사용자를 알아보게 하는 헤더.
+ *
+ * **추천 경로에만 붙인다.** 서버가 읽는 곳이 거기뿐이고, 모든 요청에 실으면 이 기기를
+ * 가리키는 값이 필요 없는 곳까지 퍼진다.
+ *
+ * 로그인 상태에서도 그냥 붙인다 — 서버는 JWT 가 있으면 헤더를 무시한다. 붙일지
+ * 말지를 로그인 여부로 가르면, 토큰이 막 만료된 찰나에 어느 쪽도 아닌 요청이 나간다.
+ */
+const sessionHeader = () => ({ 'X-Client-Session': clientSessionToken() })
 
 export type RecommendationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
@@ -50,6 +62,7 @@ export async function createRecommendation(
   const res = await request<RecommendationAcceptedResponse>('/api/recommendations', {
     method: 'POST',
     body: JSON.stringify(payload),
+    headers: sessionHeader(),
   })
   return { recommendationId: res.recommendationId, status: res.status }
 }
@@ -59,7 +72,9 @@ export async function createRecommendation(
  * 오지 않도록 엔드포인트가 나뉘어 있다.
  */
 export async function getRecommendation(id: string): Promise<RecommendationResponse> {
-  const res = await request<RecommendationStatusResponse>(`/api/recommendations/${id}`)
+  const res = await request<RecommendationStatusResponse>(`/api/recommendations/${id}`, {
+    headers: sessionHeader(),
+  })
   return {
     recommendationId: res.recommendationId,
     status: res.status,
@@ -153,7 +168,9 @@ function toListing(p: RecommendedPropertyItem): Listing {
  * 정렬은 화면이 한다(`lib/listing-sort.ts`).
  */
 export async function getRecommendedListings(id: string): Promise<Listing[]> {
-  const res = await request<RecommendedPropertyResponse>(`/api/recommendations/${id}/properties`)
+  const res = await request<RecommendedPropertyResponse>(`/api/recommendations/${id}/properties`, {
+    headers: sessionHeader(),
+  })
   return res.content.map(toListing)
 }
 

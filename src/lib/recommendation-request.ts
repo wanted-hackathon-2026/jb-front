@@ -34,7 +34,12 @@ export const toImportance = (weight: number) =>
   Math.min(5, Math.max(1, 1 + Math.round(weight / 25)))
 
 export interface FilterSnapshot {
-  workplaceId: string
+  /**
+   * 거점. **저장된 것을 고르거나(id) 이번 요청에만 쓸 주소를 넣는다.**
+   * 서버가 둘 중 정확히 하나만 받으므로 여기서도 한쪽만 채운다.
+   * 비로그인은 거점을 저장할 수 없어 늘 후자다.
+   */
+  workplace: { id: string } | { name: string; roadAddress: string }
   transport: TransportMode
   maxMinutes: number
   lifestyle: LifestyleWeights
@@ -48,7 +53,9 @@ export function toRecommendationRequest(f: FilterSnapshot): RecommendationCreate
   const [depositMin, depositMax] = f.deposit
   const [monthlyRentMin, monthlyRentMax] = f.rent
   return {
-    workplaceId: f.workplaceId,
+    ...('id' in f.workplace
+      ? { workplaceId: f.workplace.id }
+      : { workplace: { name: f.workplace.name, roadAddress: f.workplace.roadAddress } }),
     transportType: TRANSPORT[f.transport],
     // 슬라이더 하한이 5 지만, 예전 값이 로컬에 남아 있을 수 있어 여기서도 막는다.
     maxCommuteMinutes: Math.min(

@@ -17,6 +17,7 @@ import type {
   RecommendedPropertyDetailResponse,
 } from '@/types/backend'
 import { sqmToPyeong } from '@/lib/format'
+import { clientSessionToken } from '@/lib/client-session'
 import { request } from './http'
 
 /**
@@ -152,6 +153,8 @@ export async function getRecommendedListing(
 ): Promise<Listing> {
   const res = await request<RecommendedPropertyDetailResponse>(
     `/api/recommendations/${recommendationId}/properties/${id}`,
+    // 비로그인도 자기 추천을 볼 수 있어야 한다(lib/api/recommendation.ts 의 sessionHeader).
+    { headers: { 'X-Client-Session': clientSessionToken() } },
   )
   const e = res.evaluation
   return {

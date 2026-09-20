@@ -25,6 +25,8 @@ import { getListingsInBounds } from '@/lib/api/listings'
 import type { PropertyMapQuery } from '@/types/backend'
 import { useListingList } from '@/lib/listing-list'
 import { toRecommendationRequest } from '@/lib/recommendation-request'
+import { ApiError } from '@/lib/api/http'
+import { ERROR_CODE } from '@/types/backend'
 import { MAX_ANCHORS, useAnchorsStore } from '@/stores/anchors'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
@@ -192,23 +194,48 @@ async function onPick(coord: { x: number; y: number }) {
 const submitting = ref(false)
 const started = ref(false)
 
+/**
+ * 실패 문구. **주소 문제만 따로 가른다** — 사용자가 할 수 있는 일이 다르기 때문이다.
+ * 저장되지 않은 거점은 주소를 그대로 보내서 서버가 지오코딩하는데, 지번만 있는
+ * 거점(지도 핀)이면 여기서 걸린다. "잠시 후 다시" 는 이때 틀린 조언이다.
+ */
+function recommendationMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.code === ERROR_CODE.ADDRESS_NOT_GEOCODABLE) {
+      return '거점 주소의 좌표를 찾지 못했어요. 도로명 주소로 다시 설정해 주세요'
+    }
+    if (e.code === ERROR_CODE.GEOCODING_UNAVAILABLE) {
+      return '주소 변환 서비스가 불안정해요. 잠시 후 다시 시도해 주세요'
+    }
+  }
+  return '추천을 받지 못했어요. 잠시 후 다시 시도해 주세요'
+}
+
 async function requestRecommendation() {
   /*
-   * 서버는 좌표가 아니라 **거점 id** 를 받는다 — 요청 시점의 조건을 스냅샷으로 복사해
-   * 두기 때문이다(property-recommendation.md). 그래서 서버에 등록되지 않은 거점으로는
-   * 추천을 받을 수 없다. 비로그인으로 찍었거나 등록이 실패한 거점이 그렇다.
+   * 거점을 서버에 넘기는 방법이 둘이다. 저장된 거점은 **id** 로 보내고(서버가 조건을
+   * 스냅샷으로 복사한다), 저장되지 않은 거점은 **주소**를 그대로 실어 보낸다.
+   *
+   * 후자가 생기면서 **비로그인도 추천을 받을 수 있게 됐다**(jb-backend 9cd8ab2).
+   * 예전에는 등록된 거점이 없으면 여기서 막았다.
+   *
+   * 주소를 보내는 쪽은 서버가 지오코딩하므로, 지번만 있는 거점(지도 핀 찍기)은
+   * 실패할 수 있다 — 거점 등록과 같은 제약이다.
    */
-  const workplaceId = anchors.anchors[0]?.id
-  if (!workplaceId || !anchors.isServerAnchor(workplaceId)) {
-    notice.error('거점을 먼저 등록해 주세요')
+  const anchor = anchors.anchors[0]
+  if (!anchor) {
+    notice.error('거점을 먼저 설정해 주세요')
     return
   }
+  const workplace = anchors.isServerAnchor(anchor.id)
+    ? { id: anchor.id }
+    : { name: anchor.name, roadAddress: anchor.address }
 
   submitting.value = true
   try {
     await reco.request(
       toRecommendationRequest({
-        workplaceId,
+        workplace,
         transport: filters.transport,
         maxMinutes: filters.maxMinutes,
         lifestyle: filters.lifestyle,
@@ -219,10 +246,10 @@ async function requestRecommendation() {
     )
     started.value = true
     sheet.state = 'peek'
-  } catch {
+  } catch (e) {
     // 이건 목록과 달리 **토스트가 맞다.** 시트를 열어 둔 채 누른 버튼이라 화면에
     // 오류 자리를 만들 곳이 없고, 조건 입력을 그대로 두고 다시 누르게 하는 게 낫다.
-    notice.error('추천을 받지 못했어요. 잠시 후 다시 시도해 주세요')
+    notice.error(recommendationMessage(e))
   } finally {
     submitting.value = false
   }
